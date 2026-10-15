@@ -12,9 +12,19 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::DISubprogram;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::FunctionAnalysisManagerModuleProxy;
+using llvm::MDNode;
+using llvm::ModuleAnalysisManager;
+using llvm::Region;
+using llvm::SmallVector;
+using llvm::StringRef;
+using llvm::dyn_cast;
+using llvm::errs;
+using llvm::raw_string_ostream;
 
 // Returns true if runOnFunction instruments F, i.e. F reports its entry and exit to the runtime.
 // Calls to functions without instrumentation must not update the callpath state (see
@@ -38,7 +48,7 @@ bool DiscoPoP::isInstrumentedFunction(Function &F) {
           fullFileName += "/";
         }
         fullFileName += subProgram->getFilename().str();
-        if (fullFileName.find(dp_project_dir) != string::npos) // function defined inside project
+        if (fullFileName.find(dp_project_dir) != std::string::npos) // function defined inside project
         {
           funcDefinedInProject = true;
         }
@@ -51,40 +61,40 @@ bool DiscoPoP::isInstrumentedFunction(Function &F) {
 
   StringRef funcName = F.getName();
   // Avoid functions we don't want to instrument
-  if (funcName.find("llvm.") != string::npos) // llvm debug calls
+  if (funcName.find("llvm.") != std::string::npos) // llvm debug calls
   {
     return false;
   }
-  if (funcName.find("__dp_") != string::npos) // instrumentation calls
+  if (funcName.find("__dp_") != std::string::npos) // instrumentation calls
   {
     return false;
   }
-  if (funcName.find("__cx") != string::npos) // c++ init calls
+  if (funcName.find("__cx") != std::string::npos) // c++ init calls
   {
     return false;
   }
-  if (funcName.find("__clang") != string::npos) // clang helper calls
+  if (funcName.find("__clang") != std::string::npos) // clang helper calls
   {
     return false;
   }
-  if (funcName.find("_GLOBAL_") != string::npos) // global init calls (c++)
+  if (funcName.find("_GLOBAL_") != std::string::npos) // global init calls (c++)
   {
     return false;
   }
-  if (funcName.find("pthread_") != string::npos) {
+  if (funcName.find("pthread_") != std::string::npos) {
     return false;
   }
 
   return getCachedFileID(F) != 0;
 }
 
-int32_t DiscoPoP::getCachedFileID(Function &F) {
+std::int32_t DiscoPoP::getCachedFileID(Function &F) {
   auto pos = file_id_cache.find(&F);
   if (pos != file_id_cache.end()) {
     return pos->second;
   }
-  int32_t file_id = 0;
-  determineFileID(F, file_id);
+  std::int32_t file_id = 0;
+  dputil::determineFileID(F, file_id);
   file_id_cache[&F] = file_id;
   return file_id;
 }
@@ -146,18 +156,18 @@ void DiscoPoP::buildCUGraph(Function &F, ModuleAnalysisManager &MAM, FunctionCUG
   // NOTE: changed the way we get the arguments
   BasicBlock *BB = &F.getEntryBlock();
   auto BI = BB->begin();
-  string lid;
+  std::string lid;
   if (DebugLoc dl = BI->getDebugLoc()) {
-    lid = to_string(dl->getLine());
+    lid = std::to_string(dl->getLine());
   } else {
-    lid = to_string(BI->getFunction()->getSubprogram()->getLine());
+    lid = std::to_string(BI->getFunction()->getSubprogram()->getLine());
   }
 
   for (Function::arg_iterator it = F.arg_begin(); it != F.arg_end(); it++) {
-    string type_str;
+    std::string type_str;
     raw_string_ostream rso(type_str);
     (it->getType())->print(rso);
-    Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
+    Variable v(it->getName().str(), rso.str(), std::to_string(fileID) + ":" + lid, true, true);
     graph.root->argumentsList.push_back(v);
   }
   /********************* End of initialize root values

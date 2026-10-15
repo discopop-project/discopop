@@ -12,9 +12,30 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::AllocaInst;
+using llvm::BasicBlock;
+using llvm::CallBase;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::DINode;
+using llvm::DbgDeclareInst;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::IRBuilder;
+using llvm::InvokeInst;
+using llvm::LLVMContext;
+using llvm::LoadInst;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::PointerType;
+using llvm::ReturnInst;
+using llvm::StoreInst;
+using llvm::StringRef;
+using llvm::Type;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::errs;
+using llvm::isa;
 
 /* metadata format in LLVM IR:
 !5 = metadata !{
@@ -69,13 +90,13 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
     // assign unique instruction ids
     LLVMContext& ctx = BI->getContext();
-    int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
-    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
+    std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
     BI->setMetadata("dp.md.instr.id", N);
     // fill instructionID to lineID mapping file
     const DebugLoc &location = BI->getDebugLoc();
-    uint32_t lno = 0;
-    uint32_t colno = 0;
+    std::uint32_t lno = 0;
+    std::uint32_t colno = 0;
     if (location) {
       lno = location.getLine();
       colno = location.getCol();
@@ -83,9 +104,9 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       lno = BI->getFunction()->getSubprogram()->getLine();
     }
     if(lno != 0){
-      instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << to_string(fileID) << ":" << to_string(lno) << ":" << to_string(colno) << "\n";
+      instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << std::to_string(fileID) << ":" << std::to_string(lno) << ":" << std::to_string(colno) << "\n";
     } else{
-      instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
+      instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
     }
 
     if ([[maybe_unused]] DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
@@ -137,7 +158,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
           strDes = cast<DINode>(structNode);
           if (strDes->getTag() == dwarf::DW_TAG_structure_type) {
-            string strName(structType->getStructName().data());
+            std::string strName(structType->getStructName().data());
             if (Structs.find(strName) == Structs.end()) {
               processStructTypes(strName, structNode);
             }
@@ -189,11 +210,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       StringRef fn = "";
       if (F) {
         fn = F->getName();
-        if (fn.find("__dp_") != string::npos) // avoid instrumentation calls
+        if (fn.find("__dp_") != std::string::npos) // avoid instrumentation calls
         {
           continue;
         }
-        if (fn.find("__clang_") != string::npos) // clang helper calls
+        if (fn.find("__clang_") != std::string::npos) // clang helper calls
         {
           continue;
         }
@@ -201,7 +222,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
           IRBuilder<> IRBRet(&*BI);
-          IRBRet.CreateCall(DpFuncExit, {lidConstant(getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
+          IRBRet.CreateCall(DpFuncExit, {lidConstant(dputil::getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
           continue;
         }
         if ((fn.str() == "exit") || F->doesNotReturn()) // terminates without returning to main
@@ -253,7 +274,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           continue;
         }
       }
-      LID lid = getLID(&*BI, fileID);
+      LID lid = dputil::getLID(&*BI, fileID);
       if (lid > 0) // calls on non-user code are not instrumented
       {
         IRBuilder<> IRBCall(&*BI);
@@ -281,7 +302,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // return
     else if (isa<ReturnInst>(BI)) {
-      LID lid = getLID(&*BI, fileID);
+      LID lid = dputil::getLID(&*BI, fileID);
       assert((lid > 0) && "Returning on LID = 0!");
 
       Function *parent = BB.getParent();

@@ -25,18 +25,17 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_exit(LID lid, int32_t isExit) {
+void __dp_func_exit(LID lid, std::int32_t isExit) {
   if (!profiling_active()) {
     if (DP_DEBUG) {
-      cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
-      cout << " but the runtime is not running. Destructors?" << endl;
+      std::cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
+      std::cout << " but the runtime is not running. Destructors?" << std::endl;
     }
     return;
   }
@@ -54,8 +53,8 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   }
 
   if (DP_DEBUG) {
-    cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << endl;
-    cout << "Function stack level = " << std::dec << function_manager->get_current_stack_level() << endl;
+    std::cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << std::endl;
+    std::cout << "Function stack level = " << std::dec << function_manager->get_current_stack_level() << std::endl;
   }
   // restore the callpath state of the caller, still under the lock (released with dp_scope)
   leave_function_for_callstate();

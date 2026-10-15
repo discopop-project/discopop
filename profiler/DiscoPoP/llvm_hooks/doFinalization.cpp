@@ -12,11 +12,8 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
 
-bool DiscoPoP::doFinalization(Module &M) {
+bool DiscoPoP::doFinalization(llvm::Module &M) {
   // unique InstructionID assignment
   // write the current count of unique instructions to a file to avoid duplication between modules.
   profiler_files::writeCounter("DP_InstructionIDCounter.txt", InstructionIDCounter);

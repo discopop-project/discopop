@@ -17,60 +17,85 @@
 
 #define DP_DEBUG_TYPE "dputils"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
-using namespace std;
+using dputil::VariableNameFinder;
+using dputil::determineFileID;
+using dputil::encodeLID;
+using dputil::getFileID;
+using dputil::getLID;
+using dputil::get_exe_dir;
+using llvm::AllocaInst;
+using llvm::BasicBlock;
+using llvm::BinaryOperator;
+using llvm::ConstantInt;
+using llvm::DILocation;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::GEPOperator;
+using llvm::GetElementPtrInst;
+using llvm::GlobalValue;
+using llvm::GlobalVariable;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::MDNode;
+using llvm::Module;
+using llvm::SExtInst;
+using llvm::StoreInst;
+using llvm::StringRef;
+using llvm::StructType;
+using llvm::Value;
+using llvm::dyn_cast;
+using llvm::errs;
+using llvm::isa;
 
 // cl::opt <string> FileMappingPath("fm-path", cl::init(""),
 //                                  cl::desc("Specify file mapping location"),
 //                                  cl::Hidden);
-string FileMappingPath = "";
+std::string FileMappingPath = "";
 
-cl::opt<bool>
-    DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", cl::init(false),
-                                                cl::desc("disable the memory profiling for allocations which belong to "
+llvm::cl::opt<bool>
+    DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", llvm::cl::init(false),
+                                                llvm::cl::desc("disable the memory profiling for allocations which belong to "
                                                          "function arguments"),
-                                                cl::Hidden);
+                                                llvm::cl::Hidden);
 
 namespace dputil {
 
-int32_t getFileID(string /*fileMapping*/, string fullPathName) {
+std::int32_t getFileID(std::string /*fileMapping*/, std::string fullPathName) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
-    char const *tmp = getenv("DOT_DISCOPOP");
+    char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    FileMappingPath = getenv("DOT_DISCOPOP");
+    FileMappingPath = std::getenv("DOT_DISCOPOP");
     FileMappingPath += "/FileMapping.txt";
   }
 
   // check if path in DP_PROJECT_ROOT_DIR
   std::string dp_project_dir(dputil::getEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
-  if (fullPathName.find(dp_project_dir) == string::npos) // function defined outside project
+  if (fullPathName.find(dp_project_dir) == std::string::npos) // function defined outside project
   {
     return 0;
   }
 
   // Keep FileMapping.txt in an in-memory cache. getFileID is called per-instruction, so
   // re-reading the file on every call dominates the pass runtime.
-  static std::map<std::string, int32_t> fileIdCache;
-  static int32_t nextFileId = 1;
+  static std::map<std::string, std::int32_t> fileIdCache;
+  static std::int32_t nextFileId = 1;
   static bool fileMappingLoaded = false;
 
   auto loadFileMapping = [&]() {
-    fstream fileMappingFile;
-    fileMappingFile.open(FileMappingPath.data(), ios::in);
+    std::fstream fileMappingFile;
+    fileMappingFile.open(FileMappingPath.data(), std::ios::in);
     if (fileMappingFile) {
-      string tp;
-      while (getline(fileMappingFile, tp)) {
-        size_t tab = tp.find("\t");
-        if (tab == string::npos) {
+      std::string tp;
+      while (std::getline(fileMappingFile, tp)) {
+        std::size_t tab = tp.find("\t");
+        if (tab == std::string::npos) {
           continue;
         }
-        int32_t id = stoi(tp.substr(0, tab));
+        std::int32_t id = std::stoi(tp.substr(0, tab));
         std::string file_name = tp.substr(tab + 1);
         fileIdCache[file_name] = id;
         if (id >= nextFileId) {
@@ -106,8 +131,8 @@ int32_t getFileID(string /*fileMapping*/, string fullPathName) {
   }
 
   // still unknown: assign a new id, persist it once, and cache it
-  int32_t tempfid = nextFileId++;
-  fstream fileMappingFile;
+  std::int32_t tempfid = nextFileId++;
+  std::fstream fileMappingFile;
   fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
   fileMappingFile << tempfid << "\t" << fullPathName << "\n";
   fileMappingFile.close();
@@ -138,8 +163,8 @@ int32_t getFileID(string /*fileMapping*/, string fullPathName) {
   */
 }
 
-int64_t encodeLID(int32_t fileID, int64_t line) {
-  static std::set<int32_t> warnedFileIDs;
+std::int64_t encodeLID(std::int32_t fileID, std::int64_t line) {
+  static std::set<std::int32_t> warnedFileIDs;
   if (fileID < 0 || fileID > MAXFILEID) {
     if (warnedFileIDs.insert(fileID).second) {
       errs() << "DiscoPoP: warning: the file id " << fileID << " exceeds the maximum of " << MAXFILEID
@@ -154,25 +179,25 @@ int64_t encodeLID(int32_t fileID, int64_t line) {
     }
     return 0;
   }
-  return (static_cast<int64_t>(fileID) << LIDSIZE) + line;
+  return (static_cast<std::int64_t>(fileID) << LIDSIZE) + line;
 }
 
 // Encode the fileID and line number of BI as LID.
 // Encode metadata regarding the instruction in the first LIDMETADATASIZE bits
 // This is needed to support multiple files in a project.
-int64_t getLID(Instruction *BI, int32_t &fileID) {
+std::int64_t getLID(Instruction *BI, std::int32_t &fileID) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
-    char const *tmp = getenv("DOT_DISCOPOP");
+    char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    FileMappingPath = getenv("DOT_DISCOPOP");
+    FileMappingPath = std::getenv("DOT_DISCOPOP");
     FileMappingPath += "/FileMapping.txt";
   }
 
-  int32_t lno = 0;
+  std::int32_t lno = 0;
 
   const DebugLoc &location = BI->getDebugLoc();
   if (location) {
@@ -221,15 +246,15 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
 }
 
 // determine the file index according to the given FileMapping
-void determineFileID(Function &F, int32_t &fileID) {
+void determineFileID(Function &F, std::int32_t &fileID) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
-    char const *tmp = getenv("DOT_DISCOPOP");
+    char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    FileMappingPath = getenv("DOT_DISCOPOP");
+    FileMappingPath = std::getenv("DOT_DISCOPOP");
     FileMappingPath += "/FileMapping.txt";
   }
   fileID = 0;
@@ -237,7 +262,7 @@ void determineFileID(Function &F, int32_t &fileID) {
   for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
     BasicBlock &BB = *FI;
     for (BasicBlock::iterator BI = BB.begin(), EI = BB.end(); BI != EI; ++BI) {
-      int32_t lno;
+      std::int32_t lno;
       const DebugLoc &location = BI->getDebugLoc();
       if (location) {
         lno = BI->getDebugLoc().getLine();
@@ -262,8 +287,8 @@ void determineFileID(Function &F, int32_t &fileID) {
           }
 
           if (absolutePathFileName) {
-            fileID = dputil::getFileID(FileMappingPath, string(absolutePathFileName));
-            free(absolutePathFileName); // allocated by realpath
+            fileID = dputil::getFileID(FileMappingPath, std::string(absolutePathFileName));
+            std::free(absolutePathFileName); // allocated by realpath
           }
           // the first instruction with a debug location determines the file
           return;
@@ -273,12 +298,12 @@ void determineFileID(Function &F, int32_t &fileID) {
   }
 }
 
-string get_exe_dir() {
+std::string get_exe_dir() {
   char buff[1024];
   ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
   if (len != -1) {
     buff[len] = '\0';
-    string fullPath = std::string(buff);
+    std::string fullPath = std::string(buff);
     return fullPath.substr(0, fullPath.find_last_of('/'));
   }     return "";
 
@@ -286,7 +311,7 @@ string get_exe_dir() {
 
 VariableNameFinder::VariableNameFinder(Module & /*M*/) {}
 
-string VariableNameFinder::getVarName(Value const *V) {
+std::string VariableNameFinder::getVarName(Value const *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
     if (auto GEPI = dyn_cast<GetElementPtrInst>(I)) {
       // an element (of an array, of a struct) is named like the object it belongs to
@@ -298,7 +323,7 @@ string VariableNameFinder::getVarName(Value const *V) {
     }
 
     if (const BinaryOperator *binop = dyn_cast<BinaryOperator>(I)) {
-      string op;
+      std::string op;
       switch (binop->getOpcode()) {
 #define DP_DPUTILS_DEBUG 1
       case Instruction::BinaryOps::Add:
@@ -386,11 +411,11 @@ string VariableNameFinder::getVarName(Value const *V) {
   }
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    return to_string(CI->getSExtValue());
+    return std::to_string(CI->getSExtValue());
   }
 
   if (V->hasName()) {
-    string r = V->getName().str();
+    std::string r = V->getName().str();
 //    std::size_t found = r.find(".addr");
 //    if (found != string::npos) {
 //      return r.erase(found);

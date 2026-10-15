@@ -22,7 +22,6 @@
 #include <string>
 #include <unordered_set>
 
-using namespace std;
 
 namespace __dp {
 
@@ -38,13 +37,13 @@ void generateStringDepMap() {
   for (auto &dline : *allDeps) {
     if (dline.first) {
       //  unpack dline.first (lid) to instructionID and callpathStateID
-      uint32_t dline_first_instID = (dline.first & 0xFFFFFFFF);
-      uint32_t dline_first_callpathStateID = ((dline.first & 0xFFFFFFFF00000000) >> 32);
-      string unpacked_lid = to_string(dline_first_instID) + "@" +
-                            to_string(dline_first_callpathStateID); // use instructionID instead of lineID
-      unordered_set<string> lineDeps;
+      std::uint32_t dline_first_instID = (dline.first & 0xFFFFFFFF);
+      std::uint32_t dline_first_callpathStateID = ((dline.first & 0xFFFFFFFF00000000) >> 32);
+      std::string unpacked_lid = std::to_string(dline_first_instID) + "@" +
+                            std::to_string(dline_first_callpathStateID); // use instructionID instead of lineID
+      std::unordered_set<std::string> lineDeps;
       for (auto &d : dline.second) {
-        string dep = "";
+        std::string dep = "";
         switch (d.type) {
         case RAW:
           dep += "RAW";
@@ -63,12 +62,12 @@ void generateStringDepMap() {
         }
 
         // unpack d.depOn to instructionID and callpathStateID
-        uint32_t d_depOn_instID = (d.depOn & 0xFFFFFFFF);
-        uint32_t d_depOn_callpathStateID = ((d.depOn & 0xFFFFFFFF00000000) >> 32);
-        dep += ' ' + to_string(d_depOn_instID) + "@" +
-               to_string(d_depOn_callpathStateID); // use unpacked information instead of lineID
+        std::uint32_t d_depOn_instID = (d.depOn & 0xFFFFFFFF);
+        std::uint32_t d_depOn_callpathStateID = ((d.depOn & 0xFFFFFFFF00000000) >> 32);
+        dep += ' ' + std::to_string(d_depOn_instID) + "@" +
+               std::to_string(d_depOn_callpathStateID); // use unpacked information instead of lineID
 
-        dep += "|" + string(d.var);
+        dep += "|" + std::string(d.var);
         dep += "(" + std::to_string(d.AAvar) + ")";
 
         lineDeps.insert(dep);
@@ -96,7 +95,7 @@ void outputDeps() {
     for (auto dep : pair.second) {
       *out << ' ' << dep;
     }
-    *out << endl;
+    *out << std::endl;
   }
 }
 // End HA

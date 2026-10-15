@@ -28,7 +28,6 @@
 #include <iostream>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
@@ -89,13 +88,13 @@ void write_results(LID lid) {
   outputDeps();
 
 
-  *out << dputil::decodeLID(lid) << " END program" << endl;
+  *out << dputil::decodeLID(lid) << " END program" << std::endl;
   out->flush();
   out->close();
 
   const auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::high_resolution_clock::now() - statistics_profiling_start_time);
-  auto stats_file = ofstream(profiler_output_path("statistics/profiling_time.txt"), ios::out);
+  auto stats_file = std::ofstream(profiler_output_path("statistics/profiling_time.txt"), std::ios::out);
   stats_file << std::to_string(time_elapsed.count()) << " ms\n";
   stats_file.close();
 }

@@ -14,19 +14,16 @@
 #include <cstdint>
 #include <thread>
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
 
 namespace static_callpaths {
 
 // The .dot files written below are debugging aids: nothing in the toolchain reads them back,
 // and for deep call graphs they are by far the largest artifacts the pass produces (tens of MB
 // per translation unit). They are therefore only written on request.
-static bool write_callpath_dot_files() { return getenv("DP_WRITE_CALLPATH_DOT") != nullptr; }
+static bool write_callpath_dot_files() { return std::getenv("DP_WRITE_CALLPATH_DOT") != nullptr; }
 
-using CALLPATH_STATE_ID = int32_t;
-using INSTRUCTION_ID = int32_t;
+using CALLPATH_STATE_ID = std::int32_t;
+using INSTRUCTION_ID = std::int32_t;
 
 void process_enumerate_paths_stack(std::atomic<uint16_t> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
   bool initial_iteration = true;
@@ -73,7 +70,7 @@ void process_enumerate_paths_stack(std::atomic<uint16_t> *active_threads, Static
       predecessor_path->register_transition(transition_instruction, current_state_id);
 
       // enqueue successors
-      std::vector<std::tuple<StaticCallPathTreeNode*, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
+      std::vector<std::tuple<StaticCallPathTreeNode*, std::int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
 
       // The ancestor chain of new_current_path is identical for every successor,
       // so map base_node -> closest ancestor path node once, then look up per successor.
@@ -84,7 +81,7 @@ void process_enumerate_paths_stack(std::atomic<uint16_t> *active_threads, Static
       }
 
       for(auto succ_pair: new_current_path->base_node->successors){
-        int32_t trigger_instructionID = succ_pair.first;
+        std::int32_t trigger_instructionID = succ_pair.first;
         for(auto succ: succ_pair.second){
 
           // check for cycles: succ already present on the path -> cycle
@@ -127,7 +124,7 @@ void process_enumerate_paths_stack(std::atomic<uint16_t> *active_threads, Static
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
   // start ids from start_path_id (no collisions between modules)
   StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
@@ -181,7 +178,7 @@ StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] s
 
 // save the id of the initial state id to file
 void save_initial_path(StaticCallPathTree* call_path_tree_ptr){
-  cout << "saving initial path..\n";
+  std::cout << "saving initial path..\n";
 
   // prepare saving the initial callpathStateID
   std::ofstream file = profiler_files::open("initial_stateID.txt");
@@ -197,19 +194,19 @@ void save_initial_path(StaticCallPathTree* call_path_tree_ptr){
     // not every function whose (mangled) name contains "main", e.g. a parameter of type "Domain"
     if (label == "main")
     {
-      cout << "CANDIDATE: " << label << "\n";
+      std::cout << "CANDIDATE: " << label << "\n";
       // save path id to file
-      file << to_string(candidate->path_id) << "\n";
-      cout << "FOUND A MAIN PATH!\n";
+      file << std::to_string(candidate->path_id) << "\n";
+      std::cout << "FOUND A MAIN PATH!\n";
       break;
     }
   }
   file.close();
-  cout << "Done saving initial path..\n";
+  std::cout << "Done saving initial path..\n";
 }
 
 void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
-  cout << "saving enumerated paths..\n";
+  std::cout << "saving enumerated paths..\n";
   // prepare saving the mapping from callpath to callpathStateID for reference
   std::ofstream stateID_to_callpath_file = profiler_files::open("stateID_to_callpath_mapping.txt");
   // write file
@@ -228,7 +225,7 @@ void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
     }
 */
     // root node uses itself as parent
-    uint32_t parent_id = path->path_id;
+    std::uint32_t parent_id = path->path_id;
     if(path->prefix != nullptr) {
         parent_id = path->prefix->path_id;
     }
@@ -244,11 +241,11 @@ void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   }
   stateID_to_callpath_file << global_buffer;
   stateID_to_callpath_file.close();
-  cout << "Done saving enumerated path..\n";
+  std::cout << "Done saving enumerated path..\n";
 }
 
 void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
-  cout << "saving path state transitions..\n";
+  std::cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   std::ofstream callpath_state_transitions_file = profiler_files::open("callpath_state_transitions.txt");
   // write file
@@ -301,7 +298,7 @@ void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
     callpath_state_transitions_dot.close();
   }
 
-  cout << "Done saving path state transitions..\n";
+  std::cout << "Done saving path state transitions..\n";
 }
 
 // Saves which states are entry states of function instances, and the root entry state of each
@@ -317,7 +314,7 @@ void save_function_entries(StaticCallPathTree* call_path_tree_ptr){
     if(path_node->base_node == nullptr || path_node->base_node->get_type()){
       continue;
     }
-    int32_t function_entry_id = path_node->base_node->function_entry_instruction_id;
+    std::int32_t function_entry_id = path_node->base_node->function_entry_instruction_id;
     if(function_entry_id == 0){
       continue;
     }
@@ -334,13 +331,13 @@ void save_static_calltree_to_dot(StaticCalltree *calltree){
   if (!write_callpath_dot_files()) {
     return;
   }
-  cout << "saving path state transitions to dot..\n";
+  std::cout << "saving path state transitions to dot..\n";
   // prepare saving the calltree as DOT file
   std::ofstream calltree_dot_file = profiler_files::open("static_calltree.dot");
   // write file
   calltree_dot_file << calltree->to_dot_string() << "\n";
   calltree_dot_file.close();
-  cout << "Done saving path state transitions to dot..\n";
+  std::cout << "Done saving path state transitions to dot..\n";
 }
 
 // adds the state transition edges corresponding to returning from a function.

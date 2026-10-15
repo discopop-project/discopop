@@ -12,24 +12,42 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::BranchInst;
+using llvm::CallBase;
+using llvm::CallInst;
+using llvm::DILocalScope;
+using llvm::DataLayout;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::InvokeInst;
+using llvm::LoadInst;
+using llvm::Loop;
+using llvm::LoopInfo;
+using llvm::ModuleAnalysisManager;
+using llvm::Region;
+using llvm::ReturnInst;
+using llvm::StoreInst;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
+using llvm::raw_string_ostream;
 
-void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
-                         map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM) {
+void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> &CUVector,
+                         std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM) {
   const DataLayout *DL = &ThisModule->getDataLayout(); // used to get data size of variables,
   // pointers, structs etc.
   Node *currentNode = root;
   CU *cu;
   LID lid;
-  string varName;
+  std::string varName;
   bool isGlobalVar = false;
-  string varType;
-  set<string> suspiciousVariables;
-  string basicBlockName;
+  std::string varType;
+  std::set<std::string> suspiciousVariables;
+  std::string basicBlockName;
 
-  map<Loop *, Node *> loopToNodeMap;
+  std::map<Loop *, Node *> loopToNodeMap;
 
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
 
@@ -56,7 +74,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
     } else {
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
-      for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++) {
+      for (std::map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++) {
         if (it->second == currentNode) // current node found in loop map jump to its parent.
         {
           currentNode = currentNode->parentNode;
@@ -78,14 +96,14 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
     cu->BBID = bb->getName().str();
     cu->BB = *bb;
     currentNode->childrenNodes.push_back(cu);
-    vector<CU *> basicBlockCUVector;
+    std::vector<CU *> basicBlockCUVector;
     basicBlockCUVector.push_back(cu);
-    BBIDToCUIDsMap.insert(pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
+    BBIDToCUIDsMap.insert(std::pair<std::string, std::vector<CU *>>(bb->getName(), basicBlockCUVector));
     DILocalScope *scopeBuffer = nullptr;
 
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
-      lid = getLID(&*instruction, fileID);
+      lid = dputil::getLID(&*instruction, fileID);
       basicBlockName = bb->getName().str();
 
       // Do not allow to combine Instructions from different scopes in the
@@ -236,7 +254,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
 
           // get the name of the called function and check if a FileIO function
           // is called
-          set<string> IOFunctions{
+          std::set<std::string> IOFunctions{
               "fopen",       "fopen_s",      "freopen",    "freopen_s",      "fclose",    "fflush",     "setbuf",
               "setvbuf",     "fwide",        "fread",      "fwrite",         "fgetc",     "getc",       "fgets",
               "fputc",       "putc",         "fputs",      "getchar",        "gets",      "gets_s",     "putchar",
@@ -257,7 +275,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           if (ci) {
             if (ci->getCalledFunction()) {
               if (ci->getCalledFunction()->hasName()) {
-                if (find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) !=
+                if (std::find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) !=
                     IOFunctions.end()) {
                   // Called function performs FileIO
                   cu->performsFileIO = true;
@@ -284,7 +302,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
     // check for call instructions in current basic block
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // Note: Don't create nodes for library functions (c++/llvm).
-      LID lid = getLID(&*instruction, fileID);
+      LID lid = dputil::getLID(&*instruction, fileID);
       if (lid > 0) {
         if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
           Function *f = nullptr;
@@ -298,17 +316,17 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
             f = ci->getCalledFunction();
           }
 
-          string lid;
+          std::string lid;
           if (f) {
             bool externalFunction = true;
             for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI) {
               externalFunction = false;
               auto tempBI = FI->begin();
               if (DebugLoc dl = tempBI->getDebugLoc()) {
-                lid = to_string(dl->getLine());
+                lid = std::to_string(dl->getLine());
               } else {
                 if (tempBI->getFunction()->getSubprogram()) {
-                  lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
+                  lid = std::to_string(tempBI->getFunction()->getSubprogram()->getLine());
                 } else {
                   lid = "LineNotFound";
                 }
@@ -339,10 +357,10 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
             // bring the for loop inside to avoid the segmentation fault. If you
             // think it is not appropriate, find a solution for it. 14.2.2016
             for (Function::arg_iterator it = f->arg_begin(); it != f->arg_end(); it++) {
-              string type_str;
+              std::string type_str;
               raw_string_ostream rso(type_str);
               (it->getType())->print(rso);
-              Variable v(string(it->getName()), rso.str(), lid, true, true);
+              Variable v(std::string(it->getName()), rso.str(), lid, true, true);
               n->argumentsList.push_back(v);
             }
           } else // get name of the indirect function which is called
@@ -359,14 +377,14 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
 
           //if (isRecursive(*f, CGWP->getCallGraph())) {
           if (isRecursive(*f, CG)) {
-            LID lid = getLID(&*instruction, fileID);
+            LID lid = dputil::getLID(&*instruction, fileID);
             n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
           }
 
-          vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
+          std::vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
           // locate the CU where this function call belongs
           for (auto i : BBCUsVector) {
-            LID lid = getLID(&*instruction, fileID);
+            LID lid = dputil::getLID(&*instruction, fileID);
             if (lid >= i->startLine && lid <= i->endLine) {
               i->instructionsLineNumbers.insert(lid);
               i->childrenNodes.push_back(n);

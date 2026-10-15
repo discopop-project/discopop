@@ -14,9 +14,14 @@
 
 #include "dp_reduction/dp_reduction.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::Function;
+using llvm::LoopInfo;
+using llvm::StoreInst;
+using llvm::Value;
+using llvm::cast;
+using llvm::errs;
+using llvm::isa;
 
 // Goes through all instructions in a loop and determines if they might be
 // suitable for reduction.
@@ -64,7 +69,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
 
   std::string loopEndLine = dp_reduction::CFA(F, loop, file_id);
   loop_info.end_line = loopEndLine;
-  loop_info.function_name = string((basic_blocks[1]->getParent()->getName()));
+  loop_info.function_name = std::string((basic_blocks[1]->getParent()->getName()));
   loop_info.loop_id = services_.getLoopID(loop);
 
   loops_.push_back(loop_info);
@@ -77,7 +82,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
 
   // Scan all instructions in the loop's basic blocks to find the load and
   // store instructions.
-  for (size_t i = 0; i < basic_blocks.size(); ++i) {
+  for (std::size_t i = 0; i < basic_blocks.size(); ++i) {
     llvm::BasicBlock *const bb = basic_blocks[i];
 
     // Skip the loop's own control blocks and look at its body only. These used to be
@@ -176,8 +181,8 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
   // now check if the variables are part of a reduction operation
   for (auto candidate : candidates) {
     int index = isa<StoreInst>(candidate.load_inst_) ? 1 : 0;
-    string varNameLoad = "LOAD";
-    string varTypeLoad = "SCALAR";
+    std::string varNameLoad = "LOAD";
+    std::string varTypeLoad = "SCALAR";
     llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
 
     varNameLoad = services_.getVariableName(candidate.load_inst_);
@@ -222,7 +227,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
           // Then, we traverse the whole function to check if the reduction
           // operation is > or <
           BasicBlock *BB = (candidate.load_inst_)->getParent();
-          string bbName = BB->getName().str();
+          std::string bbName = BB->getName().str();
 
           // Ignore loops. Only look for conditional blocks
           if (bbName.find("if") != std::string::npos || bbName.find("for") != std::string::npos) {

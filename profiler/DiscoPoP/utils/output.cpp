@@ -20,8 +20,10 @@
 #include <algorithm>
 #include <fstream>
 
-using namespace llvm;
-using namespace std;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::StringRef;
+using llvm::cast;
 using cu_output::xmlEscape;
 
 namespace {
@@ -48,14 +50,14 @@ private:
 } // namespace
 
 /********** Output functions *********/
-string cu_output::xmlEscape(string data) {
-  string::size_type pos = 0;
+std::string cu_output::xmlEscape(std::string data) {
+  std::string::size_type pos = 0;
   for (;;) {
     pos = data.find_first_of("\"&<>", pos);
-    if (pos == string::npos) {
+    if (pos == std::string::npos) {
       break;
 }
-    string replacement;
+    std::string replacement;
     switch (data[pos]) {
     case '\"':
       replacement = "&quot;";
@@ -93,8 +95,8 @@ void cu_output::writeCUGraph(Node *root, const std::map<std::string, std::string
   outOriginalVariables.close();
 }
 
-string CUGraphWriter::getLineNumbersString(set<LID> LineNumbers) {
-  string line = "";
+std::string CUGraphWriter::getLineNumbersString(std::set<LID> LineNumbers) {
+  std::string line = "";
   for (auto li : LineNumbers) {
     std::string temp = ',' + dputil::decodeLID(li);
     if (temp != ",*") {
@@ -108,8 +110,8 @@ string CUGraphWriter::getLineNumbersString(set<LID> LineNumbers) {
   return line;
 }
 
-string CUGraphWriter::getChildrenNodesString(Node *root) {
-  string childrenIDs = "";
+std::string CUGraphWriter::getChildrenNodesString(Node *root) {
+  std::string childrenIDs = "";
   int i = 0;
   std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
     if (i == 0) {
@@ -135,7 +137,7 @@ void CUGraphWriter::printTree(Node *root, bool isRoot) {
 
 void CUGraphWriter::printNode(Node *root, bool /*isRoot*/) {
   if (root->name.find("llvm")) {
-    string start = "";
+    std::string start = "";
     if (root->type == nodeTypes::loop) {
       auto loopStart = loopStartLines.find(root->ID);
       start = loopStart != loopStartLines.end() ? loopStart->second : "";
@@ -160,7 +162,7 @@ void CUGraphWriter::printNode(Node *root, bool /*isRoot*/) {
       }
       outCUs << "\t\t</funcArguments>" << "\n";
 
-      string rlVals = "";
+      std::string rlVals = "";
       for (auto rl : root->returnLines) {
         rlVals += dputil::decodeLID(rl) + ", ";
       }
@@ -213,17 +215,17 @@ void CUGraphWriter::printNode(Node *root, bool /*isRoot*/) {
         for (auto ii : i.second) {
           // get call instruction id
           MDNode *md = cu->callLineToCallInstructionMap[i.first][idx]->getMetadata("dp.md.instr.id");
-          string callInstId = "UNKNOWN";
+          std::string callInstId = "UNKNOWN";
           if(md && md->getNumOperands() > 0){
             StringRef instruction_id_str = cast<MDString>(md->getOperand(0))->getString();
             callInstId = instruction_id_str.split(':').second.str();
           }
           // append to XML file
           outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\" callInstId=\"" << callInstId << "\">" << ii->ID << "</nodeCalled>"
-                  << endl;
+                  << std::endl;
           // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
           outCUs << "\t\t\t\t<recursiveFunctionCall>" << ii->recursiveFunctionCall << "</recursiveFunctionCall>"
-                  << endl;
+                  << std::endl;
           idx++;
         }
       }

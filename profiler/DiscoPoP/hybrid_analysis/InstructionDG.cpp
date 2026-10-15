@@ -14,21 +14,29 @@
 
 #include "DPUtils.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::AllocaInst;
+using llvm::DebugLoc;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::StoreInst;
+using llvm::Value;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::isa;
 
-InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid)
+InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, std::int32_t _fid)
     : VNF(_VNF), CFG(_CFG), fid(_fid) {
   for (auto edge : CFG->getInEdges(CFG->getExit())) {
     // check for nullptr
     if (edge->getSrc()) {
-      recursiveDepFinder(new set<Instruction *>(), edge->getSrc()->getItem());
+      recursiveDepFinder(new std::set<Instruction *>(), edge->getSrc()->getItem());
     }
   }
 }
 
-void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C) {
+void InstructionDG::recursiveDepChecker(std::set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C) {
   if (CFG->isEntryOrExit(C)) {
     return;
 }
@@ -57,7 +65,7 @@ void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions,
 }
 }
 
-void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I) {
+void InstructionDG::recursiveDepFinder(std::set<Instruction *> *checkedInstructions, Instruction *I) {
   if (CFG->isEntryOrExit(I) || checkedInstructions->find(I) != checkedInstructions->end()) {
     return;
 }
@@ -67,7 +75,7 @@ void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, 
 }
   for (auto edge : CFG->getInEdges(I)) {
     if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
-      recursiveDepChecker(new set<Instruction *>(), I, edge->getSrc()->getItem());
+      recursiveDepChecker(new std::set<Instruction *>(), I, edge->getSrc()->getItem());
     }
     recursiveDepFinder(checkedInstructions, edge->getSrc()->getItem());
   }
@@ -75,10 +83,10 @@ void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, 
 
 void InstructionDG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
 
-string InstructionDG::getInstructionLine(Instruction *I) {
+std::string InstructionDG::getInstructionLine(Instruction *I) {
   if (DebugLoc dl = I->getDebugLoc()) {
-    return to_string(dl->getLine());
-  }     return to_string(I->getFunction()->getSubprogram()->getLine());
+    return std::to_string(dl->getLine());
+  }     return std::to_string(I->getFunction()->getSubprogram()->getLine());
 
 }
 
@@ -91,39 +99,39 @@ bool InstructionDG::edgeIsINIT(Edge<Instruction *> *e){
   return false;
 }
 
-string InstructionDG::getInitEdgeInstructionLine(Edge<Instruction *> *e){
+std::string InstructionDG::getInitEdgeInstructionLine(Edge<Instruction *> *e){
   return getInstructionLine(e->getSrc()->getItem());
 }
 
-string InstructionDG::getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap){
+std::string InstructionDG::getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap){
   Instruction *I = e->getSrc()->getItem();
   return staticValueNameToMemRegIDMap[VNF->getVarName(I)].first + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
 }
 
-string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
-                                  unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
+std::string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
+                                  std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap) {
   // staticValueNameToMemRegIDMap maps: <SSA variable name> TO (original
   // variable name, statically assigned MemReg ID)
   Instruction *I = e->getSrc()->getItem();
   Instruction *J = e->getDst()->getItem();
 
-  string depType;
+  std::string depType;
   if (isa<AllocaInst>(J)) {
     depType = "INIT";
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " *|" +
+    return std::to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " *|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } if (DebugLoc dl = J->getDebugLoc()) {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + to_string(fid) + ":" +
+    depType = (isa<LoadInst>(I) ? std::string("R") : std::string("W")) + "A" + (isa<LoadInst>(J) ? std::string("R") : std::string("W"));
+    return std::to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + std::to_string(fid) + ":" +
            getInstructionLine(J) + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } else {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + to_string(fid) + ":" +
+    depType = (isa<LoadInst>(I) ? std::string("R") : std::string("W")) + "A" + (isa<LoadInst>(J) ? std::string("R") : std::string("W"));
+    return std::to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + std::to_string(fid) + ":" +
            getInstructionLine(J) + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
@@ -131,8 +139,8 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
   }
 }
 
-string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
-                                  unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
+std::string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
+                                  std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap) {
   // staticValueNameToMemRegIDMap maps: <SSA variable name> TO (original
   // variable name, statically assigned MemReg ID)
   Instruction *I = e->getSrc()->getItem();
@@ -149,7 +157,7 @@ string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
   // cleanup metadata string to get the pure id
   unique_instruction_id_J.replace(0, 15, "");  // replaces "dp.md.instr.id:" with ""
 
-  string depType;
+  std::string depType;
   if (isa<AllocaInst>(J)) {
     depType = "INIT";
     return unique_instruction_id_I + " " + "NOM" + " " + depType + " *|" +
@@ -157,13 +165,13 @@ string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } if (DebugLoc dl = J->getDebugLoc()) {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    depType = (isa<LoadInst>(I) ? std::string("R") : std::string("W")) + "A" + (isa<LoadInst>(J) ? std::string("R") : std::string("W"));
     return unique_instruction_id_I + " " + "NOM" + " " + depType + " " + unique_instruction_id_J + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } else {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    depType = (isa<LoadInst>(I) ? std::string("R") : std::string("W")) + "A" + (isa<LoadInst>(J) ? std::string("R") : std::string("W"));
     return unique_instruction_id_I + " " + "NOM" + " " + depType + " " + unique_instruction_id_J + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
@@ -171,15 +179,15 @@ string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
   }
 }
 
-void InstructionDG::dumpToDot(const string targetPath) {
+void InstructionDG::dumpToDot(const std::string targetPath) {
   // Write the graph to a DOT file
-  ofstream dotStream;
+  std::ofstream dotStream;
   dotStream.open(targetPath);
 
   dotStream << "digraph g {\n";
   // Create all nodes in DOT format
   for (auto instNode : getInstructionNodes()) {
-    string label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
+    std::string label = "label=\"" + std::to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
     Instruction *instr = instNode->getItem();
     if (isa<StoreInst>(instr)) {
       if (DebugLoc dl = instr->getDebugLoc()) {
@@ -196,9 +204,9 @@ void InstructionDG::dumpToDot(const string targetPath) {
     label += ") ";
 
     if (DebugLoc dl = instr->getDebugLoc()) {
-      label += to_string(dl.getLine());
+      label += std::to_string(dl.getLine());
       label += ", ";
-      label += to_string(dl.getCol());
+      label += std::to_string(dl.getCol());
     } else if (isa<StoreInst>(instr)) {
       label += std::to_string(instr->getFunction()->getSubprogram()->getLine()) + "\n";
     }

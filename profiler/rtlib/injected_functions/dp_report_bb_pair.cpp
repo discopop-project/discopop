@@ -24,7 +24,6 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
@@ -37,11 +36,11 @@ extern "C" {
 // invocation. semaphore is the value __dp_bb_state returned when that source
 // basic block was executed most recently in this invocation, or 0 if it was not
 // executed yet, in which case no dependency exists.
-void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
+void __dp_report_bb_pair(std::int32_t semaphore, std::uint32_t bbIndex) {
   DP_CALLBACK_SCOPE(REPORT_BB_PAIR);
 
   if (semaphore) {
-    bbList->record(bbIndex, static_cast<uint32_t>(semaphore) - 1, current_callpath_state_id_for_bb_reports());
+    bbList->record(bbIndex, static_cast<std::uint32_t>(semaphore) - 1, current_callpath_state_id_for_bb_reports());
   }
 }
 
@@ -50,7 +49,7 @@ void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
 // function's semaphore for that block: the current callpath state id + 1, so
 // that 0 keeps meaning "not executed" (also before the profiler is initialized,
 // as no dependency is reported then either).
-uint32_t __dp_bb_state() {
+std::uint32_t __dp_bb_state() {
   // the semaphore half of the pair reports, so it belongs to REPORT_BB_PAIR in a benchmark build
   if (!callback_body_enabled(CallbackId::REPORT_BB_PAIR) || !profiling_active() || current_callpath_state == nullptr) {
     return 0;
@@ -58,7 +57,7 @@ uint32_t __dp_bb_state() {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
-  return static_cast<uint32_t>(current_callpath_state->get_id()) + 1;
+  return static_cast<std::uint32_t>(current_callpath_state->get_id()) + 1;
 }
 }
 

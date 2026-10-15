@@ -24,7 +24,6 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
@@ -35,14 +34,14 @@ extern "C" {
 // handed over under bbIndex have their sources in the same execution of that
 // basic block (or no source instruction at all, INIT). Both ends of these
 // dependencies therefore carry the current callpath state.
-void __dp_report_bb(uint32_t bbIndex) {
+void __dp_report_bb(std::uint32_t bbIndex) {
   DP_CALLBACK_SCOPE(REPORT_BB);
 
 #ifdef DP_RTLIB_VERBOSE
   std::cout << "bbIndex: " << std::to_string(bbIndex) << '\n';
 #endif
 
-  const uint32_t state = current_callpath_state_id_for_bb_reports();
+  const std::uint32_t state = current_callpath_state_id_for_bb_reports();
   bbList->record(bbIndex, state, state);
 }
 }

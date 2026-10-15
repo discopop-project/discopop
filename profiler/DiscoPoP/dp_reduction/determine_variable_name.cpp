@@ -12,11 +12,22 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::ConstantInt;
+using llvm::GetElementPtrInst;
+using llvm::GlobalVariable;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::MDNode;
+using llvm::PointerType;
+using llvm::StoreInst;
+using llvm::StructType;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
 
-string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, string> *trueVarNamesFromMetadataMap) {
+std::string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap) {
 
   assert(I && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(I) ? 1 : 0;
@@ -25,7 +36,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
   IRBuilder<> builder(I);
 
   if (operand == nullptr) {
-    string retVal = getOrInsertVarName_static("", builder);
+    std::string retVal = getOrInsertVarName_static("", builder);
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
     }       return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -35,7 +46,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
   if (operand->hasName()) {
     //// we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
-      string retVal = string(operand->getName());
+      std::string retVal = std::string(operand->getName());
       if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
         return retVal; // not found
       }         return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -53,20 +64,20 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
         Value *constValue = gep->getOperand(2);
         if (constValue && isa<ConstantInt>(*constValue)) {
           ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
-          uint64_t memberIdx = *(idxPtr->getValue().getRawData());
+          std::uint64_t memberIdx = *(idxPtr->getValue().getRawData());
           if (!(cast<StructType>(structType))->isLiteral()) {
-            string strName(structType->getStructName().data());
-            map<string, MDNode *>::iterator it = Structs.find(strName);
+            std::string strName(structType->getStructName().data());
+            std::map<std::string, MDNode *>::iterator it = Structs.find(strName);
             if (it != Structs.end()) {
               std::string ret = findStructMemberName_static(it->second, memberIdx, builder);
               if (ret.size() > 0) {
-                string retVal = ret;
+                std::string retVal = ret;
                 if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
                 }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
 
               } else {
-                string retVal = getOrInsertVarName_static("", builder);
+                std::string retVal = getOrInsertVarName_static("", builder);
                 if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
                 }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -85,7 +96,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       }
       return dp_reduction_determineVariableName(static_cast<Instruction *>(gep), trueVarNamesFromMetadataMap);
     }
-    string retVal = string(operand->getName().data());
+    std::string retVal = std::string(operand->getName().data());
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
     }       return (*trueVarNamesFromMetadataMap)[retVal]; // found

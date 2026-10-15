@@ -19,9 +19,17 @@
 #define DEBUG_TYPE "dpop"
 //#define DEBUG_TYPE "dp-omissions"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::DINamespace;
+using llvm::DINode;
+using llvm::DIType;
+using llvm::IntegerType;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::PointerType;
+using llvm::Type;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::errs;
 
 // Initializations
 void DiscoPoP::setupDataTypes() {
@@ -85,7 +93,7 @@ void DiscoPoP::setupCallbacks() {
 // DPReduction end
 
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
-void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode) {
+void DiscoPoP::processStructTypes(std::string const &fullStructName, MDNode *structNode) {
   assert(structNode && "structNode cannot be NULL");
   DIType *strDes = cast<DIType>(structNode);
   assert(strDes->getTag() == dwarf::DW_TAG_structure_type);
@@ -109,13 +117,13 @@ void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNo
       DIType *memberTypeDes = cast<DIType>(memberType);
       // DIType memberTypeDes(memberType);
       if (memberTypeDes->getTag() == dwarf::DW_TAG_structure_type) {
-        string fullName = "";
+        std::string fullName = "";
         // try to get namespace
         if (memberType->getNumOperands() > 2 && structNode->getOperand(2) != NULL) {
           MDNode *namespaceNode = cast<MDNode>(structNode->getOperand(2));
           DINamespace *dins = cast<DINamespace>(namespaceNode);
           // DINameSpace dins(namespaceNode);
-          fullName = "struct." + string(dins->getName().data()) + "::";
+          fullName = "struct." + std::string(dins->getName().data()) + "::";
         }
         // fullName += string(memberType->getOperand(3)->getName().data());
         fullName += (dyn_cast<MDString>(memberType->getOperand(3)))->getString();

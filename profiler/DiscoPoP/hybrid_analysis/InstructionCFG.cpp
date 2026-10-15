@@ -12,9 +12,16 @@
 
 #include "InstructionCFG.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::AllocaInst;
+using llvm::BasicBlock;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::ReturnInst;
+using llvm::StoreInst;
+using llvm::isa;
+using llvm::successors;
 
 InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : VNF(_VNF) {
   entry = Graph::addInstructionNode(reinterpret_cast<Instruction *>(ENTRY));
@@ -87,12 +94,12 @@ void InstructionCFG::highlightInstructionNode(Instruction *instr) { highlightedI
 
 void InstructionCFG::dumpToDot(const std::string targetPath) {
   // Write the graph to a DOT file
-  ofstream dotStream;
+  std::ofstream dotStream;
   dotStream.open(targetPath);
   dotStream << "digraph{";
   // Create all nodes in DOT format
   for (auto instNode : getInstructionNodes()) {
-    string label;
+    std::string label;
     DebugLoc dl;
     Instruction *instr;
     if (instNode == entry) {
@@ -103,7 +110,7 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
       label = "label=EXIT";
       goto printInstructionNode;
     }
-    label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
+    label = "label=\"" + std::to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
     instr = instNode->getItem();
     dl = instr->getDebugLoc();
     if (isa<StoreInst>(instr) || isa<LoadInst>(instr)) {
@@ -120,11 +127,11 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
       label += ") ";
 
       if (dl) {
-        label += to_string(dl.getLine());
+        label += std::to_string(dl.getLine());
         label += ", ";
-        label += to_string(dl.getCol());
+        label += std::to_string(dl.getCol());
       } else {
-        label += to_string(instr->getFunction()->getSubprogram()->getLine());
+        label += std::to_string(instr->getFunction()->getSubprogram()->getLine());
       }
       label += "\"";
       if (highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()) {

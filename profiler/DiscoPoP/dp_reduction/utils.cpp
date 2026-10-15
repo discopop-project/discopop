@@ -12,9 +12,22 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::PointerType;
+using llvm::StringRef;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::isa;
 
 // finds the previous use of 'val'
 llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
@@ -72,7 +85,7 @@ Type *dp_reduction::pointsToStruct(PointerType *PTy) {
   return structType->getTypeID() == Type::StructTyID ? structType : nullptr;
 }
 
-string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {
+std::string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {
   assert(structNode);
   assert(structNode->getOperand(10));
   MDNode *memberListNodes = cast<MDNode>(structNode->getOperand(10));
@@ -99,8 +112,8 @@ llvm::Value *dp_reduction::points_to_var(llvm::GetElementPtrInst *instr) {
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-LID dp_reduction::getLID(Instruction *BI, int32_t & /*fileID*/) {
-  int32_t lno;
+LID dp_reduction::getLID(Instruction *BI, std::int32_t & /*fileID*/) {
+  std::int32_t lno;
 
   const DebugLoc &location = BI->getDebugLoc();
   if (location) {

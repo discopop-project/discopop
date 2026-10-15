@@ -28,30 +28,28 @@
 #include <unistd.h>
 #include <vector>
 
-using namespace std;
-using namespace dputil;
 
 namespace __dp {
 
 void readRuntimeInfo() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter readRuntimeInfo\n";
+  std::cout << "enter readRuntimeInfo\n";
 #endif
 
-  ifstream conf(get_exe_dir() + "/dp.conf");
-  string line;
+  std::ifstream conf(dputil::get_exe_dir() + "/dp.conf");
+  std::string line;
   if (conf.is_open()) {
     auto func = [](char c) { return (c == ' '); };
-    vector<string> *substrings = nullptr;
-    while (getline(conf, line)) {
-      substrings = split(line, '=');
+    std::vector<std::string> *substrings = nullptr;
+    while (std::getline(conf, line)) {
+      substrings = dputil::split(line, '=');
       if (substrings->size() == 2) {
-        string variable = (*substrings)[0];
-        string value = (*substrings)[1];
+        std::string variable = (*substrings)[0];
+        std::string value = (*substrings)[1];
         variable.erase(std::remove_if(variable.begin(), variable.end(), func), variable.end());
         value.erase(std::remove_if(value.begin(), value.end(), func), value.end());
 
-        int32_t intValue = atoi(value.c_str());
+        std::int32_t intValue = std::atoi(value.c_str());
         if (intValue > 0) {
           if (variable.compare("DP_DEBUG") == 0) {
             DP_DEBUG = true;
@@ -77,17 +75,17 @@ void readRuntimeInfo() {
     }
   }
   if (DP_DEBUG) {
-    cout << "sig_elem_bit = " << SIG_ELEM_BIT << "\n";
-    cout << "sig_num_elem = " << SIG_NUM_ELEM << "\n";
-    cout << "sig_num_hash = " << SIG_NUM_HASH << "\n";
-    cout << "num_workers  = " << NUM_WORKERS << "\n";
-    cout << "faq_chunks_per_worker   = " << FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER << "\n";
-    cout << "saq_elements_per_worker = " << SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER << "\n";
+    std::cout << "sig_elem_bit = " << SIG_ELEM_BIT << "\n";
+    std::cout << "sig_num_elem = " << SIG_NUM_ELEM << "\n";
+    std::cout << "sig_num_hash = " << SIG_NUM_HASH << "\n";
+    std::cout << "num_workers  = " << NUM_WORKERS << "\n";
+    std::cout << "faq_chunks_per_worker   = " << FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER << "\n";
+    std::cout << "saq_elements_per_worker = " << SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER << "\n";
     sleep(2);
   }
 
 #ifdef DP_RTLIB_VERBOSE
-  cout << "exit readRuntimeInfo\n";
+  std::cout << "exit readRuntimeInfo\n";
 #endif
 }
 
@@ -103,7 +101,7 @@ void initParallelization() {
   workers = new pthread_t[NUM_WORKERS];
 
   // Initialize count of accesses
-  numAccesses = new uint64_t[NUM_WORKERS]();
+  numAccesses = new std::uint64_t[NUM_WORKERS]();
 
   // bound the memory held by the access queues
   firstAccessQueue.set_max_size(static_cast<std::size_t>(FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER) * NUM_WORKERS);
@@ -116,7 +114,7 @@ void initParallelization() {
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   // create worker threads to process the firstAccessQueue
-  for (int64_t i = 0; i < NUM_WORKERS; ++i) {
+  for (std::int64_t i = 0; i < NUM_WORKERS; ++i) {
     pthread_create(&workers[i], &attr, processFirstAccessQueue, reinterpret_cast<void *>(i));
   }
 
@@ -172,7 +170,7 @@ void finalizeParallelization() {
 #endif
 
   if (DP_DEBUG) {
-    cout << "BEGIN: finalize parallelization... \n";
+    std::cout << "BEGIN: finalize parallelization... \n";
   }
 
   // push last state of the mainThread_AccessInfoBuffer to the global FirstAccessQueue
@@ -196,7 +194,7 @@ void finalizeParallelization() {
   numAccesses = nullptr;
 
   if (DP_DEBUG) {
-    cout << "END: finalize parallelization... \n";
+    std::cout << "END: finalize parallelization... \n";
   }
 }
 

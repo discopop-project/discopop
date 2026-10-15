@@ -13,13 +13,15 @@
 #include "DiscoPoP.hpp"
 #include <thread>
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::Function;
+using llvm::Instruction;
+using llvm::Loop;
+using llvm::Module;
+using llvm::ModuleAnalysisManager;
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
-  cout << "MODULE " << M.getName().str() << "\n";
+  std::cout << "MODULE " << M.getName().str() << "\n";
 
   doInitialization(M);
 
@@ -57,21 +59,21 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   instrument_landing_pads(M);
   // prepare information for call state transitioning and instruction mapping during dynamic analysis.
   // -> build static calltree for state transition and instruction mapping preparation
-  cout << "Building static calltree..\n";
+  std::cout << "Building static calltree..\n";
   StaticCalltree static_calltree = static_callpaths::buildStaticCalltree(M, loop_id_to_identity);
-  cout << "Done building static calltree..\n";
+  std::cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
-  cout << "Enumerating paths..\n";
-  auto start = chrono::high_resolution_clock::now();
-  std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> state_transitions;
-  std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> inverse_state_transitions;
+  std::cout << "Enumerating paths..\n";
+  auto start = std::chrono::high_resolution_clock::now();
+  std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> state_transitions;
+  std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> inverse_state_transitions;
   [[maybe_unused]] auto state_transitions_ptr = &state_transitions;
   [[maybe_unused]] auto inverset_state_transitions_ptr = &inverse_state_transitions;
   auto static_calltree_ptr = &static_calltree;
   auto call_path_tree_ptr = static_callpaths::enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
-  auto end = chrono::high_resolution_clock::now();
+  auto end = std::chrono::high_resolution_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-  cout << "Done enumerating paths.. took: " << (time/1000.0) << "s" << std::endl;
+  std::cout << "Done enumerating paths.. took: " << (time/1000.0) << "s" << std::endl;
 
   // DEBUG
   //std::cout << "CallPathTree: " << std::endl;
@@ -81,10 +83,10 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
 
   // add fucntion exit edges to state_transitions
-  cout << "START AFEETT..\n";
+  std::cout << "START AFEETT..\n";
   //add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   static_callpaths::add_function_exit_edges_to_transitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
-  cout << "Done AFEETT..\n";
+  std::cout << "Done AFEETT..\n";
 
 
   // save the generated paths and transitions to disk

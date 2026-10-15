@@ -12,13 +12,10 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
 
-void DiscoPoP::insertDpFinalize(Instruction *before) {
-  LID lid = getLID(before, fileID);
+void DiscoPoP::insertDpFinalize(llvm::Instruction *before) {
+  LID lid = dputil::getLID(before, fileID);
   assert((lid > 0) && "Returning on an invalid LID.");
-  IRBuilder<> IRB(before);
+  llvm::IRBuilder<> IRB(before);
   IRB.CreateCall(DpFinalize, lidConstant(lid));
 }

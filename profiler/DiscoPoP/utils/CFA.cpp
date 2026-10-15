@@ -12,13 +12,20 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::Instruction;
+using llvm::Loop;
+using llvm::LoopInfo;
+using llvm::SmallVector;
+using llvm::SmallVectorImpl;
+using llvm::StringRef;
+using llvm::errs;
 
 // Control-flow analysis functions
 
-void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToPETNodeID) {
+void DiscoPoP::CFA(Function &F, LoopInfo &LI, const std::map<Loop *, std::string> &loopToPETNodeID) {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB) {
     BasicBlock *tmpBB = &*BB;
@@ -59,7 +66,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToP
       }
       for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
         StringRef exitType = (*EI)->getName().split('.').first;
-        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != string::npos) &&
+        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != std::string::npos) &&
             (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
           RealExitBlocks.push_back(*EI);
           if (DP_DEBUG) {
@@ -73,7 +80,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToP
           for (unsigned int i = 0; i < numSucc; ++i) {
             BasicBlock *succ = TI->getSuccessor(i);
             exitType = succ->getName().split('.').first;
-            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != string::npos) &&
+            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != std::string::npos) &&
                 (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
               RealExitBlocks.push_back(succ);
               if (DP_DEBUG) {
@@ -115,7 +122,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToP
         identity.pet_node_id = pet_node != loopToPETNodeID.end() ? pet_node->second : "-";
         DebugLoc start_loc = L->getStartLoc();
         identity.start_location =
-            start_loc ? dputil::decodeLID(dputil::encodeLID(fileID, start_loc.getLine())) : to_string(fileID) + ":0";
+            start_loc ? dputil::decodeLID(dputil::encodeLID(fileID, start_loc.getLine())) : std::to_string(fileID) + ":0";
         loop_id_to_identity[tmp_loop_id] = identity;
         // Instrument loop header block.
         instrumentLoopEntry(tmpBB, tmp_loop_id);

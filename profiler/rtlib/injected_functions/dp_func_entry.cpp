@@ -25,14 +25,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID) {
+void __dp_func_entry(LID lid, std::int32_t isStart, std::int32_t functionEntryID) {
   DP_CALLBACK_SCOPE(FUNC_ENTRY);
 
   // The runtime is up before the first callback: it is brought up from .init_array, see
@@ -44,7 +43,7 @@ void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID) {
 
 
   if (isStart) {
-    *out << "START " << dputil::decodeLID(lid) << endl;
+    *out << "START " << dputil::decodeLID(lid) << std::endl;
 }
 
   // Reset last call tracker
