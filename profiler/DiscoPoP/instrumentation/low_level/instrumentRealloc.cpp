@@ -10,28 +10,29 @@
  *
  */
 
+#include <vector>
+
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
-#include <vector>
 
 using llvm::CallBase;
 using llvm::CallInst;
-using llvm::IRBuilder;
+using llvm::cast;
 using llvm::Instruction;
 using llvm::InvokeInst;
-using llvm::Value;
-using llvm::cast;
+using llvm::IRBuilder;
 using llvm::isa;
+using llvm::Value;
 
-void DiscoPoP::InstrumentRealloc(CallBase *to_instrument) {
+void DiscoPoP::InstrumentRealloc(CallBase* to_instrument) {
   // add instrumentation for calls to realloc
   LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
-}
+  }
 
   // Determine correct placement for the call to __dp_new
-  Instruction *next_inst = nullptr;
+  Instruction* next_inst = nullptr;
   if (isa<CallInst>(to_instrument)) {
     next_inst = llvmcompat::NextInstruction(to_instrument);
   } else if (isa<InvokeInst>(to_instrument)) {
@@ -45,11 +46,11 @@ void DiscoPoP::InstrumentRealloc(CallBase *to_instrument) {
   }
 
   IRBuilder<> irb(next_inst);
-  std::vector<Value *> args;
+  std::vector<Value*> args;
 
   // deallocate the block that was handed in
   args.push_back(LidConstant(lid));
-  Value *old_addr = irb.CreatePtrToInt(to_instrument->getArgOperand(0), int64_);
+  Value* old_addr = irb.CreatePtrToInt(to_instrument->getArgOperand(0), int64_);
   args.push_back(old_addr);
   irb.CreateCall(dp_delete_, args, "");
   args.clear();
@@ -58,11 +59,11 @@ void DiscoPoP::InstrumentRealloc(CallBase *to_instrument) {
   // pointer is the only one that describes it; registering the old address instead leaves the
   // runtime tracking a range the program no longer uses.
   args.push_back(LidConstant(lid));
-  Value *start_addr = irb.CreatePtrToInt(to_instrument, int64_);
-  Value *end_addr = start_addr;
-  Value *num_bytes = to_instrument->getArgOperand(1);
+  Value* start_addr = irb.CreatePtrToInt(to_instrument, int64_);
+  Value* end_addr = start_addr;
+  Value* num_bytes = to_instrument->getArgOperand(1);
   args.push_back(start_addr);
-  args.push_back(end_addr); // currently unused
+  args.push_back(end_addr);  // currently unused
   args.push_back(num_bytes);
 
   irb.CreateCall(dp_new_, args, "");

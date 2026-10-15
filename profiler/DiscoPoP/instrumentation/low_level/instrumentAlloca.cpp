@@ -10,48 +10,49 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <vector>
+
+#include "DiscoPoP.hpp"
 
 using llvm::AllocaInst;
 using llvm::ArrayType;
+using llvm::cast;
 using llvm::ConstantInt;
 using llvm::IRBuilder;
 using llvm::Type;
 using llvm::Value;
-using llvm::cast;
 
 // Instrumentation function inserters.
-void DiscoPoP::InstrumentAlloca(AllocaInst *to_instrument) {
+void DiscoPoP::InstrumentAlloca(AllocaInst* to_instrument) {
   LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
-}
+  }
 
   // NOTE: manual memory management using malloc etc. not covered yet!
 
   IRBuilder<> irb(to_instrument->getNextNode());
 
-  std::vector<Value *> args;
+  std::vector<Value*> args;
   args.push_back(LidConstant(lid));
   args.push_back(DetermineVariableNameDynamic(to_instrument, ""));
 
   // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "",
   // toInstrument->getNextNonDebugInstruction());
-  Value *start_addr = irb.CreatePtrToInt(to_instrument, int64_, "");
+  Value* start_addr = irb.CreatePtrToInt(to_instrument, int64_, "");
   args.push_back(start_addr);
 
-  Value *end_addr = start_addr;
+  Value* end_addr = start_addr;
   std::uint64_t element_size_in_bytes = to_instrument->getAllocatedType()->getScalarSizeInBits() / 8;
-  Value *num_elements = to_instrument->getOperand(0);
+  Value* num_elements = to_instrument->getOperand(0);
   if (to_instrument->isArrayAllocation()) {
     // endAddr = startAddr + allocated size
     end_addr = irb.CreateAdd(start_addr, irb.CreateIntCast(num_elements, int64_, true));
   } else if (to_instrument->getAllocatedType()->isArrayTy()) {
     // unpack potentially multidimensional allocations
 
-    Type *type_to_parse = to_instrument->getAllocatedType();
-    Type *element_type;
+    Type* type_to_parse = to_instrument->getAllocatedType();
+    Type* element_type;
 
     std::uint64_t tmp_num_elements = 1;
 

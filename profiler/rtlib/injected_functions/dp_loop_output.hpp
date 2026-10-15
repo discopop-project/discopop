@@ -20,4 +20,4 @@ extern "C" {
 void __dp_loop_output();
 }
 
-} // namespace dp
+}  // namespace dp

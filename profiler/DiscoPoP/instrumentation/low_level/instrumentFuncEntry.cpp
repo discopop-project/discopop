@@ -10,38 +10,39 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <vector>
+
+#include "DiscoPoP.hpp"
 
 using llvm::ArrayType;
 using llvm::BasicBlock;
+using llvm::cast;
 using llvm::ConstantInt;
+using llvm::errs;
 using llvm::Function;
 using llvm::GlobalVariable;
-using llvm::IRBuilder;
 using llvm::Instruction;
+using llvm::IRBuilder;
+using llvm::isa;
 using llvm::PHINode;
 using llvm::StringRef;
 using llvm::Type;
 using llvm::Value;
-using llvm::cast;
-using llvm::errs;
-using llvm::isa;
 
-void DiscoPoP::InstrumentFuncEntry(Function &f) {
-  BasicBlock &entry_bb = f.getEntryBlock();
+void DiscoPoP::InstrumentFuncEntry(Function& f) {
+  BasicBlock& entry_bb = f.getEntryBlock();
   LID lid = 0;
   std::int32_t is_start = 0;
 
   StringRef fn = f.getName();
-  if (fn.str() == "main"){
+  if (fn.str() == "main") {
     is_start = 1;
     // insert 'allocations' of global variables
-    Instruction *insert_before = &*entry_bb.begin();
+    Instruction* insert_before = &*entry_bb.begin();
 
     auto tmp_end = f.getParent()->global_end();
-    tmp_end--; // necessary, since the list of Globals is modified when e.g. new
-               // strings are created.
+    tmp_end--;  // necessary, since the list of Globals is modified when e.g. new
+                // strings are created.
     for (auto global_it = f.getParent()->global_begin(); global_it != tmp_end; global_it++) {
       // ignore globals which make use of "Appending Linkage", since they are
       // system internal and do not behave like regular values. An example for
@@ -52,22 +53,22 @@ void DiscoPoP::InstrumentFuncEntry(Function &f) {
 
       IRBuilder<> irb(insert_before->getNextNode());
 
-      std::vector<Value *> args;
+      std::vector<Value*> args;
       args.push_back(LidConstant(lid));
       args.push_back(GetOrInsertVarNameDynamic(global_it->getName().str(), irb));
 
       // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64,
       // "", toInstrument->getNextNonDebugInstruction());
-      Value *start_addr = irb.CreatePtrToInt(cast<Value>(&*global_it), int64_, "");
+      Value* start_addr = irb.CreatePtrToInt(cast<Value>(&*global_it), int64_, "");
       args.push_back(start_addr);
 
-      Value *end_addr = start_addr;
+      Value* end_addr = start_addr;
       std::uint64_t num_elements = 1;
       std::uint64_t allocated_size = global_it->getValueType()->getScalarSizeInBits();
       if (global_it->getValueType()->isArrayTy()) {
         // unpack potentially multidimensional allocations
-        Type *type_to_parse = global_it->getValueType();
-        Type *element_type;
+        Type* type_to_parse = global_it->getValueType();
+        Type* element_type;
 
         // unpack multidimensional allocations
         while (type_to_parse->isArrayTy()) {
@@ -105,13 +106,15 @@ void DiscoPoP::InstrumentFuncEntry(Function &f) {
       IRBuilder<> irb(&*entry_bb.begin());
       // the third argument (function entry id) is set to the call's own instruction id in
       // update_argument_instruction_ids
-      irb.CreateCall(dp_func_entry_, {LidConstant(lid), ConstantInt::get(int32_, is_start), ConstantInt::get(int32_, 0)});
+      irb.CreateCall(dp_func_entry_,
+                     {LidConstant(lid), ConstantInt::get(int32_, is_start), ConstantInt::get(int32_, 0)});
       if (kDpDebug) {
         errs() << "DiscoPoP: funcEntry instrumented\n";
       }
       break;
     }
   }
-  assert((lid > 0) && "Function entry is not instrumented because LID are all "
-                      "invalid for the entry block.");
+  assert((lid > 0) &&
+         "Function entry is not instrumented because LID are all "
+         "invalid for the entry block.");
 }

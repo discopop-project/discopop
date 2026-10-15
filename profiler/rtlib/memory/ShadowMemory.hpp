@@ -12,20 +12,19 @@
 
 #pragma once
 
-#include "AbstractShadow.hpp"
-#include "Signature.hpp"
-
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
+#include "AbstractShadow.hpp"
+#include "Signature.hpp"
 
 namespace dp {
 
 class ShadowMemory : public AbstractShadow {
-public:
+ public:
   ShadowMemory(int slot_size, int size, int num_hash) {
     sig_read_ = new Signature(slot_size, size, num_hash);
     sig_write_ = new Signature(slot_size, size, num_hash);
@@ -48,9 +47,13 @@ public:
     return sig_write_->Insert(mem_addr, value);
   }
 
-  inline void UpdateInRead(std::int64_t mem_addr, SigElement new_value) override { sig_read_->Update(mem_addr, new_value); }
+  inline void UpdateInRead(std::int64_t mem_addr, SigElement new_value) override {
+    sig_read_->Update(mem_addr, new_value);
+  }
 
-  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override { sig_write_->Update(mem_addr, new_value); }
+  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override {
+    sig_write_->Update(mem_addr, new_value);
+  }
 
   inline void RemoveFromRead(std::int64_t mem_addr) override { sig_read_->Remove(mem_addr); }
 
@@ -73,9 +76,9 @@ public:
 
   inline void Print() override {}
 
-private:
-  Signature *sig_read_;
-  Signature *sig_write_;
+ private:
+  Signature* sig_read_;
+  Signature* sig_write_;
 };
 
-} // namespace dp
+}  // namespace dp

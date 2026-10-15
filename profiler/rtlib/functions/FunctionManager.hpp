@@ -12,9 +12,6 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-#include "lid_utils.hpp"
-
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -22,6 +19,9 @@
 #include <set>
 #include <unordered_map>
 #include <utility>
+
+#include "DPTypes.hpp"
+#include "lid_utils.hpp"
 
 namespace dp {
 
@@ -33,7 +33,7 @@ namespace dp {
 using CallSite = std::pair<LID, std::int32_t>;
 
 struct CallSiteHash {
-  std::size_t operator()(const CallSite &site) const noexcept {
+  std::size_t operator()(const CallSite& site) const noexcept {
     return std::hash<LID>()(site.first) ^ (std::hash<std::int32_t>()(site.second) << 1);
   }
 };
@@ -45,7 +45,7 @@ using BGNFuncList = std::unordered_map<CallSite, std::set<LID>, CallSiteHash>;
 using ENDFuncList = std::set<LID>;
 
 class FunctionManager {
-public:
+ public:
   FunctionManager() {}
 
   ~FunctionManager() {}
@@ -88,10 +88,10 @@ public:
     begin_funcs_[CallSite{last_call_or_invoke_, last_call_instruction_}].insert(current_lid);
   }
 
-  void OutputFunctions(std::ostream &stream) const {
+  void OutputFunctions(std::ostream& stream) const {
     // "<call site> BGN func <entry> [<call instruction id>]": the instruction id is omitted when
     // no call was logged, e.g. for a function called back from code without instrumentation
-    for (const auto &func_begin : begin_funcs_) {
+    for (const auto& func_begin : begin_funcs_) {
       for (auto fb : func_begin.second) {
         stream << dputil::DecodeLid(func_begin.first.first) << " BGN func ";
         stream << dputil::DecodeLid(fb);
@@ -107,9 +107,9 @@ public:
     }
   }
 
-private:
-  BGNFuncList begin_funcs_; // function entries
-  ENDFuncList end_funcs_;   // function returns
+ private:
+  BGNFuncList begin_funcs_;  // function entries
+  ENDFuncList end_funcs_;    // function returns
 
   LID last_call_or_invoke_ = 0;
   std::int32_t last_call_instruction_ = 0;
@@ -117,4 +117,4 @@ private:
   std::int32_t func_stack_level_ = 0;
 };
 
-} // namespace dp
+}  // namespace dp

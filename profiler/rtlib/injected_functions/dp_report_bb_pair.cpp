@@ -11,13 +11,6 @@
  */
 
 #include "dp_report_bb_pair.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-#include "hybrid_analysis/bb_deps.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -25,6 +18,11 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace dp {
 
@@ -62,4 +60,4 @@ std::uint32_t __dp_bb_state() {
 }
 }
 
-} // namespace dp
+}  // namespace dp

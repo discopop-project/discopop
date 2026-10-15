@@ -12,17 +12,16 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-
 #include <cassert>
 #include <cstdint>
-
 #include <iostream>
+
+#include "DPTypes.hpp"
 
 namespace dp {
 
 class Signature {
-public:
+ public:
   Signature(std::int32_t slot_size, std::int32_t size, std::int32_t num_of_hash = 1)
       : sig_slot_size_(slot_size), num_slot_(size), num_hash_(num_of_hash) {
     // Seven bytes is as wide as a slot can get: insert() and membershipCheck() assemble the value
@@ -52,17 +51,17 @@ public:
 
   SigElement MembershipCheck(std::int64_t elem);
 
-  bool Intersect(Signature &other);
+  bool Intersect(Signature& other);
 
   double ExpectedFalsePositiveRate();
 
-private:
-  std::int32_t sig_slot_size_; // in bits
+ private:
+  std::int32_t sig_slot_size_;  // in bits
   std::int32_t num_slot_;
-  [[maybe_unused]] std::int32_t num_hash_; // 1 by default
-  std::int32_t sig_slot_size_in_byte_; // slot size in byte
-  std::int32_t sig_size_in_byte_;     // total size in byte
-  std::uint8_t *sigarray_;
+  [[maybe_unused]] std::int32_t num_hash_;  // 1 by default
+  std::int32_t sig_slot_size_in_byte_;      // slot size in byte
+  std::int32_t sig_size_in_byte_;           // total size in byte
+  std::uint8_t* sigarray_;
 
   std::int32_t inserted_elem_;
   std::int32_t conflict_elem_;
@@ -70,4 +69,4 @@ private:
   std::uint32_t Hash(std::int64_t value) { return static_cast<std::uint32_t>((value >> 8) + value) % num_slot_; }
 };
 
-} // namespace dp
+}  // namespace dp

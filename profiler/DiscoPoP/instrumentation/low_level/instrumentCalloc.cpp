@@ -10,29 +10,30 @@
  *
  */
 
+#include <vector>
+
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
-#include <vector>
 
 using llvm::CallBase;
 using llvm::CallInst;
-using llvm::IRBuilder;
+using llvm::cast;
 using llvm::Instruction;
 using llvm::InvokeInst;
+using llvm::IRBuilder;
+using llvm::isa;
 using llvm::PtrToIntInst;
 using llvm::Value;
-using llvm::cast;
-using llvm::isa;
 
-void DiscoPoP::InstrumentCalloc(CallBase *to_instrument) {
+void DiscoPoP::InstrumentCalloc(CallBase* to_instrument) {
   // add instrumentation for calls to calloc
   LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
-}
+  }
 
   // Determine correct placement for the call to __dp_new
-  Instruction *next_inst = nullptr;
+  Instruction* next_inst = nullptr;
   if (isa<CallInst>(to_instrument)) {
     next_inst = llvmcompat::NextInstruction(to_instrument);
   } else if (isa<InvokeInst>(to_instrument)) {
@@ -47,15 +48,15 @@ void DiscoPoP::InstrumentCalloc(CallBase *to_instrument) {
 
   IRBuilder<> irb(next_inst);
 
-  std::vector<Value *> args;
+  std::vector<Value*> args;
   args.push_back(LidConstant(lid));
 
-  Value *start_addr = PtrToIntInst::CreatePointerCast(to_instrument, int64_, "", next_inst->getIterator());
-  Value *end_addr = start_addr;
-  Value *num_bytes = irb.CreateMul(to_instrument->getArgOperand(0), to_instrument->getArgOperand(1));
+  Value* start_addr = PtrToIntInst::CreatePointerCast(to_instrument, int64_, "", next_inst->getIterator());
+  Value* end_addr = start_addr;
+  Value* num_bytes = irb.CreateMul(to_instrument->getArgOperand(0), to_instrument->getArgOperand(1));
 
   args.push_back(start_addr);
-  args.push_back(end_addr); // currently unused
+  args.push_back(end_addr);  // currently unused
   args.push_back(num_bytes);
 
   irb.CreateCall(dp_new_, args, "");

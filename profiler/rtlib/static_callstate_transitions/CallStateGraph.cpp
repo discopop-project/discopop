@@ -12,14 +12,14 @@
 
 #include "CallStateGraph.hpp"
 
-#include "output_paths.hpp"
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+
+#include "output_paths.hpp"
 
 namespace {
 
@@ -28,17 +28,17 @@ namespace {
 // ios_base::app, so a truncated or left over line is exactly what it looks like. It must not throw:
 // this constructor runs from __dp_init, where an escaping exception takes the instrumented program
 // down before it has started.
-bool ParseId(const std::string &text, std::int32_t &result) {
+bool ParseId(const std::string& text, std::int32_t& result) {
   try {
     std::size_t consumed = 0;
     result = std::stoi(text, &consumed);
     return consumed > 0;
-  } catch (const std::logic_error &) {
+  } catch (const std::logic_error&) {
     return false;
   }
 }
 
-} // namespace
+}  // namespace
 
 CallStateGraph::CallStateGraph() {
 #ifdef DP_RTLIB_VERBOSE
@@ -126,7 +126,7 @@ CallStateGraph::CallStateGraph() {
 //   S <state_id> <function_entry_instruction_id>   the state is the entry state of a function instance
 //   E <function_entry_instruction_id> <state_id>   the root entry state of the function
 // Without it, functions are entered only through call transitions of their own translation unit.
-void CallStateGraph::ReadFunctionEntries(const std::string &path) {
+void CallStateGraph::ReadFunctionEntries(const std::string& path) {
   std::ifstream file(path);
   if (!file) {
     std::cerr << "DiscoPoP: could not open " << path << ". Reported call states will be incorrect!\n";
@@ -157,12 +157,12 @@ void CallStateGraph::RegisterStateFunction(std::int32_t call_state_id, std::int3
 }
 
 void CallStateGraph::RegisterFunctionEntryState(std::int32_t function_entry_id, std::int32_t call_state_id) {
-  CallState *state = GetOrRegisterNode(call_state_id);
+  CallState* state = GetOrRegisterNode(call_state_id);
   state->SetFunctionEntryId(function_entry_id);
   function_entry_states_[function_entry_id] = state;
 }
 
-CallState *CallStateGraph::GetFunctionEntryState(std::int32_t function_entry_id) {
+CallState* CallStateGraph::GetFunctionEntryState(std::int32_t function_entry_id) {
   auto pos = function_entry_states_.find(function_entry_id);
   if (pos == function_entry_states_.end()) {
     return nullptr;
@@ -185,9 +185,9 @@ CallStateGraph::~CallStateGraph() {
 #endif
 }
 
-CallState *CallStateGraph::GetOrRegisterNode(std::int32_t call_state_id) {
+CallState* CallStateGraph::GetOrRegisterNode(std::int32_t call_state_id) {
   if (node_map_.find(call_state_id) == node_map_.end()) {
-    CallState *node = new CallState(call_state_id);
+    CallState* node = new CallState(call_state_id);
     node_map_[call_state_id] = node;
     return node;
   }
@@ -195,15 +195,15 @@ CallState *CallStateGraph::GetOrRegisterNode(std::int32_t call_state_id) {
 }
 
 void CallStateGraph::RegisterTransition(std::int32_t source_call_state_id, std::int32_t trigger_instruction,
-                                         std::int32_t target_call_state_id) {
-  CallState *source = GetOrRegisterNode(source_call_state_id);
-  CallState *target = GetOrRegisterNode(target_call_state_id);
+                                        std::int32_t target_call_state_id) {
+  CallState* source = GetOrRegisterNode(source_call_state_id);
+  CallState* target = GetOrRegisterNode(target_call_state_id);
   source->RegisterTransition(trigger_instruction, target);
 }
 
 void CallStateGraph::RegisterImplicitReturnTransition(std::int32_t source_call_state_id,
-                                                         std::int32_t target_call_state_id) {
-  CallState *source = GetOrRegisterNode(source_call_state_id);
-  CallState *target = GetOrRegisterNode(target_call_state_id);
+                                                      std::int32_t target_call_state_id) {
+  CallState* source = GetOrRegisterNode(source_call_state_id);
+  CallState* target = GetOrRegisterNode(target_call_state_id);
   source->RegisterImplicitReturnTransition(target);
 }

@@ -11,13 +11,6 @@
  */
 
 #include "dp_loop_entry.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-
-#include "static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -25,6 +18,10 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
 
@@ -39,7 +36,6 @@ void __dp_loop_entry(LID lid, std::int32_t loop_id, std::int32_t instruction_id)
 
   if (is_new_loop) {
     loop_manager->CreateNewLoop(function_stack_level, loop_id, lid);
-
 
   } else {
     // The same loop iterates again
@@ -58,11 +54,10 @@ void __dp_loop_entry(LID lid, std::int32_t loop_id, std::int32_t instruction_id)
     // and update top().funcLevel.
 
     loop_manager->CorrectFuncLevel(function_stack_level);
-
   }
 
   UpdateCallstate(instruction_id);
 }
 }
 
-} // namespace dp
+}  // namespace dp

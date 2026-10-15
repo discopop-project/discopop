@@ -10,20 +10,25 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <string>
+
+#include "DiscoPoP.hpp"
 
 using llvm::AllocaInst;
 using llvm::BasicBlock;
 using llvm::CallBase;
 using llvm::CallInst;
+using llvm::cast;
 using llvm::ConstantInt;
-using llvm::DINode;
 using llvm::DbgDeclareInst;
 using llvm::DebugLoc;
+using llvm::DINode;
+using llvm::dyn_cast;
+using llvm::errs;
 using llvm::Function;
-using llvm::IRBuilder;
 using llvm::InvokeInst;
+using llvm::IRBuilder;
+using llvm::isa;
 using llvm::LLVMContext;
 using llvm::LoadInst;
 using llvm::MDNode;
@@ -33,10 +38,6 @@ using llvm::ReturnInst;
 using llvm::StoreInst;
 using llvm::StringRef;
 using llvm::Type;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::errs;
-using llvm::isa;
 
 /* metadata format in LLVM IR:
 !5 = metadata !{
@@ -87,15 +88,15 @@ static bool IsDeallocationFunction(StringRef fn) {
 }
 
 // TODO: atomic variables
-void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
+void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
   for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
     // assign unique instruction ids
     LLVMContext& ctx = bi->getContext();
     std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id_++;
-    MDNode* n = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
+    MDNode* n = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:" + std::to_string(llvm_ir_instruction_id)));
     bi->setMetadata("dp.md.instr.id", n);
     // fill instructionID to lineID mapping file
-    const DebugLoc &location = bi->getDebugLoc();
+    const DebugLoc& location = bi->getDebugLoc();
     std::uint32_t lno = 0;
     std::uint32_t colno = 0;
     if (location) {
@@ -104,13 +105,14 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
     } else if (isa<AllocaInst>(bi) || isa<StoreInst>(bi)) {
       lno = bi->getFunction()->getSubprogram()->getLine();
     }
-    if(lno != 0){
-      instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << std::to_string(file_id) << ":" << std::to_string(lno) << ":" << std::to_string(colno) << "\n";
-    } else{
+    if (lno != 0) {
+      instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << std::to_string(file_id) << ":"
+                                     << std::to_string(lno) << ":" << std::to_string(colno) << "\n";
+    } else {
       instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
     }
 
-    if ([[maybe_unused]] DbgDeclareInst *di = dyn_cast<DbgDeclareInst>(bi)) {
+    if ([[maybe_unused]] DbgDeclareInst* di = dyn_cast<DbgDeclareInst>(bi)) {
       assert(DI->getOperand(0));
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
@@ -170,7 +172,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
     }
     // alloca instruction
     else if (isa<AllocaInst>(bi)) {
-      AllocaInst *ai = cast<AllocaInst>(bi);
+      AllocaInst* ai = cast<AllocaInst>(bi);
 
       // if the option is set, check if the AllocaInst is static at the entry
       // block of a function and skip it's instrumentation. This leads to a
@@ -201,7 +203,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
     // call and invoke
     else if (IsaCallOrInvoke(&*bi)) {
       // resolves aliases, e.g. calls of constructors (see getCalledFunctionThroughAliases)
-      Function *f = GetCalledFunctionThroughAliases(&*bi);
+      Function* f = GetCalledFunctionThroughAliases(&*bi);
 
       // For ordinary function calls, F has a name.
       // However, sometimes the function being called
@@ -211,11 +213,11 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
       StringRef fn = "";
       if (f) {
         fn = f->getName();
-        if (fn.find("__dp_") != std::string::npos) // avoid instrumentation calls
+        if (fn.find("__dp_") != std::string::npos)  // avoid instrumentation calls
         {
           continue;
         }
-        if (fn.find("__clang_") != std::string::npos) // clang helper calls
+        if (fn.find("__clang_") != std::string::npos)  // clang helper calls
         {
           continue;
         }
@@ -226,7 +228,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
           irb_ret.CreateCall(dp_func_exit_, {LidConstant(dputil::GetLid(&*bi, file_id)), ConstantInt::get(int32_, 0)});
           continue;
         }
-        if ((fn.str() == "exit") || f->doesNotReturn()) // terminates without returning to main
+        if ((fn.str() == "exit") || f->doesNotReturn())  // terminates without returning to main
         {
           // exit() and quick_exit() run the handlers registered at program start, so the runtime is
           // shut down through .fini_array like on the ordinary path. The others -- abort(), _exit(),
@@ -276,27 +278,26 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
         }
       }
       LID lid = dputil::GetLid(&*bi, file_id);
-      if (lid > 0) // calls on non-user code are not instrumented
+      if (lid > 0)  // calls on non-user code are not instrumented
       {
         IRBuilder<> irb_call(&*bi);
         // the call site as a location, which the runtime reports for BGN func, and the instruction
         // id, on which it switches the callpath state. The state follows the call only if it enters
         // an instrumented function, see enter_function_for_callstate in the runtime library
-        irb_call.CreateCall(dp_call_or_invoke_,
-                           {LidConstant(lid), ConstantInt::get(int32_, llvm_ir_instruction_id)});
+        irb_call.CreateCall(dp_call_or_invoke_, {LidConstant(lid), ConstantInt::get(int32_, llvm_ir_instruction_id)});
         if (kDpDebug) {
           if (isa<CallInst>(bi)) {
             if (!(fn.str() == "")) {
               errs() << "calling " << fn << " on " << lid << "\n";
             } else {
               errs() << "calling unknown function on " << lid << "\n";
-}
+            }
           } else {
             if (!(fn.str() == "")) {
               errs() << "invoking " << fn << " on " << lid << "\n";
             } else {
               errs() << "invoking unknown function on " << lid << "\n";
-}
+            }
           }
         }
       }
@@ -306,7 +307,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
       LID lid = dputil::GetLid(&*bi, file_id);
       assert((lid > 0) && "Returning on LID = 0!");
 
-      Function *parent = bb.getParent();
+      Function* parent = bb.getParent();
       assert(parent != NULL);
       StringRef fn = parent->getName();
 

@@ -11,11 +11,6 @@
  */
 
 #include "dp_new.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -23,15 +18,16 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, std::int64_t /*numBytes*/) {
-  DP_CALLBACK_SCOPE(NEW);
-}
+void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, std::int64_t /*numBytes*/) { DP_CALLBACK_SCOPE(NEW); }
 }
 
-} // namespace dp
+}  // namespace dp

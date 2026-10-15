@@ -12,16 +12,16 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-
 #include <cstdint>
 #include <unordered_set>
 #include <vector>
 
+#include "DPTypes.hpp"
+
 namespace dp {
 
 class AbstractShadow {
-public:
+ public:
   virtual ~AbstractShadow() {}
 
   virtual SigElement TestInRead(std::int64_t mem_addr) = 0;
@@ -49,4 +49,4 @@ public:
   virtual void Print() = 0;
 };
 
-} // namespace dp
+}  // namespace dp

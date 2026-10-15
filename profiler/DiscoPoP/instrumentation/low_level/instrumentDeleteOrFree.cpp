@@ -10,28 +10,29 @@
  *
  */
 
+#include <vector>
+
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
-#include <vector>
 
 using llvm::CallBase;
 using llvm::IRBuilder;
 using llvm::PtrToIntInst;
 using llvm::Value;
 
-void DiscoPoP::InstrumentDeleteOrFree(CallBase *to_instrument) {
+void DiscoPoP::InstrumentDeleteOrFree(CallBase* to_instrument) {
   // add instrumentation for delete instructions or calls to free
   LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
-}
+  }
   IRBuilder<> irb(llvmcompat::NextInstruction(to_instrument));
 
-  std::vector<Value *> args;
+  std::vector<Value*> args;
   args.push_back(LidConstant(lid));
 
-  Value *start_addr =
-      PtrToIntInst::CreatePointerCast(to_instrument->getArgOperand(0), int64_, "", to_instrument->getNextNode()->getIterator());
+  Value* start_addr = PtrToIntInst::CreatePointerCast(to_instrument->getArgOperand(0), int64_, "",
+                                                      to_instrument->getNextNode()->getIterator());
 
   args.push_back(start_addr);
 

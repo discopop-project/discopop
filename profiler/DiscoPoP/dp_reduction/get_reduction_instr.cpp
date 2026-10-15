@@ -10,24 +10,24 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <vector>
+
+#include "DiscoPoP.hpp"
 
 // Retrieves the reduction operation for the operand that is stored by the
 // 'store_instr' (if such a reduction operation exists).
 // The parameter 'load_instr' will point to the load instruction that actually
 // loads the value (if such a load instruction exists).
-llvm::Instruction *dp_reduction::GetReductionInstr(llvm::Instruction *store_instr,
-                                                              llvm::Instruction **load_instr) {
+llvm::Instruction* dp_reduction::GetReductionInstr(llvm::Instruction* store_instr, llvm::Instruction** load_instr) {
   // find the reduction operation for the source operand of the 'store_instr'
-  llvm::Instruction *reduction_instr = dp_reduction::FindReductionInstr(store_instr->getOperand(0));
+  llvm::Instruction* reduction_instr = dp_reduction::FindReductionInstr(store_instr->getOperand(0));
   if (!reduction_instr) {
     return nullptr;
   }
   // Now find the destination address of the store instruction.
   // After that, search the load instruction that loads this value and store a
   // pointer to it in 'load_instr'.
-  llvm::Value *store_dst = dp_reduction::GetVarRec(store_instr->getOperand(1));
+  llvm::Value* store_dst = dp_reduction::GetVarRec(store_instr->getOperand(1));
   if (store_dst) {
     std::vector<char> reduction_operations;
     *load_instr = dp_reduction::GetLoadInstr(store_dst, reduction_instr, reduction_operations);

@@ -27,7 +27,7 @@ extern "C" {
 // Deliberately takes no lock: this runs during static initialization, where
 // locking a global mutex would depend on that mutex already being constructed,
 // and where the program is still single-threaded anyway.
-void __dp_add_bb_deps(char *dep_string_ptr) {
+void __dp_add_bb_deps(char* dep_string_ptr) {
   if (dep_string_ptr == nullptr) {
     return;
   }
@@ -36,4 +36,4 @@ void __dp_add_bb_deps(char *dep_string_ptr) {
 // End HA
 }
 
-} // namespace dp
+}  // namespace dp

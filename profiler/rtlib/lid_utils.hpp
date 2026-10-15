@@ -13,22 +13,22 @@
 #pragma once
 
 #include <assert.h>
+#include <stdint.h>
+#include <unistd.h>
+
 #include <fstream>
-#include <iostream> // std::cerr
+#include <iostream>  // std::cerr
 #include <sstream>
 #include <stdexcept>
-#include <stdint.h>
 #include <string>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
 #include "DPTypes.hpp"
 
-
 namespace dputil {
 
-inline void DecodeLid(std::int64_t lid, std::ostream &out) {
+inline void DecodeLid(std::int64_t lid, std::ostream& out) {
   if (lid == 0) {
     out << '*';
     return;
@@ -49,8 +49,8 @@ inline std::string DecodeLid(std::int64_t lid) {
   return ss.str();
 }
 
-inline std::vector<std::string> *Split(std::string input, char delim) {
-  std::vector<std::string> *substrings = new std::vector<std::string>();
+inline std::vector<std::string>* Split(std::string input, char delim) {
+  std::vector<std::string>* substrings = new std::vector<std::string>();
   std::istringstream input_string_stream(input);
   std::string sub;
 
@@ -62,12 +62,12 @@ inline std::vector<std::string> *Split(std::string input, char delim) {
 }
 
 inline int32_t GetFileId(std::string file_mapping, std::string full_path_name) {
-  int32_t index = 0; // if the associated file id is not found, then we return 0
+  int32_t index = 0;  // if the associated file id is not found, then we return 0
   std::string line;
   std::ifstream file_map(file_mapping.c_str());
 
   if (file_map.is_open()) {
-    std::vector<std::string> *substrings = nullptr;
+    std::vector<std::string>* substrings = nullptr;
     while (getline(file_map, line)) {
       substrings = Split(line, '\t');
       bool found = false;
@@ -91,12 +91,13 @@ inline int32_t GetFileId(std::string file_mapping, std::string full_path_name) {
   return index;
 }
 
-inline bool FileExists(const std::string &filename) {
+inline bool FileExists(const std::string& filename) {
   std::ifstream ifile(filename.c_str());
 
   if (ifile.fail()) {
     return false;
-  }     return true;
+  }
+  return true;
 }
 
 inline std::string GetExeDir() {
@@ -106,8 +107,8 @@ inline std::string GetExeDir() {
     buff[len] = '\0';
     std::string full_path = std::string(buff);
     return full_path.substr(0, full_path.find_last_of('/'));
-  }     return "";
-
+  }
+  return "";
 }
 
-} // namespace dputil
+}  // namespace dputil

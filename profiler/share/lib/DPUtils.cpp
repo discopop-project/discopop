@@ -18,24 +18,27 @@
 
 #define DP_DEBUG_TYPE "dputils"
 
-using dputil::VariableNameFinder;
 using dputil::DetermineFileId;
 using dputil::EncodeLid;
+using dputil::GetExeDir;
 using dputil::GetFileId;
 using dputil::GetLid;
-using dputil::GetExeDir;
+using dputil::VariableNameFinder;
 using llvm::AllocaInst;
 using llvm::BasicBlock;
 using llvm::BinaryOperator;
 using llvm::ConstantInt;
-using llvm::DILocation;
 using llvm::DebugLoc;
+using llvm::DILocation;
+using llvm::dyn_cast;
+using llvm::errs;
 using llvm::Function;
 using llvm::GEPOperator;
 using llvm::GetElementPtrInst;
 using llvm::GlobalValue;
 using llvm::GlobalVariable;
 using llvm::Instruction;
+using llvm::isa;
 using llvm::LoadInst;
 using llvm::MDNode;
 using llvm::Module;
@@ -44,31 +47,28 @@ using llvm::StoreInst;
 using llvm::StringRef;
 using llvm::StructType;
 using llvm::Value;
-using llvm::dyn_cast;
-using llvm::errs;
-using llvm::isa;
 
 // cl::opt <string> FileMappingPath("fm-path", cl::init(""),
 //                                  cl::desc("Specify file mapping location"),
 //                                  cl::Hidden);
-std::string &FileMappingPath() {
+std::string& FileMappingPath() {
   // allocated once and never destroyed: an object with static storage duration must be trivially destructible
-  static std::string &path = *new std::string();
+  static std::string& path = *new std::string();
   return path;
 }
 
-llvm::cl::opt<bool>
-    dp_memory_profiling_skip_function_arguments("memory-profiling-skip-function-arguments", llvm::cl::init(false),
-                                                llvm::cl::desc("disable the memory profiling for allocations which belong to "
-                                                         "function arguments"),
-                                                llvm::cl::Hidden);
+llvm::cl::opt<bool> dp_memory_profiling_skip_function_arguments(
+    "memory-profiling-skip-function-arguments", llvm::cl::init(false),
+    llvm::cl::desc("disable the memory profiling for allocations which belong to "
+                   "function arguments"),
+    llvm::cl::Hidden);
 
 namespace dputil {
 
 std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) {
   // prepare environment variables
   if (FileMappingPath().length() == 0) {
-    char const *tmp = std::getenv("DOT_DISCOPOP");
+    char const* tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
@@ -79,7 +79,7 @@ std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) 
 
   // check if path in DP_PROJECT_ROOT_DIR
   std::string dp_project_dir(dputil::GetEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
-  if (full_path_name.find(dp_project_dir) == std::string::npos) // function defined outside project
+  if (full_path_name.find(dp_project_dir) == std::string::npos)  // function defined outside project
   {
     return 0;
   }
@@ -179,8 +179,9 @@ std::int64_t EncodeLid(std::int32_t file_id, std::int64_t line) {
   }
   if (line < 0 || line >= kMaxLno) {
     if (warned_file_ids.insert(file_id).second) {
-      errs() << "DiscoPoP: warning: line " << line << " of the file with the id " << file_id << " exceeds the maximum of "
-             << kMaxLno - 1 << " lines, its instructions are not instrumented (see FileMapping.txt for the file)\n";
+      errs() << "DiscoPoP: warning: line " << line << " of the file with the id " << file_id
+             << " exceeds the maximum of " << kMaxLno - 1
+             << " lines, its instructions are not instrumented (see FileMapping.txt for the file)\n";
     }
     return 0;
   }
@@ -190,10 +191,10 @@ std::int64_t EncodeLid(std::int32_t file_id, std::int64_t line) {
 // Encode the fileID and line number of BI as LID.
 // Encode metadata regarding the instruction in the first LIDMETADATASIZE bits
 // This is needed to support multiple files in a project.
-std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
+std::int64_t GetLid(Instruction* bi, std::int32_t& file_id) {
   // prepare environment variables
   if (FileMappingPath().length() == 0) {
-    char const *tmp = std::getenv("DOT_DISCOPOP");
+    char const* tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
@@ -204,7 +205,7 @@ std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
 
   std::int32_t lno = 0;
 
-  const DebugLoc &location = bi->getDebugLoc();
+  const DebugLoc& location = bi->getDebugLoc();
   if (location) {
     lno = bi->getDebugLoc().getLine();
   } else if (isa<AllocaInst>(bi) || isa<StoreInst>(bi)) {
@@ -216,14 +217,14 @@ std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
   if (file_id == 0) {
     // Get the new fileID.
     StringRef file = "", dir = "";
-    MDNode *n = bi->getMetadata("dbg");
+    MDNode* n = bi->getMetadata("dbg");
     if (n == nullptr) {
       // N == NULL means BI is only a helper instruction.
       // No metadata is attached to BI.
       return 0;
     }
-    const DebugLoc &location = bi->getDebugLoc();
-    const DILocation *loc = location.get();
+    const DebugLoc& location = bi->getDebugLoc();
+    const DILocation* loc = location.get();
     file = loc->getFilename();
     dir = loc->getDirectory();
 
@@ -251,10 +252,10 @@ std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
 }
 
 // determine the file index according to the given FileMapping
-void DetermineFileId(Function &f, std::int32_t &file_id) {
+void DetermineFileId(Function& f, std::int32_t& file_id) {
   // prepare environment variables
   if (FileMappingPath().length() == 0) {
-    char const *tmp = std::getenv("DOT_DISCOPOP");
+    char const* tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
@@ -265,10 +266,10 @@ void DetermineFileId(Function &f, std::int32_t &file_id) {
   file_id = 0;
 
   for (Function::iterator fi = f.begin(), fe = f.end(); fi != fe; ++fi) {
-    BasicBlock &bb = *fi;
+    BasicBlock& bb = *fi;
     for (BasicBlock::iterator bi = bb.begin(), ei = bb.end(); bi != ei; ++bi) {
       std::int32_t lno;
-      const DebugLoc &location = bi->getDebugLoc();
+      const DebugLoc& location = bi->getDebugLoc();
       if (location) {
         lno = bi->getDebugLoc().getLine();
       } else {
@@ -276,16 +277,16 @@ void DetermineFileId(Function &f, std::int32_t &file_id) {
       }
 
       if (lno) {
-        MDNode *n = bi->getMetadata("dbg");
+        MDNode* n = bi->getMetadata("dbg");
         // N == NULL means BI is only a helper instruction.
         // No metadata is attached to BI.
         if (n) {
           StringRef file = "", dir = "";
-          const DILocation *loc = location.get();
+          const DILocation* loc = location.get();
           file = loc->getFilename();
           dir = loc->getDirectory();
 
-          char *absolute_path_file_name = realpath((dir.str() + "/" + file.str()).c_str(), nullptr);
+          char* absolute_path_file_name = realpath((dir.str() + "/" + file.str()).c_str(), nullptr);
 
           if (absolute_path_file_name == nullptr) {
             absolute_path_file_name = realpath(file.data(), nullptr);
@@ -293,7 +294,7 @@ void DetermineFileId(Function &f, std::int32_t &file_id) {
 
           if (absolute_path_file_name) {
             file_id = dputil::GetFileId(FileMappingPath(), std::string(absolute_path_file_name));
-            std::free(absolute_path_file_name); // allocated by realpath
+            std::free(absolute_path_file_name);  // allocated by realpath
           }
           // the first instruction with a debug location determines the file
           return;
@@ -310,14 +311,14 @@ std::string GetExeDir() {
     buff[len] = '\0';
     std::string full_path = std::string(buff);
     return full_path.substr(0, full_path.find_last_of('/'));
-  }     return "";
-
+  }
+  return "";
 }
 
-VariableNameFinder::VariableNameFinder(Module & /*M*/) {}
+VariableNameFinder::VariableNameFinder(Module& /*M*/) {}
 
-std::string VariableNameFinder::GetVarName(Value const *v) {
-  if (const Instruction *i = dyn_cast<Instruction>(v)) {
+std::string VariableNameFinder::GetVarName(Value const* v) {
+  if (const Instruction* i = dyn_cast<Instruction>(v)) {
     if (auto gepi = dyn_cast<GetElementPtrInst>(i)) {
       // an element (of an array, of a struct) is named like the object it belongs to
       return GetVarName(gepi->getOperand(0));
@@ -327,107 +328,107 @@ std::string VariableNameFinder::GetVarName(Value const *v) {
       return GetVarName(i->getOperand(0));
     }
 
-    if (const BinaryOperator *binop = dyn_cast<BinaryOperator>(i)) {
+    if (const BinaryOperator* binop = dyn_cast<BinaryOperator>(i)) {
       std::string op;
       switch (binop->getOpcode()) {
 #define DP_DPUTILS_DEBUG 1
-      case Instruction::BinaryOps::Add:
-        op = "+";
-        break;
-      case Instruction::BinaryOps::FAdd:
-        op = "+";
-        break;
-      case Instruction::BinaryOps::Sub:
-        op = "-";
-        break;
-      case Instruction::BinaryOps::FSub:
-        op = "-";
-        break;
-      case Instruction::BinaryOps::Mul:
-        op = "*";
-        break;
-      case Instruction::BinaryOps::FMul:
-        op = "*";
-        break;
-      case Instruction::BinaryOps::UDiv:
-        op = "/";
-        break;
-      case Instruction::BinaryOps::SDiv:
-        op = "/";
-        break;
-      case Instruction::BinaryOps::FDiv:
-        op = "/";
-        break;
-      case Instruction::BinaryOps::URem:
-        op = "%";
-        break;
-      case Instruction::BinaryOps::SRem:
-        op = "%";
-        break;
-      case Instruction::BinaryOps::FRem:
-        op = "%";
-        break;
-      case Instruction::BinaryOps::Shl:
-        op = "<<";
-        break;
-      case Instruction::BinaryOps::LShr:
-        op = ">>";
-        break;
-      case Instruction::BinaryOps::AShr:
-        op = ">>";
-        break;
-      case Instruction::BinaryOps::And:
-        op = "&&";
-        break;
-      case Instruction::BinaryOps::Or:
-        op = "||";
-        break;
-      case Instruction::BinaryOps::Xor:
-        op = "^^";
-        break;
+        case Instruction::BinaryOps::Add:
+          op = "+";
+          break;
+        case Instruction::BinaryOps::FAdd:
+          op = "+";
+          break;
+        case Instruction::BinaryOps::Sub:
+          op = "-";
+          break;
+        case Instruction::BinaryOps::FSub:
+          op = "-";
+          break;
+        case Instruction::BinaryOps::Mul:
+          op = "*";
+          break;
+        case Instruction::BinaryOps::FMul:
+          op = "*";
+          break;
+        case Instruction::BinaryOps::UDiv:
+          op = "/";
+          break;
+        case Instruction::BinaryOps::SDiv:
+          op = "/";
+          break;
+        case Instruction::BinaryOps::FDiv:
+          op = "/";
+          break;
+        case Instruction::BinaryOps::URem:
+          op = "%";
+          break;
+        case Instruction::BinaryOps::SRem:
+          op = "%";
+          break;
+        case Instruction::BinaryOps::FRem:
+          op = "%";
+          break;
+        case Instruction::BinaryOps::Shl:
+          op = "<<";
+          break;
+        case Instruction::BinaryOps::LShr:
+          op = ">>";
+          break;
+        case Instruction::BinaryOps::AShr:
+          op = ">>";
+          break;
+        case Instruction::BinaryOps::And:
+          op = "&&";
+          break;
+        case Instruction::BinaryOps::Or:
+          op = "||";
+          break;
+        case Instruction::BinaryOps::Xor:
+          op = "^^";
+          break;
 
-        // robust solution to API changes (e.g. llvm adds more instruction
-        // types) case Instruction::BinaryOps::BinaryOpsEnd: // fall through
-      default:
+          // robust solution to API changes (e.g. llvm adds more instruction
+          // types) case Instruction::BinaryOps::BinaryOpsEnd: // fall through
+        default:
 #ifdef DP_DEBUG_TYPE
-        errs() << "DPUTils VariableNameFinder::getVarName:  did not consider "
-                  "enum value in switch on BinaryOperator";
+          errs() << "DPUTils VariableNameFinder::getVarName:  did not consider "
+                    "enum value in switch on BinaryOperator";
 #endif
-        break;
+          break;
       }
       return GetVarName(i->getOperand(0)) + op + GetVarName(i->getOperand(1));
     }
 
     if (isa<StoreInst>(i) || isa<LoadInst>(i)) {
-      Value *v = i->getOperand((isa<StoreInst>(i) ? 1 : 0));
+      Value* v = i->getOperand((isa<StoreInst>(i) ? 1 : 0));
       if (isa<LoadInst>(v)) {
         return "*" + GetVarName(v);
-}
+      }
       return GetVarName(v);
     }
   }
 
-  if (const GEPOperator *gepo = dyn_cast<GEPOperator>(v)) {
-    if (const GlobalVariable *gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
+  if (const GEPOperator* gepo = dyn_cast<GEPOperator>(v)) {
+    if (const GlobalVariable* gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
       if (isa<StructType>(gepo->getSourceElementType())) {
         return GlobalValue::getGlobalIdentifier(gv->getName(), gv->getLinkage(), gv->getParent()->getSourceFileName());
       }
     }
   }
 
-  if (const ConstantInt *ci = dyn_cast<ConstantInt>(v)) {
+  if (const ConstantInt* ci = dyn_cast<ConstantInt>(v)) {
     return std::to_string(ci->getSExtValue());
   }
 
   if (v->hasName()) {
     std::string r = v->getName().str();
-//    std::size_t found = r.find(".addr");
-//    if (found != string::npos) {
-//      return r.erase(found);
-//    }
+    //    std::size_t found = r.find(".addr");
+    //    if (found != string::npos) {
+    //      return r.erase(found);
+    //    }
     return r;
   }
   return "!";
 }
 
-} // namespace dputil
+}  // namespace dputil

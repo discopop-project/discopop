@@ -26,4 +26,4 @@ void __dp_delete(LID lid, ADDR start_addr);
 #endif
 }
 
-} // namespace dp
+}  // namespace dp

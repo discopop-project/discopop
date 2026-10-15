@@ -22,4 +22,4 @@ extern "C" {
 void __dp_finalize(LID lid);
 }
 
-} // namespace dp
+}  // namespace dp

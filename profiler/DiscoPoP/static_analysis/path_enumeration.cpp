@@ -10,7 +10,6 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <cstdint>
 #include <iostream>
 #include <stack>
@@ -20,6 +19,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "DiscoPoP.hpp"
 
 namespace static_callpaths {
 
@@ -31,35 +31,37 @@ static bool WriteCallpathDotFiles() { return std::getenv("DP_WRITE_CALLPATH_DOT"
 using CallpathStateId = std::int32_t;
 using InstructionId = std::int32_t;
 
-void ProcessEnumeratePathsStack(std::atomic<uint16_t> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, InstructionId, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
+void ProcessEnumeratePathsStack(
+    std::atomic<uint16_t>* active_threads, StaticCallPathTree* call_path_tree,
+    std::stack<std::tuple<StaticCallPathTreeNode*, InstructionId, StaticCallPathTreeNode*>>* new_stack,
+    std::mutex* new_stack_mtx) {
   bool initial_iteration = true;
   std::vector<StaticCallPathTreeNode*> nodes_added_by_thread;
-  while(active_threads->load() != 0){
+  while (active_threads->load() != 0) {
     // at least one thread is not finished
 
-    if(initial_iteration){
+    if (initial_iteration) {
       // thread is already active
       initial_iteration = false;
-    }
-    else{
+    } else {
       // mark this thread as active
       active_threads->fetch_add(1);
     }
 
-    while(!new_stack->empty()){
+    while (!new_stack->empty()) {
       // try fetch tuple
       std::tuple<StaticCallPathTreeNode*, InstructionId, StaticCallPathTreeNode*> new_current_tuple;
       bool fetched_element = false;
       {
         std::lock_guard<std::mutex> lg(*new_stack_mtx);
-        if(!new_stack->empty()){
+        if (!new_stack->empty()) {
           new_current_tuple = new_stack->top();
           new_stack->pop();
           fetched_element = true;
         }
       }
 
-      if(!fetched_element){
+      if (!fetched_element) {
         // no element fetched. try again.
         break;
       }
@@ -81,18 +83,18 @@ void ProcessEnumeratePathsStack(std::atomic<uint16_t> *active_threads, StaticCal
       // The ancestor chain of new_current_path is identical for every successor,
       // so map base_node -> closest ancestor path node once, then look up per successor.
       std::unordered_map<StaticCalltreeNode*, StaticCallPathTreeNode*> ancestor_by_base;
-      for(StaticCallPathTreeNode* current = new_current_path; current->base_node != nullptr; current = current->prefix){
+      for (StaticCallPathTreeNode* current = new_current_path; current->base_node != nullptr;
+           current = current->prefix) {
         // keep the first (closest to new_current_path) match
         ancestor_by_base.emplace(current->base_node, current);
       }
 
-      for(auto succ_pair: new_current_path->base_node->successors){
+      for (auto succ_pair : new_current_path->base_node->successors) {
         std::int32_t trigger_instruction_id = succ_pair.first;
-        for(auto succ: succ_pair.second){
-
+        for (auto succ : succ_pair.second) {
           // check for cycles: succ already present on the path -> cycle
           auto cycle_it = ancestor_by_base.find(succ);
-          if(cycle_it != ancestor_by_base.end()){
+          if (cycle_it != ancestor_by_base.end()) {
             // register transition
             new_current_path->RegisterTransition(trigger_instruction_id, cycle_it->second->path_id);
             continue;
@@ -101,13 +103,12 @@ void ProcessEnumeratePathsStack(std::atomic<uint16_t> *active_threads, StaticCal
           auto new_path = new_current_path->GetOrRegisterSuccessor(call_path_tree, succ);
           nodes_added_by_thread.push_back(new_path);
           new_elements_buffer.push_back(std::make_tuple(new_current_path, trigger_instruction_id, new_path));
-
         }
       }
       // push prepared elements to stack
       {
         std::lock_guard<std::mutex> lg(*new_stack_mtx);
-        for(auto elem : new_elements_buffer){
+        for (auto elem : new_elements_buffer) {
           new_stack->push(elem);
         }
       }
@@ -121,32 +122,36 @@ void ProcessEnumeratePathsStack(std::atomic<uint16_t> *active_threads, StaticCal
   // register nodes added by the thread for later use
   {
     std::lock_guard<std::mutex> lg(call_path_tree->all_nodes_mtx);
-    for(auto elem : nodes_added_by_thread){
+    for (auto elem : nodes_added_by_thread) {
       call_path_tree->RegisterNodeInAllNodes(elem);
     }
   }
-
 }
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* EnumeratePaths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+StaticCallPathTree* EnumeratePaths(
+    StaticCalltree& calltree,
+    [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>>*
+        state_transitions,
+    [[maybe_unused]] std::unordered_map<std::int32_t, std::unordered_map<std::int32_t, std::int32_t>>*
+        inverse_state_transitions,
+    std::uint32_t start_path_id) {
   // start ids from start_path_id (no collisions between modules)
   StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
   std::vector<StaticCalltreeNode*> entry_nodes;
-  for(auto pair: calltree.function_map){
+  for (auto pair : calltree.function_map) {
     // functions without callers in this module, including those with loops (whose loop iteration
     // states lead back to the function node). They can be called from other modules, indirectly,
     // or by library code, and are entered at their root state then (see save_function_entries).
-    if(pair.second->IsUncalledFunction()){
+    if (pair.second->IsUncalledFunction()) {
       entry_nodes.push_back(pair.second);
-    }
-    else{
+    } else {
       // ensure, that main is always an entry state
-      if(pair.first == "main"){
+      if (pair.first == "main") {
         entry_nodes.push_back(pair.second);
       }
     }
@@ -154,7 +159,7 @@ StaticCallPathTree* EnumeratePaths(StaticCalltree& calltree, [[maybe_unused]] st
   // traverse the static calltree to build the paths
   std::stack<std::tuple<StaticCallPathTreeNode*, InstructionId, StaticCallPathTreeNode*>> new_stack;
   // -> initialize
-  for(auto node_ptr: entry_nodes){
+  for (auto node_ptr : entry_nodes) {
     // new stack
     auto new_node = call_path_tree->root->GetOrRegisterSuccessor(call_path_tree, node_ptr);
     new_stack.push(std::make_tuple(call_path_tree->root, 0, new_node));
@@ -162,20 +167,21 @@ StaticCallPathTree* EnumeratePaths(StaticCalltree& calltree, [[maybe_unused]] st
   }
   // -> process stack concurrently
 
-  unsigned int worker_count = 1; // std::thread::hardware_concurrency();
-  if(worker_count == 0){
-    worker_count = 1; // fallback, if concurrency could not be determined.
+  unsigned int worker_count = 1;  // std::thread::hardware_concurrency();
+  if (worker_count == 0) {
+    worker_count = 1;  // fallback, if concurrency could not be determined.
   }
   std::atomic<uint16_t> active_threads(worker_count);
   std::mutex new_stack_mtx;
 
   std::vector<std::thread> workers;
-  for(unsigned int i = 0; i < worker_count; ++i){
-    workers.push_back(std::thread(ProcessEnumeratePathsStack, &active_threads, call_path_tree, &new_stack, &new_stack_mtx));
+  for (unsigned int i = 0; i < worker_count; ++i) {
+    workers.push_back(
+        std::thread(ProcessEnumeratePathsStack, &active_threads, call_path_tree, &new_stack, &new_stack_mtx));
   }
 
   // join workers, wait for enumeration to be finished
-  for(auto &worker: workers){
+  for (auto& worker : workers) {
     worker.join();
   }
 
@@ -183,7 +189,7 @@ StaticCallPathTree* EnumeratePaths(StaticCalltree& calltree, [[maybe_unused]] st
 }
 
 // save the id of the initial state id to file
-void SaveInitialPath(StaticCallPathTree* call_path_tree_ptr){
+void SaveInitialPath(StaticCallPathTree* call_path_tree_ptr) {
   std::cout << "saving initial path..\n";
 
   // prepare saving the initial callpathStateID
@@ -193,13 +199,11 @@ void SaveInitialPath(StaticCallPathTree* call_path_tree_ptr){
   std::vector<StaticCallPathTreeNode*> candidates = call_path_tree_ptr->root->successors;
 
   // write file
-  for(auto candidate: candidates){
-
+  for (auto candidate : candidates) {
     auto label = candidate->base_node->GetLabel();
     // the label of a function node is the function's name. Only main itself is the entry point,
     // not every function whose (mangled) name contains "main", e.g. a parameter of type "Domain"
-    if (label == "main")
-    {
+    if (label == "main") {
       std::cout << "CANDIDATE: " << label << "\n";
       // save path id to file
       file << std::to_string(candidate->path_id) << "\n";
@@ -211,34 +215,34 @@ void SaveInitialPath(StaticCallPathTree* call_path_tree_ptr){
   std::cout << "Done saving initial path..\n";
 }
 
-void SaveEnumeratedPaths(StaticCallPathTree* call_path_tree_ptr){
+void SaveEnumeratedPaths(StaticCallPathTree* call_path_tree_ptr) {
   std::cout << "saving enumerated paths..\n";
   // prepare saving the mapping from callpath to callpathStateID for reference
   std::ofstream state_id_to_callpath_file = profiler_files::Open("stateID_to_callpath_mapping.txt");
   // write file
   std::string global_buffer = "";
-  for(auto path: call_path_tree_ptr->all_nodes){
-/*
-    Note: 12.02.2026: removing the states leads to holes in the data dependency information.
-    These states could allow the detection of dependencies originating from the function argument initialization.
+  for (auto path : call_path_tree_ptr->all_nodes) {
+    /*
+        Note: 12.02.2026: removing the states leads to holes in the data dependency information.
+        These states could allow the detection of dependencies originating from the function argument initialization.
 
-    // filter out paths ending with call instructions
-    if(path->base_node != nullptr){
-      if(path->base_node->get_type() == 1){
-        // type is call instruction
-        continue;
-      }
-    }
-*/
+        // filter out paths ending with call instructions
+        if(path->base_node != nullptr){
+          if(path->base_node->get_type() == 1){
+            // type is call instruction
+            continue;
+          }
+        }
+    */
     // root node uses itself as parent
     std::uint32_t parent_id = path->path_id;
-    if(path->prefix != nullptr) {
-        parent_id = path->prefix->path_id;
+    if (path->prefix != nullptr) {
+      parent_id = path->prefix->path_id;
     }
 
     std::string node_label = "ROOT";
-    if(path->base_node != nullptr) {
-        node_label = path->base_node->GetLabel();
+    if (path->base_node != nullptr) {
+      node_label = path->base_node->GetLabel();
     }
 
     // new format: <NodeID> <ParentID> <Label>
@@ -250,7 +254,7 @@ void SaveEnumeratedPaths(StaticCallPathTree* call_path_tree_ptr){
   std::cout << "Done saving enumerated path..\n";
 }
 
-void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr){
+void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr) {
   std::cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   std::ofstream callpath_state_transitions_file = profiler_files::Open("callpath_state_transitions.txt");
@@ -259,18 +263,19 @@ void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr){
 
   std::string global_buffer = "";
   std::string return_targets_buffer = "# Format: <source_state_id> <target_state_id>\n";
-  for(auto path: call_path_tree_ptr->all_nodes){
-    for(auto transition_pair: path->state_transitions){
-      if(transition_pair.first == 1){
+  for (auto path : call_path_tree_ptr->all_nodes) {
+    for (auto transition_pair : path->state_transitions) {
+      if (transition_pair.first == 1) {
         continue;
       }
-      std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
+      std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) +
+                                      " " + std::to_string(transition_pair.second) + "\n";
       global_buffer += transition_buffer;
     }
   }
-  for(auto path: call_path_tree_ptr->all_nodes){
-    for(auto transition_pair: path->state_transitions){
-      if(transition_pair.first == 1){
+  for (auto path : call_path_tree_ptr->all_nodes) {
+    for (auto transition_pair : path->state_transitions) {
+      if (transition_pair.first == 1) {
         return_targets_buffer += std::to_string(path->path_id) + " " + std::to_string(transition_pair.second) + "\n";
       }
     }
@@ -289,12 +294,14 @@ void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr){
     callpath_state_transitions_dot << "diGraph G {\n";
 
     global_buffer = "";  // reuse old global buffer
-    for(auto path : call_path_tree_ptr->all_nodes){
-      for(auto transition_pair: path->state_transitions){
-        if(transition_pair.first == 1){
+    for (auto path : call_path_tree_ptr->all_nodes) {
+      for (auto transition_pair : path->state_transitions) {
+        if (transition_pair.first == 1) {
           continue;
         }
-        std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
+        std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " +
+                                        std::to_string(transition_pair.second) +
+                                        " [label = " + std::to_string(transition_pair.first) + "];\n";
         global_buffer += transition_buffer;
       }
     }
@@ -312,20 +319,21 @@ void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr){
 // identified by the instruction id of their __dp_func_entry call. The runtime library follows a
 // call's transition into a function only if it leads to an entry state of the entered function,
 // and else switches to the function's root entry state (see enter_function_for_callstate).
-void SaveFunctionEntries(StaticCallPathTree* call_path_tree_ptr){
+void SaveFunctionEntries(StaticCallPathTree* call_path_tree_ptr) {
   std::ofstream file = profiler_files::Open("callpath_function_entries.txt");
-  file << "# Format: S <state_id> <function_entry_instruction_id> | E <function_entry_instruction_id> <root_state_id>\n";
+  file
+      << "# Format: S <state_id> <function_entry_instruction_id> | E <function_entry_instruction_id> <root_state_id>\n";
   std::string buffer;
-  for(auto path_node: call_path_tree_ptr->all_nodes){
-    if(path_node->base_node == nullptr || path_node->base_node->GetType()){
+  for (auto path_node : call_path_tree_ptr->all_nodes) {
+    if (path_node->base_node == nullptr || path_node->base_node->GetType()) {
       continue;
     }
     std::int32_t function_entry_id = path_node->base_node->function_entry_instruction_id;
-    if(function_entry_id == 0){
+    if (function_entry_id == 0) {
       continue;
     }
     buffer += "S " + std::to_string(path_node->path_id) + " " + std::to_string(function_entry_id) + "\n";
-    if(path_node->prefix == call_path_tree_ptr->root){
+    if (path_node->prefix == call_path_tree_ptr->root) {
       buffer += "E " + std::to_string(function_entry_id) + " " + std::to_string(path_node->path_id) + "\n";
     }
   }
@@ -333,7 +341,7 @@ void SaveFunctionEntries(StaticCallPathTree* call_path_tree_ptr){
   file.close();
 }
 
-void SaveStaticCalltreeToDot(StaticCalltree *calltree){
+void SaveStaticCalltreeToDot(StaticCalltree* calltree) {
   if (!WriteCallpathDotFiles()) {
     return;
   }
@@ -347,29 +355,28 @@ void SaveStaticCalltreeToDot(StaticCalltree *calltree){
 }
 
 // adds the state transition edges corresponding to returning from a function.
-// for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
-void AddFunctionExitEdgesToTransitions(StaticCallPathTree* call_path_tree_ptr){
-
+// for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from
+// every state
+void AddFunctionExitEdgesToTransitions(StaticCallPathTree* call_path_tree_ptr) {
   // for each path in paths
-    // rfind first call instruction
-    // create prefix path, ending just before found call instruction
-    // find state id for the prefix path
-    // register edge transition from path to prefix path with trigger instruction "1" (i.e. leaving function)
-  for(auto path: call_path_tree_ptr->all_nodes){
+  // rfind first call instruction
+  // create prefix path, ending just before found call instruction
+  // find state id for the prefix path
+  // register edge transition from path to prefix path with trigger instruction "1" (i.e. leaving function)
+  for (auto path : call_path_tree_ptr->all_nodes) {
     // rfind first call instruction
 
     StaticCallPathTreeNode* last_call_prefix = nullptr;
     auto current = path;
-    while(current->base_node != nullptr){
-      if(current->base_node->GetType() == true){
+    while (current->base_node != nullptr) {
+      if (current->base_node->GetType() == true) {
         // base node is a call instruction
         last_call_prefix = current->prefix;
         break;
       }
-              current = current->prefix;
-
+      current = current->prefix;
     }
-    if(last_call_prefix == nullptr){
+    if (last_call_prefix == nullptr) {
       // no call found
       continue;
     }
@@ -382,4 +389,4 @@ void AddFunctionExitEdgesToTransitions(StaticCallPathTree* call_path_tree_ptr){
   }
 }
 
-} // namespace static_callpaths
+}  // namespace static_callpaths

@@ -22,4 +22,4 @@ extern "C" {
 void __dp_taken_branch_counter_output();
 }
 
-} // namespace dp
+}  // namespace dp

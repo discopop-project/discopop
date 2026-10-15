@@ -12,8 +12,6 @@
 
 #pragma once
 
-#include "lid_constants.hpp"
-
 #include "llvm-c/Core.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -51,6 +49,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "lid_constants.hpp"
+
 // Guard legacy LLVM includes (may be missing in newer LLVM versions)
 #if __has_include(<llvm/Transforms/IPO/PassManagerBuilder.h>)
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -65,34 +65,34 @@
 #endif
 
 #include <assert.h>
+#include <stdint.h>
+#include <unistd.h>
+
 #include <fstream>
-#include <iostream> // std::cerr
+#include <iostream>  // std::cerr
 #include <sstream>
 #include <stdexcept>
-#include <stdint.h>
 #include <string>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
-
 // extern cl::opt <string> FileMappingPath;
 // The path of FileMapping.txt; empty until the first file id is determined.
-std::string &FileMappingPath();
+std::string& FileMappingPath();
 extern llvm::cl::opt<bool> dp_memory_profiling_skip_function_arguments;
 namespace dputil {
 
 // value of the environment variable `name`, or `fallback` if it is not set (std::string(nullptr) is
 // undefined behaviour); the fallbacks match the ones the pass's doInitialization sets
-inline std::string GetEnvOrDefault(const char *name, const char *fallback) {
-  const char *value = getenv(name);
+inline std::string GetEnvOrDefault(const char* name, const char* fallback) {
+  const char* value = getenv(name);
   return std::string(value != nullptr ? value : fallback);
 }
 
 inline std::string DecodeLid(int64_t lid) {
   if (lid == 0) {
     return "*";
-}
+  }
 
   std::stringstream ss;
   uint32_t ulid = static_cast<uint32_t>(lid);
@@ -101,8 +101,8 @@ inline std::string DecodeLid(int64_t lid) {
   return ss.str();
 }
 
-inline std::vector<std::string> *Split(std::string input, char delim) {
-  std::vector<std::string> *substrings = new std::vector<std::string>();
+inline std::vector<std::string>* Split(std::string input, char delim) {
+  std::vector<std::string>* substrings = new std::vector<std::string>();
   std::istringstream input_string_stream(input);
   std::string sub;
 
@@ -113,12 +113,13 @@ inline std::vector<std::string> *Split(std::string input, char delim) {
   return substrings;
 }
 
-inline bool FileExists(const std::string &filename) {
+inline bool FileExists(const std::string& filename) {
   std::ifstream ifile(filename.c_str());
 
   if (ifile.fail()) {
     return false;
-  }     return true;
+  }
+  return true;
 }
 
 int32_t GetFileId(std::string file_mapping, std::string full_path_name);
@@ -127,17 +128,17 @@ int32_t GetFileId(std::string file_mapping, std::string full_path_name);
 // once per file id if one of them does not fit into the LID.
 int64_t EncodeLid(int32_t file_id, int64_t line);
 
-int64_t GetLid(llvm::Instruction *bi, int32_t &file_id);
+int64_t GetLid(llvm::Instruction* bi, int32_t& file_id);
 
-void DetermineFileId(llvm::Function &f, int32_t &file_id);
+void DetermineFileId(llvm::Function& f, int32_t& file_id);
 
 std::string GetExeDir();
 
 class VariableNameFinder {
-public:
-  explicit VariableNameFinder(llvm::Module &m);
+ public:
+  explicit VariableNameFinder(llvm::Module& m);
 
-  std::string GetVarName(llvm::Value const *v);
+  std::string GetVarName(llvm::Value const* v);
 };
 
-} // namespace dputil
+}  // namespace dputil

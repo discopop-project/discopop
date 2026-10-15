@@ -10,33 +10,34 @@
  *
  */
 
-//#define SKIP_DUP_INSTR 1
+// #define SKIP_DUP_INSTR 1
 
 #include "DiscoPoP.hpp"
+
 #include <string>
 
 // after the includes: LLVM headers define their own DEBUG_TYPE
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "dpop"
-//#define DEBUG_TYPE "dp-omissions"
+// #define DEBUG_TYPE "dp-omissions"
 
+using llvm::cast;
 using llvm::DINamespace;
 using llvm::DINode;
 using llvm::DIType;
+using llvm::dyn_cast;
+using llvm::errs;
 using llvm::IntegerType;
 using llvm::MDNode;
 using llvm::MDString;
 using llvm::PointerType;
 using llvm::Type;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::errs;
 
 // Initializations
 void DiscoPoP::SetupDataTypes() {
-  void_type_ = const_cast<Type *>(Type::getVoidTy(*this_module_context_));
-  int32_ = const_cast<IntegerType *>(IntegerType::getInt32Ty(*this_module_context_));
-  int64_ = const_cast<IntegerType *>(IntegerType::getInt64Ty(*this_module_context_));
+  void_type_ = const_cast<Type*>(Type::getVoidTy(*this_module_context_));
+  int32_ = const_cast<IntegerType*>(IntegerType::getInt32Ty(*this_module_context_));
+  int64_ = const_cast<IntegerType*>(IntegerType::getInt64Ty(*this_module_context_));
   char_ptr_ = PointerType::getUnqual(Type::getInt8Ty(*this_module_context_));
 }
 
@@ -55,23 +56,23 @@ void DiscoPoP::SetupCallbacks() {
 
   dp_read_ = this_module_->getOrInsertFunction("__dp_read", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                           int64_, int64_, char_ptr_, int64_, int64_
+                                               int64_, int64_, char_ptr_, int64_, int64_
 #else
-                                           int64_, int64_, char_ptr_
+                                               int64_, int64_, char_ptr_
 #endif
   );
 
   dp_write_ = this_module_->getOrInsertFunction("__dp_write", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                            int64_, int64_, char_ptr_, int64_, int64_
+                                                int64_, int64_, char_ptr_, int64_, int64_
 #else
-                                            int64_, int64_, char_ptr_
+                                                int64_, int64_, char_ptr_
 #endif
   );
 
   dp_alloca_ = this_module_->getOrInsertFunction("__dp_alloca", void_type_,
 
-                                             int64_, char_ptr_, int64_, int64_, int64_, int64_);
+                                                 int64_, char_ptr_, int64_, int64_, int64_, int64_);
 
   dp_new_ = this_module_->getOrInsertFunction("__dp_new", void_type_, int64_, int64_, int64_, int64_);
 

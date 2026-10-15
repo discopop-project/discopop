@@ -12,17 +12,6 @@
 
 #include "bb_deps.hpp"
 
-#include "DPTypes.hpp"
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "Immortal.hpp"
-
-#include "debug_print.hpp"
-#include "timer.hpp"
-
-#include <boost/algorithm/string.hpp>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -30,6 +19,15 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <boost/algorithm/string.hpp>
+
+#include "DPTypes.hpp"
+#include "Immortal.hpp"
+#include "debug_print.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -47,11 +45,11 @@ namespace dp {
 // would do that part, but it would also be destroyed before __dp_finalize gets to
 // read it, which is why the storage is managed by hand here as well.
 namespace {
-ImmortalStorage<std::vector<const char *>> registered_bb_dep_strings_storage;
+ImmortalStorage<std::vector<const char*>> registered_bb_dep_strings_storage;
 bool registered_bb_dep_strings_constructed = false;
-} // namespace
+}  // namespace
 
-std::vector<const char *> &RegisteredBbDepStrings() {
+std::vector<const char*>& RegisteredBbDepStrings() {
   if (!registered_bb_dep_strings_constructed) {
     registered_bb_dep_strings_storage.Construct();
     registered_bb_dep_strings_constructed = true;
@@ -78,13 +76,13 @@ namespace {
 struct HandedOverDep {
   std::string sink;
   std::string type;
-  std::string source; // instruction id, or "*" (INIT)
-  std::string rest;   // "|<variable>(<memory region>)"
+  std::string source;  // instruction id, or "*" (INIT)
+  std::string rest;    // "|<variable>(<memory region>)"
 };
 
 // parses "<sink> NOM <type> <source>|<rest>". Returns false for malformed
 // entries, which are skipped.
-bool ParseHandedOverDep(const std::string &dep, HandedOverDep &parsed) {
+bool ParseHandedOverDep(const std::string& dep, HandedOverDep& parsed) {
   const std::size_t sink_end = dep.find(' ');
   if (sink_end == std::string::npos || sink_end == 0) {
     return false;
@@ -114,20 +112,19 @@ bool ParseHandedOverDep(const std::string &dep, HandedOverDep &parsed) {
 }
 
 // basic block index -> the dependencies handed over under it
-std::unordered_map<std::uint32_t, std::vector<HandedOverDep>>
-ParseHandedOverDepStrings(const std::vector<const char *> &dep_strings) {
+std::unordered_map<std::uint32_t, std::vector<HandedOverDep>> ParseHandedOverDepStrings(
+    const std::vector<const char*>& dep_strings) {
   std::unordered_map<std::uint32_t, std::vector<HandedOverDep>> deps_by_bb;
-  for (const char *dep_string_ptr : dep_strings) {
+  for (const char* dep_string_ptr : dep_strings) {
     if (dep_string_ptr == nullptr) {
       continue;
     }
     const std::string dep_string(dep_string_ptr);
     std::vector<std::string> entries;
     boost::split(entries, dep_string, boost::is_any_of("/"));
-    for (const std::string &entry : entries) {
+    for (const std::string& entry : entries) {
       const std::size_t separator = entry.find('=');
-      if (separator == std::string::npos || separator == 0 ||
-          entry.find_first_not_of("0123456789") != separator) {
+      if (separator == std::string::npos || separator == 0 || entry.find_first_not_of("0123456789") != separator) {
         // skip invalid entry
         continue;
       }
@@ -135,8 +132,8 @@ ParseHandedOverDepStrings(const std::vector<const char *> &dep_strings) {
       const std::string dep_list = entry.substr(separator + 1);
       std::vector<std::string> deps;
       boost::split(deps, dep_list, boost::is_any_of(","));
-      std::vector<HandedOverDep> &target = deps_by_bb[bb_index];
-      for (const std::string &dep : deps) {
+      std::vector<HandedOverDep>& target = deps_by_bb[bb_index];
+      for (const std::string& dep : deps) {
         HandedOverDep parsed;
         if (ParseHandedOverDep(dep, parsed)) {
           target.push_back(std::move(parsed));
@@ -147,21 +144,21 @@ ParseHandedOverDepStrings(const std::vector<const char *> &dep_strings) {
   return deps_by_bb;
 }
 
-} // namespace
+}  // namespace
 
-void MergeBbDeps(const std::vector<const char *> &dep_strings, const ReportedBBSet &reported, StringDepMap &out) {
+void MergeBbDeps(const std::vector<const char*>& dep_strings, const ReportedBBSet& reported, StringDepMap& out) {
   if (reported.empty()) {
     return;
   }
   const auto deps_by_bb = ParseHandedOverDepStrings(dep_strings);
-  for (const ReportedBB &execution : reported) {
+  for (const ReportedBB& execution : reported) {
     const auto deps = deps_by_bb.find(execution.bb_index);
     if (deps == deps_by_bb.end()) {
       continue;
     }
     const std::string sink_state = "@" + std::to_string(execution.sink_state);
     const std::string source_state = "@" + std::to_string(execution.source_state);
-    for (const HandedOverDep &dep : deps->second) {
+    for (const HandedOverDep& dep : deps->second) {
       std::string source = dep.source == "*" ? dep.source : dep.source + source_state;
       out[dep.sink + sink_state].insert(dep.type + " " + source + dep.rest);
     }
@@ -186,4 +183,4 @@ void ProcessRegisteredBbDeps() {
   MergeBbDeps(RegisteredBbDepStrings(), bb_list->GetExecutions(), *out_put_deps);
 }
 
-} // namespace dp
+}  // namespace dp

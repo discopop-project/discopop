@@ -32,4 +32,4 @@ void WriteResults(LID lid);
 // returns early. Does not release the Timers instance: the caller still measures itself.
 void ReleaseRuntime();
 
-} // namespace dp
+}  // namespace dp

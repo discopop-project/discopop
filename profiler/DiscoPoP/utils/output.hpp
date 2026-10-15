@@ -12,10 +12,10 @@
 
 #pragma once
 
-#include "Structs.hpp"
-
 #include <map>
 #include <string>
+
+#include "Structs.hpp"
 
 // Data.xml: the CU graph of the instrumented functions
 namespace cu_output {
@@ -25,6 +25,6 @@ std::string XmlEscape(std::string data);
 
 // appends the CU graph below root, the node of a function, to Data.xml; loopStartLines holds the
 // start line of each loop node by its ID
-void WriteCuGraph(Node *root, const std::map<std::string, std::string> &loop_start_lines);
+void WriteCuGraph(Node* root, const std::map<std::string, std::string>& loop_start_lines);
 
-} // namespace cu_output
+}  // namespace cu_output

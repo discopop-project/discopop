@@ -26,4 +26,4 @@ void __dp_new(LID lid, ADDR start_addr, ADDR end_addr, int64_t num_bytes);
 #endif
 }
 
-} // namespace dp
+}  // namespace dp

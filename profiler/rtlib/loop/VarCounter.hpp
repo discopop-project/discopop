@@ -21,12 +21,12 @@ struct VarCounter {
   int64_t mem_addr = 0;
   bool valid = true;
 
-  bool operator==(const VarCounter &other) const noexcept {
+  bool operator==(const VarCounter& other) const noexcept {
     return counters[0] == other.counters[0] && counters[1] == other.counters[1] && mem_addr == other.mem_addr &&
            valid == other.valid;
   }
 
-  bool operator!=(const VarCounter &other) const noexcept { return !(*this == other); }
+  bool operator!=(const VarCounter& other) const noexcept { return !(*this == other); }
 };
 
-} // namespace dp
+}  // namespace dp

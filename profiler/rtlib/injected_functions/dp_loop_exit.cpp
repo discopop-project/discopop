@@ -11,13 +11,6 @@
  */
 
 #include "dp_loop_exit.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-
-#include "static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -25,6 +18,10 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
 
@@ -49,9 +46,8 @@ void __dp_loop_exit(LID lid, std::int32_t loop_id, std::int32_t instruction_id) 
   loop_manager->CorrectFuncLevel(function_stack_level);
   loop_manager->ExitLoop(lid);
 
-
   UpdateCallstate(instruction_id);
 }
 }
 
-} // namespace dp
+}  // namespace dp

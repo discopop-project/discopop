@@ -18,8 +18,8 @@
 
 namespace dp {
 
-std::string ProfilerOutputPath(const std::string &file) {
-  const char *const directory = getenv("DOT_DISCOPOP_PROFILER");
+std::string ProfilerOutputPath(const std::string& file) {
+  const char* const directory = getenv("DOT_DISCOPOP_PROFILER");
   assert(directory != nullptr && "DOT_DISCOPOP_PROFILER is unset, so __dp_init did not run");
   if (directory == nullptr) {
     // Constructing a std::string from a null pointer is undefined, and the callers are about to
@@ -30,4 +30,4 @@ std::string ProfilerOutputPath(const std::string &file) {
   return std::string(directory) + "/" + file;
 }
 
-} // namespace dp
+}  // namespace dp

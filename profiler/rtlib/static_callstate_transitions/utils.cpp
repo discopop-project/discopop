@@ -11,9 +11,6 @@
  */
 
 #include "utils.hpp"
-#include "Immortal.hpp"
-#include "output_paths.hpp"
-#include "runtimeFunctionsGlobals.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -21,12 +18,16 @@
 #include <string>
 #include <vector>
 
+#include "Immortal.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+
 namespace dp {
 
 namespace {
 // the callpath state of a caller, restored when the entered function is left
 struct CallstateFrame {
-  CallState *caller_state;
+  CallState* caller_state;
   bool caller_frozen;
   // the entered function
   int32_t function_entry_id;
@@ -49,15 +50,15 @@ struct alignas(64) CallstateHotData {
 // functions after a plain global would have been destroyed. Constructed by reset_callstate_tracking,
 // which also makes the calling thread the owner; every other use is behind the owner check.
 ImmortalStorage<CallstateHotData> callstate_hot_storage;
-CallstateHotData &callstate_hot = callstate_hot_storage.value;
+CallstateHotData& callstate_hot = callstate_hot_storage.value;
 bool callstate_hot_constructed = false;
 
 // the target of the transition triggered by instructionID, following a fall-through transition
-CallState *GetTransitionTargetWithFallthrough(CallState *state, int32_t instruction_id) {
-  CallState *transition_target = state->GetTransitionTarget(instruction_id);
+CallState* GetTransitionTargetWithFallthrough(CallState* state, int32_t instruction_id) {
+  CallState* transition_target = state->GetTransitionTarget(instruction_id);
   if (transition_target) {
     // check if a fall-through transition (i.e. instructionID '0') exists
-    CallState *fallthrough_transition_target = transition_target->GetFallthroughTransitionTarget();
+    CallState* fallthrough_transition_target = transition_target->GetFallthroughTransitionTarget();
     if (fallthrough_transition_target) {
       // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
       transition_target = fallthrough_transition_target;
@@ -65,19 +66,19 @@ CallState *GetTransitionTargetWithFallthrough(CallState *state, int32_t instruct
   }
   return transition_target;
 }
-} // namespace
+}  // namespace
 
 void UpdateCallstate(int32_t instruction_id) {
   if (!callstate_owner || callstate_hot.frozen) {
     return;
   }
-  CallState *transition_target = GetTransitionTargetWithFallthrough(current_callpath_state, instruction_id);
+  CallState* transition_target = GetTransitionTargetWithFallthrough(current_callpath_state, instruction_id);
   if (transition_target) {
     current_callpath_state = transition_target;
   }
 }
 
-void ResetCallstateTracking(CallState *initial_state) {
+void ResetCallstateTracking(CallState* initial_state) {
   current_callpath_state = initial_state;
   if (!callstate_hot_constructed) {
     callstate_hot_storage.Construct();
@@ -112,7 +113,7 @@ void InitializeCurrentCallpathState() {
       }
       current_callpath_state_id = parsed;
       initial_state_found = true;
-    } catch (const std::logic_error &) {
+    } catch (const std::logic_error&) {
       continue;
     }
   }
@@ -133,7 +134,7 @@ void EnterFunctionForCallstate(int32_t function_entry_id) {
   }
   callstate_hot.frames.push_back({current_callpath_state, callstate_hot.frozen, function_entry_id});
 
-  CallState *target = nullptr;
+  CallState* target = nullptr;
   if (call_instruction != 0 && !callstate_hot.frozen) {
     target = GetTransitionTargetWithFallthrough(current_callpath_state, call_instruction);
     // the call's transition is valid only if it leads into the entered function. Otherwise the
@@ -189,4 +190,4 @@ bool CallstateTransitionsFrozen() { return callstate_hot_constructed && callstat
 
 std::size_t CallstateFrameCount() { return callstate_hot_constructed ? callstate_hot.frames.size() : 0; }
 
-} // namespace dp
+}  // namespace dp

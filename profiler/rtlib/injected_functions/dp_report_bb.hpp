@@ -22,4 +22,4 @@ extern "C" {
 void __dp_report_bb(uint32_t bb_index);
 }
 
-} // namespace dp
+}  // namespace dp

@@ -20,8 +20,8 @@ namespace dp {
 extern "C" {
 
 // hybrid analysis
-void __dp_add_bb_deps(char *dep_string_ptr);
+void __dp_add_bb_deps(char* dep_string_ptr);
 // End HA
 }
 
-} // namespace dp
+}  // namespace dp

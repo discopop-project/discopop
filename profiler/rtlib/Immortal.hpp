@@ -33,7 +33,8 @@ namespace dp {
 // Callers reach the object through a reference bound to `value`. That reference is an address
 // constant, so it is established before any initializer runs; only the object behind it has to be
 // constructed first.
-template <typename T> union ImmortalStorage {
+template <typename T>
+union ImmortalStorage {
   T value;
   char placeholder;
 
@@ -44,11 +45,12 @@ template <typename T> union ImmortalStorage {
   // destructor, so an (empty) entry is registered with __cxa_atexit; it touches nothing.
   ~ImmortalStorage() {}
 
-  ImmortalStorage(const ImmortalStorage &) = delete;
-  ImmortalStorage &operator=(const ImmortalStorage &) = delete;
+  ImmortalStorage(const ImmortalStorage&) = delete;
+  ImmortalStorage& operator=(const ImmortalStorage&) = delete;
 
-  template <typename... Args> void Construct(Args &&...args) {
-    ::new (static_cast<void *>(&value)) T(std::forward<Args>(args)...);
+  template <typename... Args>
+  void Construct(Args&&... args) {
+    ::new (static_cast<void*>(&value)) T(std::forward<Args>(args)...);
   }
 
   void Destroy() { value.~T(); }
@@ -57,10 +59,10 @@ template <typename T> union ImmortalStorage {
   // be while the object is addressed directly. A pointer variable -- and a reference at
   // namespace scope, which is one -- would itself have to be loaded before the object behind it
   // can be touched, on every callback that reaches it.
-  T *operator->() noexcept { return &value; }
-  const T *operator->() const noexcept { return &value; }
-  T &operator*() noexcept { return value; }
-  const T &operator*() const noexcept { return value; }
+  T* operator->() noexcept { return &value; }
+  const T* operator->() const noexcept { return &value; }
+  T& operator*() noexcept { return value; }
+  const T& operator*() const noexcept { return value; }
 };
 
-} // namespace dp
+}  // namespace dp

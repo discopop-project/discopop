@@ -45,8 +45,8 @@ def runtime_prototypes() -> Dict[str, List[str]]:
             if match is None:
                 continue
             parameters = [p.strip() for p in match.group(2).split(",") if p.strip()]
-            # drop the parameter names: "LID lid" -> "LID", "char *var" -> "char *"
-            types = [re.sub(r"\s*\w+$", "", p) for p in parameters]
+            # drop the parameter names: "LID lid" -> "LID", "char* var" / "char *var" -> "char *"
+            types = [re.sub(r"\s*\*\s*", " *", re.sub(r"\s*\w+$", "", p)).strip() for p in parameters]
             prototypes[match.group(1)] = [IR_TYPES[t] for t in types]
     return prototypes
 

@@ -11,12 +11,10 @@
  */
 
 #include "dp_loop_incr.hpp"
+
 #include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
 #include "callback_scope.hpp"
-
+#include "runtimeFunctionsGlobals.hpp"
 #include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
@@ -37,4 +35,4 @@ void __dp_loop_incr(const int loop_id, int32_t instruction_id) {
 }
 }
 
-} // namespace dp
+}  // namespace dp

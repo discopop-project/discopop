@@ -10,30 +10,32 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "DiscoPoP.hpp"
+
 using llvm::BasicBlock;
 using llvm::Instruction;
+using llvm::isa;
 using llvm::LoadInst;
 using llvm::Region;
 using llvm::StoreInst;
-using llvm::isa;
 
-void DiscoPoP::FillCuVariables(Region *top_region, std::set<std::string> &global_variables_set, std::vector<CU *> & /*CUVector*/,
-                               std::map<std::string, std::vector<CU *>> &bb_id_to_cu_ids_map) {
+void DiscoPoP::FillCuVariables(Region* top_region, std::set<std::string>& global_variables_set,
+                               std::vector<CU*>& /*CUVector*/,
+                               std::map<std::string, std::vector<CU*>>& bb_id_to_cu_ids_map) {
   LID lid;
   std::string var_name, var_type, var_def_line;
   bool is_global_var = false;
   // Changed TerminatorInst to Instuction
-  const Instruction *t_inst;
+  const Instruction* t_inst;
   std::string successor_bb;
 
   for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
-    CU *last_cu = bb_id_to_cu_ids_map[bb->getName().str()].back(); // get the last CU in the basic block
+    CU* last_cu = bb_id_to_cu_ids_map[bb->getName().str()].back();  // get the last CU in the basic block
     // get all successor basic blocks for bb
     t_inst = bb->getTerminator();
     for (unsigned i = 0, n_succ = t_inst->getNumSuccessors(); i < n_succ; ++i) {
@@ -51,7 +53,7 @@ void DiscoPoP::FillCuVariables(Region *top_region, std::set<std::string> &global
         lid = dputil::GetLid(&*instruction, file_id);
         if (lid == 0) {
           continue;
-}
+        }
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
         var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
         var_type = DetermineVariableType(&*instruction);

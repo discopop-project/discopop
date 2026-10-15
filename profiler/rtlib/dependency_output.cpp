@@ -10,18 +10,15 @@
  *
  */
 
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "debug_print.hpp"
-#include "timer.hpp"
-
 #include <cstdint>
 #include <iostream>
 #include <string>
 #include <unordered_set>
 
+#include "debug_print.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -34,38 +31,38 @@ void GenerateStringDepMap() {
   const auto timer = Timer(timers, TimerRegion::kGenerateStringDepMap);
 #endif
 
-  for (auto &dline : *all_deps) {
+  for (auto& dline : *all_deps) {
     if (dline.first) {
       //  unpack dline.first (lid) to instructionID and callpathStateID
       std::uint32_t dline_first_inst_id = (dline.first & 0xFFFFFFFF);
       std::uint32_t dline_first_callpath_state_id = ((dline.first & 0xFFFFFFFF00000000) >> 32);
       std::string unpacked_lid = std::to_string(dline_first_inst_id) + "@" +
-                            std::to_string(dline_first_callpath_state_id); // use instructionID instead of lineID
+                                 std::to_string(dline_first_callpath_state_id);  // use instructionID instead of lineID
       std::unordered_set<std::string> line_deps;
-      for (auto &d : dline.second) {
+      for (auto& d : dline.second) {
         std::string dep = "";
         switch (d.type) {
-        case kRaw:
-          dep += "RAW";
-          break;
-        case kWar:
-          dep += "WAR";
-          break;
-        case kWaw:
-          dep += "WAW";
-          break;
-        case kInit:
-          dep += "INIT";
-          break;
-        default:
-          break;
+          case kRaw:
+            dep += "RAW";
+            break;
+          case kWar:
+            dep += "WAR";
+            break;
+          case kWaw:
+            dep += "WAW";
+            break;
+          case kInit:
+            dep += "INIT";
+            break;
+          default:
+            break;
         }
 
         // unpack d.depOn to instructionID and callpathStateID
         std::uint32_t d_dep_on_inst_id = (d.dep_on & 0xFFFFFFFF);
         std::uint32_t d_dep_on_callpath_state_id = ((d.dep_on & 0xFFFFFFFF00000000) >> 32);
         dep += ' ' + std::to_string(d_dep_on_inst_id) + "@" +
-               std::to_string(d_dep_on_callpath_state_id); // use unpacked information instead of lineID
+               std::to_string(d_dep_on_callpath_state_id);  // use unpacked information instead of lineID
 
         dep += "|" + std::string(d.var);
         dep += "(" + std::to_string(d.aa_var) + ")";
@@ -100,4 +97,4 @@ void OutputDeps() {
 }
 // End HA
 
-} // namespace dp
+}  // namespace dp

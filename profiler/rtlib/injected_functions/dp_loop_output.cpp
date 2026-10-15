@@ -11,12 +11,6 @@
  */
 
 #include "dp_loop_output.hpp"
-#include "DPTypes.hpp"
-
-#include "output_paths.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "loop/LoopInfo.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -24,6 +18,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "DPTypes.hpp"
+#include "loop/LoopInfo.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace dp {
 
@@ -56,7 +55,7 @@ void __dp_loop_output() {
 
   // output information about the loops
   ofile.open(ProfilerOutputPath("loop_counter_output.txt"));
-  const auto &loop_counters = loop_manager->GetLoopCounters();
+  const auto& loop_counters = loop_manager->GetLoopCounters();
 
   // The counters are indexed by loop id, starting at 0. Reading them from 1 and pairing
   // them with the lines of loop_meta.txt in file order named every count after the wrong
@@ -80,4 +79,4 @@ void __dp_loop_output() {
 }
 }
 
-} // namespace dp
+}  // namespace dp

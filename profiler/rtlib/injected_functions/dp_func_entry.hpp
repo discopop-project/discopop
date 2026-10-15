@@ -23,4 +23,4 @@ extern "C" {
 void __dp_func_entry(LID lid, int32_t is_start, int32_t function_entry_id);
 }
 
-} // namespace dp
+}  // namespace dp

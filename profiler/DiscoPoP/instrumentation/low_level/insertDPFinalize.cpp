@@ -12,8 +12,7 @@
 
 #include "DiscoPoP.hpp"
 
-
-void DiscoPoP::InsertDpFinalize(llvm::Instruction *before) {
+void DiscoPoP::InsertDpFinalize(llvm::Instruction* before) {
   LID lid = dputil::GetLid(before, file_id);
   assert((lid > 0) && "Returning on an invalid LID.");
   llvm::IRBuilder<> irb(before);

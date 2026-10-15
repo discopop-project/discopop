@@ -12,12 +12,11 @@
 
 #include "dp_landing_pad.hpp"
 
-#include "runtimeFunctionsGlobals.hpp"
+#include <mutex>
 
 #include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 #include "static_callstate_transitions/utils.hpp"
-
-#include <mutex>
 
 namespace dp {
 
@@ -34,4 +33,4 @@ void __dp_landing_pad(int32_t function_entry_id) {
 }
 }
 
-} // namespace dp
+}  // namespace dp

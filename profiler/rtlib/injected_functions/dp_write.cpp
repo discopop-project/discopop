@@ -11,12 +11,6 @@
  */
 
 #include "dp_write.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -24,6 +18,10 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace dp {
 
@@ -31,9 +29,9 @@ namespace dp {
 extern "C" {
 
 #ifdef SKIP_DUP_INSTR
-void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, std::int64_t count) {
+void __dp_write(LID lid, ADDR addr, char* var, ADDR lastaddr, std::int64_t count) {
 #else
-void __dp_write(LID lid, ADDR addr, const char *var) {
+void __dp_write(LID lid, ADDR addr, const char* var) {
 #endif
 
   DP_CALLBACK_SCOPE(WRITE);
@@ -50,7 +48,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 
   if (dp_debug) {
     std::cout << "instStore at encoded LID " << std::dec << dputil::DecodeLid(lid) << " and addr " << std::hex << addr
-         << std::endl;
+              << std::endl;
   }
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
@@ -65,7 +63,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
     first_access_queue.Push(main_thread_access_info_buffer);
     main_thread_access_info_buffer = first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
   }
-  AccessInfo &current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
+  AccessInfo& current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
 
 #endif
   current.is_read = false;
@@ -75,11 +73,10 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   current.aa_var = reinterpret_cast<std::int64_t>(var);
   current.addr = addr;
 
-
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   AnalyzeSingleAccessOnMainThread(current);
 #endif
 }
 }
 
-} // namespace dp
+}  // namespace dp
