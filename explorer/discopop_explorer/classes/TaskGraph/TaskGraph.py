@@ -3509,7 +3509,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             return dict()
 
         # The profiler writes the callpaths as a prefix tree, one node per line in the format
-        # "<state_id> <parent_state_id> <label>" (see DiscoPoP::save_enumerated_paths). The root
+        # "<state_id> <parent_state_id> <label>" (see static_callpaths::save_enumerated_paths). The root
         # node references itself as its parent and carries no callpath label. Lines are emitted in
         # nondeterministic order (the writer accumulates them via an OpenMP reduction), so the tree
         # has to be read in full before any callpath can be reconstructed.

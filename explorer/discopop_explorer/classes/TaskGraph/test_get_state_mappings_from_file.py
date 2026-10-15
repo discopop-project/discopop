@@ -29,7 +29,7 @@ DEP_FILE_CONTENTS = "\n".join(
     ]
 )
 
-# Prefix tree as emitted by DiscoPoP::save_enumerated_paths. State 1 is the root and
+# Prefix tree as emitted by static_callpaths::save_enumerated_paths. State 1 is the root and
 # references itself. The line order is deliberately shuffled: the writer accumulates the
 # lines via an OpenMP reduction, so it is not deterministic.
 MAPPING_FILE_CONTENTS = "\n".join(
