@@ -90,7 +90,7 @@ AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
 thread_local depMap *myMap = nullptr;
 
-CallState *current_callpath_state = 0;
+CallState *current_callpath_state = nullptr;
 CallStateGraph *call_state_graph;
 
 // statistics

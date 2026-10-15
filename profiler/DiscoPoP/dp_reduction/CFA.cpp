@@ -27,7 +27,7 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
     // (L == NULL) if tmpBB is not in any loop.
 
     // Check if tmpBB is the loop header (.cond) block.
-    if (L != NULL) {
+    if (L != nullptr) {
       StringRef loopType = tmpBB->getName().split('.').first;
 
       // If tmpBB is the header block, get the exit blocks of the loop.

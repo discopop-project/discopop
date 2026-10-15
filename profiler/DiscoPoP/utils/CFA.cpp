@@ -29,7 +29,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToP
     Loop *L = LI.getLoopFor(tmpBB);
 
     // Check if tmpBB is the loop header (.cond) block.
-    if (L != NULL && LI.isLoopHeader(tmpBB)) {
+    if (L != nullptr && LI.isLoopHeader(tmpBB)) {
       StringRef loopType = tmpBB->getName().split('.').first;
       if (DP_DEBUG) {
         errs() << "loop [" << loopType << "] header: " << tmpBB->getName() << "\n";

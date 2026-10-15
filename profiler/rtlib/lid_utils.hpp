@@ -67,7 +67,7 @@ inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
   std::ifstream fileMap(fileMapping.c_str());
 
   if (fileMap.is_open()) {
-    std::vector<std::string> *substrings = NULL;
+    std::vector<std::string> *substrings = nullptr;
     while (getline(fileMap, line)) {
       substrings = split(line, '\t');
       bool found = false;

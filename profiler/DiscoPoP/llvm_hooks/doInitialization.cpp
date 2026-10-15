@@ -24,7 +24,7 @@ bool DiscoPoP::doInitialization(Module &M) {
 
   // prepare environment variables
   char const *tmp = getenv("DOT_DISCOPOP");
-  if (tmp == NULL) {
+  if (tmp == nullptr) {
     // DOT_DISCOPOP needs to be initialized
     setenv("DOT_DISCOPOP", ".discopop", 1);
   }
@@ -66,7 +66,7 @@ bool DiscoPoP::doInitialization(Module &M) {
 
   // prepare target directory if not present
   char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");
-  if (tmp2 == NULL) {
+  if (tmp2 == nullptr) {
     // DP_PROJECT_ROOT_DIR needs to be initialized
     std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
     std::cerr << "         As a result, library functions might be "

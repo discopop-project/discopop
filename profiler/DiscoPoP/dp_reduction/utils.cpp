@@ -63,7 +63,7 @@ Type *dp_reduction::pointsToStruct(PointerType *PTy) {
     }
   }
 */
-  return structType->getTypeID() == Type::StructTyID ? structType : NULL;
+  return structType->getTypeID() == Type::StructTyID ? structType : nullptr;
 }
 
 string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {

@@ -27,7 +27,7 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
     }
   }
   */
-  return structType->getTypeID() == Type::StructTyID ? structType : NULL;
+  return structType->getTypeID() == Type::StructTyID ? structType : nullptr;
 }
 
 Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {
@@ -41,7 +41,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
       return getOrInsertVarName_dynamic(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v) {
@@ -50,7 +50,7 @@ DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v) {
     if ((*it)->getDisplayName() == v->getName())
       return *it;
   }
-  return NULL;
+  return nullptr;
 }
 
 void DiscoPoP::collectDebugInfo() {
@@ -69,7 +69,7 @@ void DiscoPoP::collectDebugInfo() {
 }
 
 bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
-  return (BI != NULL) && ((isa<CallInst>(BI) && (!isa<DbgDeclareInst>(BI))) || isa<InvokeInst>(BI));
+  return (BI != nullptr) && ((isa<CallInst>(BI) && (!isa<DbgDeclareInst>(BI))) || isa<InvokeInst>(BI));
 }
 
 bool DiscoPoP::sanityCheck(BasicBlock *BB) {
