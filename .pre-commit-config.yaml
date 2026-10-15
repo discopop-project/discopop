@@ -55,6 +55,13 @@ repos:
     args: [--line-length=120]
 
 
+# ruff -- lint only (rules in pyproject.toml); formatting is done by black
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.17.0
+  hooks:
+  - id: ruff-check
+
+
 # check for discopop license tag
 - repo: local
   hooks:
