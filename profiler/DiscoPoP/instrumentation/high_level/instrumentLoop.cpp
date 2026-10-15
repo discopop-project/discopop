@@ -34,7 +34,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
   };
 
   auto loc = loop->getStartLoc();
-  if (!dp_reduction_loc_exists(loc)) {
+  if (!dp_reduction::loc_exists(loc)) {
     // Nothing can be said about a loop that has no location: it is left out of
     // loop_meta.txt and gets no __dp_loop_incr, so its iterations are never counted.
     // Worth a word, because the location comes off the terminator of the loop's
@@ -98,7 +98,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
       // Add an entry to the corresponding map or invalidate an already
       // existing entry, if the same instruction is executed on multiple
       // lines.
-      llvm::Value *operand = dp_reduction_get_var(instr);
+      llvm::Value *operand = dp_reduction::get_var(instr);
       if (operand) {
         std::map<llvm::Value *, llvm::Instruction *> *map_ptr =
             (opcode == llvm::Instruction::Store) ? &store_instructions : &load_instructions;
@@ -107,7 +107,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
             llvm::DebugLoc new_loc = instr->getDebugLoc();
             llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
 
-            if (!dp_reduction_loc_exists(new_loc) || !dp_reduction_loc_exists(old_loc)) {
+            if (!dp_reduction::loc_exists(new_loc) || !dp_reduction::loc_exists(old_loc)) {
               (*map_ptr)[operand] = nullptr;
             } else if (new_loc.getLine() != old_loc.getLine()) {
               (*map_ptr)[operand] = nullptr;
@@ -131,7 +131,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     if (it2 != store_instructions.end() && it2->second) {
       llvm::DebugLoc load_loc = it->second->getDebugLoc();
       llvm::DebugLoc store_loc = it2->second->getDebugLoc();
-      if (!dp_reduction_loc_exists(load_loc) || !dp_reduction_loc_exists(store_loc))
+      if (!dp_reduction::loc_exists(load_loc) || !dp_reduction::loc_exists(store_loc))
         continue;
       if (load_loc.getLine() > store_loc.getLine())
         continue;
@@ -173,7 +173,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
 
     varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
-    varTypeLoad = dp_reduction_determineVariableType(candidate.load_inst_);
+    varTypeLoad = dp_reduction::determineVariableType(candidate.load_inst_);
     if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
       if (varTypeLoad.find("ARRAY,") == std::string::npos || varNameLoad.find(".addr") == std::string::npos ||
           varTypeLoad.find("**") != std::string::npos) {
@@ -181,10 +181,10 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
       } else if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
                  varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
+          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
         } else {
           continue;
         }
@@ -193,10 +193,10 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
       if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
           varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
+          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
         } else {
           // We should ignore store instructions that are not associated with a
           // load e.g., pbvc[i] = c1s;
@@ -204,10 +204,10 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
         }
       } else {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
+          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
         } else {
           // We want to find max or min reduction operations
           // We want to find the basicblock that contains the load instruction
@@ -224,7 +224,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
             // check if loaded value is used in the store instruction to prevent
             // "false positives"
-            if (check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))) {
+            if (dp_reduction::check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))) {
               candidate.operation_ = '>';
             } else {
               continue;

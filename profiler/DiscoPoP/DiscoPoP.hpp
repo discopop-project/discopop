@@ -59,6 +59,7 @@
 
 #include "DPUtils.hpp"
 #include "utils/profiler_files.hpp"
+#include "dp_reduction/dp_reduction.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
 #include "static_analysis/StaticCalltree.hpp"
 #include "static_analysis/StaticCallPathTree.hpp"
@@ -343,32 +344,15 @@ public:
   // DPReduction
 
   void instrument_module(llvm::Module *module, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam);
-  bool inlinedFunction(llvm::Function *F);
   void instrument_function(llvm::Function *function, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info);
   void instrument_loop(llvm::Function &F, int file_id, llvm::Loop *loop, llvm::LoopInfo &LI,
                        std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
   std::string dp_reduction_CFA(llvm::Function &F, llvm::Loop *loop, int file_id);
   std::string dp_reduction_determineVariableName(llvm::Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
-  std::string dp_reduction_determineVariableType(llvm::Instruction *I);
-  llvm::Instruction *dp_reduction_get_reduction_instr(llvm::Instruction *store_instr, llvm::Instruction **load_instr);
-  llvm::Instruction *dp_reduction_find_reduction_instr(llvm::Value *val);
-  llvm::Instruction *dp_reduction_get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
-                                                 std::vector<char> &reduction_operations);
-  llvm::Value *dp_reduction_points_to_var(llvm::GetElementPtrInst *instr);
-  llvm::Value *dp_reduction_get_var(llvm::Instruction *instr);
-  llvm::Value *dp_reduction_get_var_rec(llvm::Value *val);
-  llvm::Instruction *dp_reduction_get_prev_use(llvm::Instruction *instr, llvm::Value *val);
-  inline bool dp_reduction_loc_exists(llvm::DebugLoc const &loc) { return static_cast<bool>(loc); }
   unsigned dp_reduction_get_file_id(llvm::Function *func);
   bool dp_reduction_init_util(std::string fmap_path);
-  char dp_reduction_get_char_for_opcode(llvm::Instruction *instr); //} // namespace
-  int dp_reduction_get_op_order(char c);
-  llvm::Type *dp_reduction_pointsToStruct(llvm::PointerType *PTy);
   std::string findStructMemberName_static(llvm::MDNode *structNode, unsigned idx, llvm::IRBuilder<> &builder);
-  bool dp_reduction_sanityCheck(llvm::BasicBlock *BB, int file_id);
-  LID dp_reduction_getLID(llvm::Instruction *BI, int32_t &fileID);
   void dp_reduction_insert_functions();
-  bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
   std::ofstream reduction_file;
   std::ofstream loop_counter_file;
   std::ofstream instructionID_to_lineID_file;

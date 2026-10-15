@@ -16,7 +16,7 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
+string dp_reduction::determineVariableType(Instruction *I) {
   string s = "";
   string type_str;
   int index = isa<StoreInst>(I) ? 1 : 0;
@@ -32,7 +32,7 @@ string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
       // (2025-10-30) check of struct type omitted for LLVM 19 compatibility
       //Value *ptrOperand = gep->getPointerOperand();
       //PointerType *PTy = cast<PointerType>(ptrOperand->getType());
-      //Type *structType = dp_reduction_pointsToStruct(PTy);
+      //Type *structType = dp_reduction::pointsToStruct(PTy);
       //if (structType && gep->getNumOperands() > 2) {
       if (gep->getNumOperands() > 2) {
         s = "STRUCT,";
