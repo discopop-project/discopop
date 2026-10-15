@@ -371,8 +371,9 @@ string VariableNameFinder::getVarName(Value const *V) {
 
     if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
       Value *v = I->getOperand((isa<StoreInst>(I) ? 1 : 0));
-      if (isa<LoadInst>(v))
+      if (isa<LoadInst>(v)) {
         return "*" + getVarName(v);
+}
       return getVarName(v);
     }
   }

@@ -20,8 +20,9 @@ using namespace dputil;
 void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
   // add instrumentation for calls to realloc
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
 
   // Determine correct placement for the call to __dp_new
   Instruction *nextInst = nullptr;

@@ -31,8 +31,9 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
 #endif
 
   // hybrid analysis
-  if (depOn == 0 && type == WAW)
+  if (depOn == 0 && type == WAW) {
     type = INIT;
+}
   // End HA
 
   // Remove metadata to preserve result correctness and add metadata to `Dep`

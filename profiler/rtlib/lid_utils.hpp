@@ -94,10 +94,11 @@ inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
 inline bool fexists(const std::string &filename) {
   std::ifstream ifile(filename.c_str());
 
-  if (ifile.fail())
+  if (ifile.fail()) {
     return false;
-  else
+  } else {
     return true;
+}
 }
 
 inline std::string get_exe_dir() {

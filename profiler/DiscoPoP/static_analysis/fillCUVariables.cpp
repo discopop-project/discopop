@@ -42,8 +42,9 @@ void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSe
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
         // NOTE: changed 'instruction' to '&*instruction'
         lid = getLID(&*instruction, fileID);
-        if (lid == 0)
+        if (lid == 0) {
           continue;
+}
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
         varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
         varType = determineVariableType(&*instruction);

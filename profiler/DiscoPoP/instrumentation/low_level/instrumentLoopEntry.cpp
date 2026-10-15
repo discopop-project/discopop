@@ -30,8 +30,9 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     if (isa<CallInst>(BI)) {
       Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
       StringRef tmpFn = tmpF->getName();
-      if (tmpFn.find("__dp_loop_exit") != string::npos)
+      if (tmpFn.find("__dp_loop_exit") != string::npos) {
         continue;
+}
     }
     lid = getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {

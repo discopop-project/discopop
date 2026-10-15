@@ -108,12 +108,14 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
     dl = instr->getDebugLoc();
     if (isa<StoreInst>(instr) || isa<LoadInst>(instr)) {
       if (isa<StoreInst>(instr)) {
-        if (DebugLoc dl = instr->getDebugLoc())
+        if (DebugLoc dl = instr->getDebugLoc()) {
           label += "write(";
-        else
+        } else {
           label += "init(";
-      } else
+}
+      } else {
         label += "read(";
+}
       label += VNF->getVarName(instr);
       label += ") ";
 
@@ -131,8 +133,9 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
     } else if (isa<AllocaInst>(instr)) {
       label += "alloca(" + VNF->getVarName(instr) + ")";
       label += "\",shape=rectangle,fillcolor=wheat,style=filled";
-    } else
+    } else {
       label += "?\"";
+}
 
   printInstructionNode:
     dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label << "];\n";

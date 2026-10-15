@@ -71,10 +71,12 @@ public:
   Graph(){};
 
   ~Graph() {
-    for (auto &n : instructionNodesList)
+    for (auto &n : instructionNodesList) {
       delete n;
-    for (auto &e : edgesList)
+}
+    for (auto &e : edgesList) {
       delete e;
+}
   }
 
   InstructionNode<InstructionNodeT> *operator[](InstructionNodeT item) const { return getInstructionNode(item); }
@@ -96,8 +98,9 @@ public:
   }
 
   InstructionNode<InstructionNodeT> *getInstructionNode(InstructionNodeT item) {
-    if (instructionNodes.count(item) == 0)
+    if (instructionNodes.count(item) == 0) {
       return nullptr;
+}
     return instructionNodes.find(item)->second.second;
   }
 
@@ -111,8 +114,9 @@ public:
   }
 
   int getInstructionNodeIndex(InstructionNodeT item) const {
-    if (instructionNodes.count(item) == 0)
+    if (instructionNodes.count(item) == 0) {
       return -1;
+}
     return instructionNodes.find(item)->second.first;
   }
 
@@ -140,18 +144,21 @@ public:
     InstructionNode<InstructionNodeT> *src_ = getInstructionNode(src);
     InstructionNode<InstructionNodeT> *dst_ = getInstructionNode(dst);
 
-    if (src_ == nullptr)
+    if (src_ == nullptr) {
       src_ = addInstructionNode(src);
-    if (dst_ == nullptr)
+}
+    if (dst_ == nullptr) {
       dst_ = addInstructionNode(dst);
+}
 
     return addEdge(src_, dst_);
   }
 
   std::set<Edge<InstructionNodeT> *> getInEdges(InstructionNode<InstructionNodeT> *instructionNode) {
     std::set<Edge<InstructionNodeT> *> inEdges_;
-    if (inEdges.find(instructionNode) != inEdges.end())
+    if (inEdges.find(instructionNode) != inEdges.end()) {
       inEdges_ = inEdges[instructionNode];
+}
 
     return inEdges_;
   }
@@ -163,8 +170,9 @@ public:
 
   std::set<Edge<InstructionNodeT> *> getOutEdges(InstructionNode<InstructionNodeT> *instructionNode) {
     std::set<Edge<InstructionNodeT> *> outEdges_;
-    if (outEdges.count(instructionNode) != 0)
+    if (outEdges.count(instructionNode) != 0) {
       return outEdges[instructionNode];
+}
     return outEdges_;
   }
 

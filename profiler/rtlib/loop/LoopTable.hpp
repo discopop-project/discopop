@@ -37,11 +37,13 @@ public:
   bool empty() const { return contents.empty(); }
 
   bool is_single_exit(const std::int32_t loopID) const {
-    if (empty())
+    if (empty()) {
       return true;
+}
 
-    if (top().loopID != loopID)
+    if (top().loopID != loopID) {
       return true;
+}
 
     return false;
   }

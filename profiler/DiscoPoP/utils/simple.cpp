@@ -47,8 +47,9 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
 DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v) {
   assert(v && "Global variable cannot be null");
   for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
-    if ((*it)->getDisplayName() == v->getName())
+    if ((*it)->getDisplayName() == v->getName()) {
       return *it;
+}
   }
   return nullptr;
 }
@@ -155,8 +156,9 @@ bool dp_reduction::inlinedFunction(Function *F) {
   for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI) {
     for (BasicBlock::iterator BI = FI->begin(), E = FI->end(); BI != E; ++BI) {
       if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
-        if (DI->getDebugLoc()->getInlinedAt())
+        if (DI->getDebugLoc()->getInlinedAt()) {
           return true;
+}
       }
     }
   }
@@ -166,8 +168,9 @@ bool dp_reduction::inlinedFunction(Function *F) {
 bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
   auto callNode = CG[&F];
   for (unsigned i = 0; i < callNode->size(); i++) {
-    if ((*callNode)[i]->getFunction() == &F)
+    if ((*callNode)[i]->getFunction() == &F) {
       return true;
+}
   }
   return false;
 }
@@ -222,8 +225,9 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<ReturnInst>(instruction)) {
         lid = getLID(&*instruction, fileID);
-        if (lid > 0)
+        if (lid > 0) {
           root->returnLines.insert(lid);
+}
       }
     }
   }

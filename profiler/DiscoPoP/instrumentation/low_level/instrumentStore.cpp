@@ -20,8 +20,9 @@ using namespace dputil;
 void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
 
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int64, llvm_ir_instruction_id));
