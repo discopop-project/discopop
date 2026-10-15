@@ -58,6 +58,7 @@
 #endif
 
 #include "DPUtils.hpp"
+#include "utils/output.hpp"
 #include "utils/profiler_files.hpp"
 #include "dp_reduction/dp_reduction.hpp"
 #include "dp_reduction/ReductionInstrumenter.hpp"
@@ -128,8 +129,6 @@ class DiscoPoP { // : public ModulePass, public PassInfoMixin<DiscoPoP> {
 private:
   // CUGeneration
 
-  std::ofstream outCUs;
-  std::ofstream outOriginalVariables;
   // Mohammad 23.12.2020
   std::map<std::string, std::string> loopStartLines;
 
@@ -330,22 +329,7 @@ public:
   void initializeInstructionIDCounter();
   void initializeCallpathStateIDCounter();
 
-  std::string xmlEscape(std::string data);
-
-  void secureStream();
-
-  std::string getLineNumbersString(std::set<LID> LineNumbers);
-
-  std::string getChildrenNodesString(Node *node);
-
   // void printOriginalVariables(set<string> &originalVariablesSet);
-  void printData(Node *node);
-
-  void printTree(Node *node, bool isRoot);
-
-  void printNode(Node *node, bool isRoot);
-
-  void closeOutputFiles();
   // CUGeneration end
 
   // DPReduction
