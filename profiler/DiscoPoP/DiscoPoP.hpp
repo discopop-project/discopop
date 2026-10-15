@@ -205,7 +205,7 @@ private:
 
   void instrumentLoopExit(llvm::BasicBlock *bb, int32_t id, llvm::Loop *L);
 
-  int64_t uniqueNum;
+  int64_t uniqueNum{1};
 
   // Callbacks to run-time library
   llvm::FunctionCallee DpFinalize;
@@ -251,7 +251,7 @@ private:
   uint32_t unique_callpath_state_id;
 
 public:
-  DiscoPoP() : uniqueNum(1){}; // : ModulePass(ID), uniqueNum(1){};
+  DiscoPoP()  {}; // : ModulePass(ID), uniqueNum(1){};
 
   bool runOnModule(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 
