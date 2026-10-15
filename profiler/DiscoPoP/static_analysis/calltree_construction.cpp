@@ -17,13 +17,13 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-typedef int8_t TRANSITION_TYPE; // 0 -> enterLoop, 1 -> exitLoop, 2 -> incrementLoop
+using TRANSITION_TYPE = int8_t; // 0 -> enterLoop, 1 -> exitLoop, 2 -> incrementLoop
 #define TRANSITION_TYPE_ENTERLOOP 0
 #define TRANSITION_TYPE_EXITLOOP 1
 #define TRANSITION_TYPE_INCREMENTLOOP 2
 
-typedef int32_t LOOP_ID;
-typedef std::vector<int32_t> ITERATION_INSTANCE;
+using LOOP_ID = int32_t;
+using ITERATION_INSTANCE = std::vector<int32_t>;
 
 // returns a mapping from loop id to the instruction id of the loop entry call
 std::unordered_map<int32_t, int32_t> get_loop_entry_instructionIDs(Function &F){

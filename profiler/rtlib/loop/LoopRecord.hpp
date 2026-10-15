@@ -39,6 +39,6 @@ struct LoopRecord {
   bool operator!=(const LoopRecord &other) const noexcept { return !(*this == other); }
 };
 
-typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
+using LoopRecords = std::unordered_map<LID, LoopRecord *>;
 
 } // namespace __dp

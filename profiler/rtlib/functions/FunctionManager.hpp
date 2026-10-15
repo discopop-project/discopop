@@ -29,7 +29,7 @@ namespace __dp {
 
 // a call site: its location, and the instruction id of the call (0 if unknown, e.g. a function
 // entered without a logged call)
-typedef std::pair<LID, std::int32_t> CallSite;
+using CallSite = std::pair<LID, std::int32_t>;
 
 struct CallSiteHash {
   std::size_t operator()(const CallSite &site) const noexcept {
@@ -37,11 +37,11 @@ struct CallSiteHash {
   }
 };
 
-typedef std::unordered_map<CallSite, std::set<LID>, CallSiteHash> BGNFuncList;
+using BGNFuncList = std::unordered_map<CallSite, std::set<LID>, CallSiteHash>;
 
 // 2) when two END func are identical
 
-typedef std::set<LID> ENDFuncList;
+using ENDFuncList = std::set<LID>;
 
 class FunctionManager {
 public:

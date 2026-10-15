@@ -18,7 +18,7 @@
 
 // #define SKIP_DUP_INSTR 1
 
-typedef std::int64_t sigElement;
+using sigElement = std::int64_t;
 
 namespace __dp {
 // The runtime debug flag, defined in runtimeFunctionsGlobals.cpp. Declared in this header and
