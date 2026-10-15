@@ -24,7 +24,7 @@ class StaticCalltreeNode {
     private:
         uint32_t node_id_;
         bool type_; // 0: Function; 1: Call instruction
-//        TODO: other types for loop iterations might be a good idea!
+        // TODO: other types for loop iterations might be a good idea!
         std::string function_name_;
         int32_t instruction_id_;
         std::string label_;  // precomputed once in the constructor; see get_label()

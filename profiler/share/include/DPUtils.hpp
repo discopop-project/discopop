@@ -77,7 +77,8 @@
 
 
 // extern cl::opt <string> FileMappingPath;
-extern std::string file_mapping_path;
+// The path of FileMapping.txt; empty until the first file id is determined.
+std::string &FileMappingPath();
 extern llvm::cl::opt<bool> dp_memory_profiling_skip_function_arguments;
 namespace dputil {
 
