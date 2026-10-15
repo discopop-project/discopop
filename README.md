@@ -20,8 +20,6 @@ In a nutshell, DiscoPoP performs the following steps:
 * identify parallel patterns that can be used to parallelize a code region,
 * and finally, suggest corresponding OpenMP parallelization constructs and clauses to programmers.
 
-DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code that can be transferred into the LLVM IR.
-
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Prerequisites
