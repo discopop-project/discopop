@@ -471,9 +471,7 @@ class TestAbnormalTermination(InstrumentationTestCase):
 class TestCodeBeyondTheLineOf16Bits(InstrumentationTestCase):
     """Lines past 2^14 used to spill into the file id of the location they were packed into."""
 
-    SOURCE = (
-        "// padding\n" * 20000
-        + """
+    SOURCE = "// padding\n" * 20000 + """
         int main() {                      // @main
           int b[10];
           for (int i = 0; i < 10; ++i) {  // @loop
@@ -482,7 +480,6 @@ class TestCodeBeyondTheLineOf16Bits(InstrumentationTestCase):
           return b[3];                    // @array_read
         }
         """
-    )
 
     def test_the_line_is_reported_unchanged(self) -> None:
         self.assertGreater(self.program.line_of_marker("array_write"), 20000)
