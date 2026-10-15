@@ -10,14 +10,45 @@
  *
  */
 
-#include "DiscoPoP.hpp"
+#include "utils/output.hpp"
+
+#include "DPUtils.hpp"
+#include "utils/profiler_files.hpp"
+
+#include "llvm/IR/Metadata.h"
+
+#include <algorithm>
+#include <fstream>
 
 using namespace llvm;
 using namespace std;
-using namespace dputil;
+using cu_output::xmlEscape;
+
+namespace {
+
+// writes the CU graph of one function into Data.xml
+class CUGraphWriter {
+public:
+  CUGraphWriter(std::ofstream &outCUs, const std::map<std::string, std::string> &loopStartLines)
+      : outCUs(outCUs), loopStartLines(loopStartLines) {}
+
+  void printTree(Node *node, bool isRoot);
+
+private:
+  std::string getLineNumbersString(std::set<LID> LineNumbers);
+
+  std::string getChildrenNodesString(Node *node);
+
+  void printNode(Node *node, bool isRoot);
+
+  std::ofstream &outCUs;
+  const std::map<std::string, std::string> &loopStartLines;
+};
+
+} // namespace
 
 /********** Output functions *********/
-string DiscoPoP::xmlEscape(string data) {
+string cu_output::xmlEscape(string data) {
   string::size_type pos = 0;
   for (;;) {
     pos = data.find_first_of("\"&<>", pos);
@@ -45,12 +76,23 @@ string DiscoPoP::xmlEscape(string data) {
   return data;
 }
 
-void DiscoPoP::secureStream() {
-  outOriginalVariables = profiler_files::open("OriginalVariables.txt");
-  outCUs = profiler_files::open("Data.xml");
+void cu_output::writeCUGraph(Node *root, const std::map<std::string, std::string> &loopStartLines) {
+  // OriginalVariables.txt stays empty, but is created as it always was
+  std::ofstream outOriginalVariables = profiler_files::open("OriginalVariables.txt");
+  std::ofstream outCUs = profiler_files::open("Data.xml");
+
+  outCUs << "<Nodes>" << "\n" << "\n";
+
+  CUGraphWriter(outCUs, loopStartLines).printTree(root, true);
+
+  outCUs << "</Nodes>" << "\n" << "\n" << "\n";
+
+  // closing flushes
+  outCUs.close();
+  outOriginalVariables.close();
 }
 
-string DiscoPoP::getLineNumbersString(set<LID> LineNumbers) {
+string CUGraphWriter::getLineNumbersString(set<LID> LineNumbers) {
   string line = "";
   for (auto li : LineNumbers) {
     std::string temp = ',' + dputil::decodeLID(li);
@@ -65,7 +107,7 @@ string DiscoPoP::getLineNumbersString(set<LID> LineNumbers) {
   return line;
 }
 
-string DiscoPoP::getChildrenNodesString(Node *root) {
+string CUGraphWriter::getChildrenNodesString(Node *root) {
   string childrenIDs = "";
   int i = 0;
   std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
@@ -79,17 +121,7 @@ string DiscoPoP::getChildrenNodesString(Node *root) {
   return childrenIDs;
 }
 
-void DiscoPoP::printData(Node *root) {
-  outCUs << "<Nodes>" << "\n" << "\n";
-
-  printTree(root, true);
-
-  outCUs << "</Nodes>" << "\n" << "\n" << "\n";
-
-  closeOutputFiles();
-}
-
-void DiscoPoP::printTree(Node *root, bool isRoot) {
+void CUGraphWriter::printTree(Node *root, bool isRoot) {
   printNode(root, isRoot);
 
   std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
@@ -100,11 +132,12 @@ void DiscoPoP::printTree(Node *root, bool isRoot) {
   });
 }
 
-void DiscoPoP::printNode(Node *root, bool /*isRoot*/) {
+void CUGraphWriter::printNode(Node *root, bool /*isRoot*/) {
   if (root->name.find("llvm")) {
     string start = "";
     if (root->type == nodeTypes::loop) {
-      start = loopStartLines[root->ID];
+      auto loopStart = loopStartLines.find(root->ID);
+      start = loopStart != loopStartLines.end() ? loopStart->second : "";
     } else {
       start = dputil::decodeLID(root->startLine);
     }
@@ -198,12 +231,5 @@ void DiscoPoP::printNode(Node *root, bool /*isRoot*/) {
 
     outCUs << "\t</Node>" << "\n" << "\n";
   }
-}
-
-void DiscoPoP::closeOutputFiles() {
-
-  // closing flushes
-  outCUs.close();
-  outOriginalVariables.close();
 }
 /************** End of output functions *******************/

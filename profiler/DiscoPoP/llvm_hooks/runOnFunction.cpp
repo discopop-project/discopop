@@ -193,8 +193,6 @@ void DiscoPoP::buildCUGraph(Function &F, ModuleAnalysisManager &MAM, FunctionCUG
 
   fillStartEndLineNumbers(graph.root, LI, graph.loopToPETNodeID);
 
-  secureStream();
-
   // printOriginalVariables(originalVariablesSet);
 
   /*printData(root);
@@ -236,7 +234,7 @@ void DiscoPoP::instrumentFunction(Function &F, ModuleAnalysisManager &MAM, const
 
 // Print CU Graph
 void DiscoPoP::writeCUGraph(FunctionCUGraph &graph) {
-  printData(graph.root);
+  cu_output::writeCUGraph(graph.root, loopStartLines);
 
   for (auto i : graph.CUs) {
     delete (i);
