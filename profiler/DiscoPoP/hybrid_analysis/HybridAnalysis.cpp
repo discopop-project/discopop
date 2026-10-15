@@ -29,9 +29,33 @@
 #include <unordered_map>
 #include <vector>
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::AllocaInst;
+using llvm::ArrayRef;
+using llvm::BasicBlock;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::DbgInfoIntrinsic;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::FunctionAnalysisManagerModuleProxy;
+using llvm::FunctionType;
+using llvm::GlobalValue;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::Module;
+using llvm::ModuleAnalysisManager;
+using llvm::PointerType;
+using llvm::ReturnInst;
+using llvm::StoreInst;
+using llvm::StringRef;
+using llvm::Twine;
+using llvm::Type;
+using llvm::Value;
+using llvm::appendToGlobalCtors;
+using llvm::dyn_cast;
+using llvm::errs;
+using llvm::isa;
 using hybrid_analysis::HybridAnalysis;
 
 constexpr bool DumpToDot = false;
@@ -91,8 +115,8 @@ HybridAnalysis::HybridAnalysis(Module &M) {
 }
 
 bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
-                                     map<Instruction *, CallInst *> &insertedAccessCallbacks,
-                                     map<string, string> &trueVarNamesFromMetadataMap) {
+                                     std::map<Instruction *, CallInst *> &insertedAccessCallbacks,
+                                     std::map<std::string, std::string> &trueVarNamesFromMetadataMap) {
   if (F.getInstructionCount() == 0) {
     return false;
 }
@@ -114,9 +138,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   DebugLoc dl;
   Value *V;
 
-  set<Instruction *> omittableInstructions;
+  std::set<Instruction *> omittableInstructions;
 
-  set<Value *> staticallyPredictableValues;
+  std::set<Value *> staticallyPredictableValues;
   // Get local values (variables)
   for (Instruction &I : F.getEntryBlock()) {
     if (AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
@@ -159,12 +183,12 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
   // assign static memory region IDs to statically predictable values and thus
   // dependencies
-  unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
+  std::unordered_map<std::string, std::pair<std::string, std::string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
                                                                             // name, statically assigned MemReg ID)
-  int64_t next_id;
-  string llvmIRVarName;
-  string originalVarName;
-  string staticMemoryRegionID;
+  std::int64_t next_id;
+  std::string llvmIRVarName;
+  std::string originalVarName;
+  std::string staticMemoryRegionID;
   for (auto V : staticallyPredictableValues) {
     next_id = nextFreeStaticMemoryRegionID++;
     llvmIRVarName = VNF->getVarName(V);
@@ -178,8 +202,8 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
       // metadata. Fall back to the LLVM IR name of the value.
       originalVarName = llvmIRVarName;
     }
-    staticMemoryRegionID = "S" + to_string(next_id);
-    staticValueNameToMemRegIDMap[llvmIRVarName] = pair<string, string>(originalVarName, staticMemoryRegionID);
+    staticMemoryRegionID = "S" + std::to_string(next_id);
+    staticValueNameToMemRegIDMap[llvmIRVarName] = std::pair<std::string, std::string>(originalVarName, staticMemoryRegionID);
   }
 
   if (DP_hybrid_DEBUG) {
@@ -190,8 +214,8 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   }
 
   // Perform the SPA dependence analysis
-  int32_t fid;
-  determineFileID(F, fid);
+  std::int32_t fid;
+  dputil::determineFileID(F, fid);
   // The dependencies are reported per execution of the basic block holding
   // their sinks, together with the callpath states of their ends, so that
   // they can be attributed to calling contexts and loop iterations like the
@@ -202,7 +226,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // sink BB -> dependencies whose source lies in the same execution of the
   // sink BB, before the sink, or which have no source instruction (INIT):
   // both ends get the state of the sink BB's execution
-  map<BasicBlock *, set<string>> conditionalBBDepMap;
+  std::map<BasicBlock *, std::set<std::string>> conditionalBBDepMap;
   // source BB -> variable -> sink BB -> dependencies whose source lies in an
   // earlier execution of the source BB (or of the sink BB itself). Per source
   // BB and variable, a per-invocation semaphore holds the state of the most
@@ -212,7 +236,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // the loop's header on the "j++" of its previous execution). The source
   // gets the semaphore's state, the sink the state of the sink BB's
   // execution. Only reported while the semaphore is set.
-  map<BasicBlock *, map<Value *, map<BasicBlock *, set<string>>>> conditionalBBPairDepMap;
+  std::map<BasicBlock *, std::map<Value *, std::map<BasicBlock *, std::set<std::string>>>> conditionalBBPairDepMap;
 
   //auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent()).getManager();
@@ -224,14 +248,14 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
   // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops,
   // which will be moved to the function entry
-  map<string, set<string>> lineToInitializedVarsMap;
+  std::map<std::string, std::set<std::string>> lineToInitializedVarsMap;
   for (auto edge : DG.getEdges()){
     if(DG.edgeIsINIT(edge)){
-      string initLine = DG.getInitEdgeInstructionLine(edge);
-      string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
+      std::string initLine = DG.getInitEdgeInstructionLine(edge);
+      std::string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
 
       if(lineToInitializedVarsMap.find(initLine) == lineToInitializedVarsMap.end()){
-        set<string> tmp;
+        std::set<std::string> tmp;
         lineToInitializedVarsMap[initLine] = tmp;
       }
       lineToInitializedVarsMap[initLine].insert(varIdentifier);
@@ -253,7 +277,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
     if (Src != Dst && DT.dominates(Dst, Src) && (isa<AllocaInst>(Dst) || Dst->getParent() == Src->getParent())) {
       if (!conditionalBBDepMap.count(Src->getParent())) {
-        set<string> tmp;
+        std::set<std::string> tmp;
         conditionalBBDepMap[Src->getParent()] = tmp;
       }
       conditionalBBDepMap[Src->getParent()].insert(DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
@@ -264,7 +288,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
         // check if initialization exists in the instruction line
         if(lineToInitializedVarsMap.find(DG.getInstructionLine(Dst)) != lineToInitializedVarsMap.end()){
           // check if the accessed variable is initialed here
-          string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
+          std::string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
           if(lineToInitializedVarsMap[DG.getInstructionLine(Dst)].find(varIdentifier) != lineToInitializedVarsMap[DG.getInstructionLine(Dst)].end()){
             // ignore this access as the initialized variable is accessed
             insertDep = false;
@@ -304,7 +328,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
       bbDepString += "/";
 }
     bool first = true;
-    bbDepString += to_string(bbDepCount) + "=";
+    bbDepString += std::to_string(bbDepCount) + "=";
     for (auto dep : pair.second) {
       if (!first) {
         bbDepString += ",";
@@ -318,7 +342,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
   // Add observation of in-order execution of pairs of basic blocks
   // the basic blocks writing each variable which is the source of a pair dependency
-  map<Value *, set<BasicBlock *>> writersOfVariable;
+  std::map<Value *, std::set<BasicBlock *>> writersOfVariable;
   for (auto &sourceBlock : conditionalBBPairDepMap) {
     for (auto &variable : sourceBlock.second) {
       writersOfVariable[variable.first];
@@ -335,7 +359,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     }
   }
   // one semaphore per (source BB, variable)
-  map<pair<BasicBlock *, Value *>, AllocaInst *> semaphores;
+  std::map<std::pair<BasicBlock *, Value *>, AllocaInst *> semaphores;
   for (auto &sourceBlock : conditionalBBPairDepMap) {
     for (auto &variable : sourceBlock.second) {
       auto AI = new AllocaInst(Int32, 0, "__dp_bb", llvmcompat::nextInstruction(F.getEntryBlock().getFirstNonPHI())->getIterator());
@@ -344,7 +368,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     }
   }
   // sink BB -> (semaphore, dependencies)
-  map<BasicBlock *, vector<pair<AllocaInst *, const set<string> *>>> reportsOfBlock;
+  std::map<BasicBlock *, std::vector<std::pair<AllocaInst *, const std::set<std::string> *>>> reportsOfBlock;
   for (auto &sourceBlock : conditionalBBPairDepMap) {
     for (auto &variable : sourceBlock.second) {
       for (auto &sinkBlock : variable.second) {
@@ -369,7 +393,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
         if (bbDepCount) {
           bbDepString += "/";
 }
-        bbDepString += to_string(bbDepCount);
+        bbDepString += std::to_string(bbDepCount);
         bbDepString += "=";
         bool first = true;
         for (auto &dep : *report.second) {
@@ -408,8 +432,8 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   }
 
   if (DumpToDot) {
-    CFG.dumpToDot(fileName + "_" + string(F.getName()) + ".CFG.dot");
-    DG.dumpToDot(fileName + "_" + string(F.getName()) + ".DG.dot");
+    CFG.dumpToDot(fileName + "_" + std::string(F.getName()) + ".CFG.dot");
+    DG.dumpToDot(fileName + "_" + std::string(F.getName()) + ".DG.dot");
   }
 
   if (DP_hybrid_DEBUG) {

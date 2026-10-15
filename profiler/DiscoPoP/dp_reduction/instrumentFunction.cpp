@@ -12,15 +12,13 @@
 
 #include "dp_reduction/ReductionInstrumenter.hpp"
 
-using namespace llvm;
-using namespace std;
 
 // iterates over all loops in a function and calls 'instrument_loop' for each
 // one
 void dp_reduction::ReductionInstrumenter::instrument_function(llvm::Function *function, llvm::LoopInfo &loop_info) {
 
   // get the corresponding file id
-  int32_t tmp_file_id = services_.getFileID(*function);
+  std::int32_t tmp_file_id = services_.getFileID(*function);
   if (tmp_file_id == 0) {
     return;
   }

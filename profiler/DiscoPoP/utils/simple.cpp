@@ -12,9 +12,34 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::CallGraph;
+using llvm::CallInst;
+using llvm::Constant;
+using llvm::DICompileUnit;
+using llvm::DIGlobalVariable;
+using llvm::DbgDeclareInst;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::GlobalVariable;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::InvokeInst;
+using llvm::Loop;
+using llvm::LoopInfo;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::NamedMDNode;
+using llvm::PHINode;
+using llvm::PointerType;
+using llvm::Region;
+using llvm::ReturnInst;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::errs;
+using llvm::isa;
 
 Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
   assert(PTy);
@@ -46,7 +71,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilde
 
 DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v) {
   assert(v && "Global variable cannot be null");
-  for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
+  for (std::set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
     if ((*it)->getDisplayName() == v->getName()) {
       return *it;
 }
@@ -76,7 +101,7 @@ bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
 bool DiscoPoP::sanityCheck(BasicBlock *BB) {
   LID lid;
   for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
-    lid = getLID(&*BI, fileID);
+    lid = dputil::getLID(&*BI, fileID);
     if (lid > 0) {
       return true;
     }
@@ -109,7 +134,7 @@ LID DiscoPoP::getLoopExitLID(BasicBlock *BB, Loop *L) {
       break;
     }
     for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
-      LID lid = getLID(&*BI, fileID);
+      LID lid = dputil::getLID(&*BI, fileID);
       if (lid > 0 && !isa<PHINode>(BI)) {
         return lid;
       }
@@ -175,7 +200,7 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
   return false;
 }
 
-void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI, map<Loop *, string> &loopToPETNodeID) {
+void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI, std::map<Loop *, std::string> &loopToPETNodeID) {
   if (root->type != nodeTypes::cu) {
     LID start = -1, end = -1;
 
@@ -224,7 +249,7 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<ReturnInst>(instruction)) {
-        lid = getLID(&*instruction, fileID);
+        lid = dputil::getLID(&*instruction, fileID);
         if (lid > 0) {
           root->returnLines.insert(lid);
 }
@@ -234,9 +259,9 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
 }
 
 
-int32_t DiscoPoP::get_or_register_loop_id(llvm::Loop* L){
+std::int32_t DiscoPoP::get_or_register_loop_id(llvm::Loop* L){
   // Check if loop is already registered
-    int32_t tmp_loop_id;
+    std::int32_t tmp_loop_id;
     auto pos = loop_to_id.find(L);
     if (pos != loop_to_id.end()) {
         // L found. Return loop id
@@ -244,7 +269,7 @@ int32_t DiscoPoP::get_or_register_loop_id(llvm::Loop* L){
     } else {
         // L not found. register loop id
         tmp_loop_id = loopID;
-        loop_to_id.insert(make_pair(L, tmp_loop_id));
+        loop_to_id.insert(std::make_pair(L, tmp_loop_id));
         loopID++;
     }
     return tmp_loop_id;

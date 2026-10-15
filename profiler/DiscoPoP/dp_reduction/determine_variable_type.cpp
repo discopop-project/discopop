@@ -12,13 +12,17 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::GetElementPtrInst;
+using llvm::Instruction;
+using llvm::StoreInst;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
+using llvm::raw_string_ostream;
 
-string dp_reduction::determineVariableType(Instruction *I) {
-  string s = "";
-  string type_str;
+std::string dp_reduction::determineVariableType(Instruction *I) {
+  std::string s = "";
+  std::string type_str;
   int index = isa<StoreInst>(I) ? 1 : 0;
   raw_string_ostream rso(type_str);
   (*((I->getOperand(index))->getType())).print(rso);

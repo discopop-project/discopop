@@ -13,19 +13,20 @@
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::CallBase;
+using llvm::IRBuilder;
+using llvm::PtrToIntInst;
+using llvm::Value;
 
 void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   // add instrumentation for delete instructions or calls to free
-  LID lid = getLID(toInstrument, fileID);
+  LID lid = dputil::getLID(toInstrument, fileID);
   if (lid == 0) {
     return;
 }
   IRBuilder<> IRB(llvmcompat::nextInstruction(toInstrument));
 
-  vector<Value *> args;
+  std::vector<Value *> args;
   args.push_back(lidConstant(lid));
 
   Value *startAddr =

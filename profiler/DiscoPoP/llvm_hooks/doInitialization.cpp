@@ -13,9 +13,10 @@
 #include "DiscoPoP.hpp"
 #include <filesystem>
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::Module;
+using llvm::Value;
+using llvm::dyn_cast;
+using llvm::errs;
 
 bool DiscoPoP::doInitialization(Module &M) {
   if (DP_DEBUG) {
@@ -23,18 +24,18 @@ bool DiscoPoP::doInitialization(Module &M) {
   }
 
   // prepare environment variables
-  char const *tmp = getenv("DOT_DISCOPOP");
+  char const *tmp = std::getenv("DOT_DISCOPOP");
   if (tmp == nullptr) {
     // DOT_DISCOPOP needs to be initialized
     setenv("DOT_DISCOPOP", ".discopop", 1);
   }
-  std::string tmp_str(getenv("DOT_DISCOPOP"));
+  std::string tmp_str(std::getenv("DOT_DISCOPOP"));
   setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
 
   // prepare .discopop directory if not present
   struct stat st1;
-  if (stat(getenv("DOT_DISCOPOP"), &st1) == -1) {
-    mkdir(getenv("DOT_DISCOPOP"), 0777);
+  if (stat(std::getenv("DOT_DISCOPOP"), &st1) == -1) {
+    mkdir(std::getenv("DOT_DISCOPOP"), 0777);
 
     // check if HOME/.discopop_config directory in user folder exists
     std::string user_home_dp_dir = (dputil::getEnvOrDefault("HOME", "") + std::string("/.discopop_config"));
@@ -48,13 +49,13 @@ bool DiscoPoP::doInitialization(Module &M) {
     project_overview_file.open(user_home_dp_dir + std::string("/locations.txt"), std::ios_base::app);
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
-    project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " " << std::filesystem::absolute(std::string(getenv("DOT_DISCOPOP"))).string() << "\n";
+    project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " " << std::filesystem::absolute(std::string(std::getenv("DOT_DISCOPOP"))).string() << "\n";
     project_overview_file.close();
   }
   // prepare profiler directory if not present
   struct stat st2;
-  if (stat(getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1) {
-    mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
+  if (stat(std::getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1) {
+    mkdir(std::getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
   // prepare statistics directory if not present
   struct stat st3;
@@ -65,7 +66,7 @@ bool DiscoPoP::doInitialization(Module &M) {
   }
 
   // prepare target directory if not present
-  char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");
+  char const *tmp2 = std::getenv("DP_PROJECT_ROOT_DIR");
   if (tmp2 == nullptr) {
     // DP_PROJECT_ROOT_DIR needs to be initialized
     std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
@@ -118,7 +119,7 @@ bool DiscoPoP::doInitialization(Module &M) {
 
     for (Module::global_iterator I = ThisModule->global_begin(); I != ThisModule->global_end(); I++) {
       Value *globalVariable = dyn_cast<Value>(I);
-      string glo = string(globalVariable->getName());
+      std::string glo = std::string(globalVariable->getName());
       if (glo.find(".") == glo.npos) {
         programGlobalVariablesSet.insert(glo);
         // originalVariablesSet.insert(glo);

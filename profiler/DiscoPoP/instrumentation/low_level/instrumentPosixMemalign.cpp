@@ -13,13 +13,20 @@
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::CallBase;
+using llvm::CallInst;
+using llvm::DebugLoc;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::InvokeInst;
+using llvm::LoadInst;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
 
 void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
   // add instrumentation for calls to posix_memalign
-  LID lid = getLID(toInstrument, fileID);
+  LID lid = dputil::getLID(toInstrument, fileID);
   if (lid == 0) {
     return;
 }
@@ -40,7 +47,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
 
   IRBuilder<> IRB(nextInst);
 
-  vector<Value *> args;
+  std::vector<Value *> args;
   args.push_back(lidConstant(lid));
 
   // posix_memalign returns the block through its first argument, a void** out parameter. That

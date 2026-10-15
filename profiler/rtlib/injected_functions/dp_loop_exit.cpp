@@ -24,14 +24,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
+void __dp_loop_exit(LID lid, std::int32_t loopID, std::int32_t instruction_id) {
   DP_CALLBACK_SCOPE(LOOP_EXIT);
 
   // __dp_loop_exit() can be called without __dp_loop_entry()
@@ -39,7 +38,7 @@ void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
   // by an "if" structure, and the condition of "if" fails
   if (loop_manager->is_single_exit(loopID)) {
     if (DP_DEBUG) {
-      std::cout << "Ignored single exit of loop " << loop_manager->get_current_loop_id() << endl;
+      std::cout << "Ignored single exit of loop " << loop_manager->get_current_loop_id() << std::endl;
     }
     return;
   }

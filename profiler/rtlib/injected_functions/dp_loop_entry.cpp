@@ -24,14 +24,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
+void __dp_loop_entry(LID lid, std::int32_t loopID, std::int32_t instruction_id) {
   DP_CALLBACK_SCOPE(LOOP_ENTRY);
 
   const auto function_stack_level = function_manager->get_current_stack_level();

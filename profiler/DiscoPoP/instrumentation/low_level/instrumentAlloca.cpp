@@ -12,13 +12,17 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::AllocaInst;
+using llvm::ArrayType;
+using llvm::ConstantInt;
+using llvm::IRBuilder;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
 
 // Instrumentation function inserters.
 void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
-  LID lid = getLID(toInstrument, fileID);
+  LID lid = dputil::getLID(toInstrument, fileID);
   if (lid == 0) {
     return;
 }
@@ -27,7 +31,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
 
   IRBuilder<> IRB(toInstrument->getNextNode());
 
-  vector<Value *> args;
+  std::vector<Value *> args;
   args.push_back(lidConstant(lid));
   args.push_back(determineVariableName_dynamic(toInstrument, ""));
 
@@ -37,7 +41,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
   args.push_back(startAddr);
 
   Value *endAddr = startAddr;
-  uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
+  std::uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
   Value *numElements = toInstrument->getOperand(0);
   if (toInstrument->isArrayAllocation()) {
     // endAddr = startAddr + allocated size
@@ -48,7 +52,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
     Type *typeToParse = toInstrument->getAllocatedType();
     Type *elementType;
 
-    uint64_t tmp_numElements = 1;
+    std::uint64_t tmp_numElements = 1;
 
     // unpack multidimensional allocations
     while (typeToParse->isArrayTy()) {

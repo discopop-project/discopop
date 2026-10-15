@@ -12,13 +12,19 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::Function;
+using llvm::PHINode;
+using llvm::StringRef;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
 
-void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
+void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, std::int32_t id) {
   BasicBlock *currentBB = bb;
-  vector<Value *> args;
+  std::vector<Value *> args;
   LID lid = 0;
 
   // Take care of the order of instrumentation functions for loop entry
@@ -30,11 +36,11 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     if (isa<CallInst>(BI)) {
       Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
       StringRef tmpFn = tmpF->getName();
-      if (tmpFn.find("__dp_loop_exit") != string::npos) {
+      if (tmpFn.find("__dp_loop_exit") != std::string::npos) {
         continue;
 }
     }
-    lid = getLID(&*BI, fileID);
+    lid = dputil::getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
       args.push_back(lidConstant(lid));
       args.push_back(ConstantInt::get(Int32, id));

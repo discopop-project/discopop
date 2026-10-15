@@ -14,18 +14,20 @@
 #include <unordered_set>
 #include <queue>
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::DbgVariableRecord;
+using llvm::Instruction;
+using llvm::filterDbgVars;
+using llvm::predecessors;
 
-string DiscoPoP::determineVariableDefLine(Instruction *I) {
-  string varDefLine{"LineNotFound"};
+std::string DiscoPoP::determineVariableDefLine(Instruction *I) {
+  std::string varDefLine{"LineNotFound"};
 
   bool isGlobal = false;
-  string varName = determineVariableName_static(&*I, isGlobal, true, "");
+  std::string varName = determineVariableName_static(&*I, isGlobal, true, "");
   varName = (varName.find(".addr") == varName.npos) ? varName : varName.erase(varName.find(".addr"), 5);
 
-  string varType = determineVariableType(&*I);
+  std::string varType = determineVariableType(&*I);
 //  std::cout << "\tvarName: " << varName << "\n";
 //  std::cout << "\tvarType: " << varType << "\n";
 
@@ -58,7 +60,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
       if((varName == SRCVarName) && (varType == rso.str())){
         found_var = true;
-        varDefLine = to_string(fileID) + ":" + to_string(DVR.getDebugLoc().getLine());
+        varDefLine = std::to_string(fileID) + ":" + std::to_string(DVR.getDebugLoc().getLine());
         break;
       }
     }

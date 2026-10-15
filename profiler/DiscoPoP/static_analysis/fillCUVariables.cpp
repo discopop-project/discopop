@@ -12,18 +12,21 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::Region;
+using llvm::StoreInst;
+using llvm::isa;
 
-void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> & /*CUVector*/,
-                               map<string, vector<CU *>> &BBIDToCUIDsMap) {
+void DiscoPoP::fillCUVariables(Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> & /*CUVector*/,
+                               std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap) {
   LID lid;
-  string varName, varType, varDefLine;
+  std::string varName, varType, varDefLine;
   bool isGlobalVar = false;
   // Changed TerminatorInst to Instuction
   const Instruction *TInst;
-  string successorBB;
+  std::string successorBB;
 
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
     CU *lastCU = BBIDToCUIDsMap[bb->getName().str()].back(); // get the last CU in the basic block
@@ -41,7 +44,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSe
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
         // NOTE: changed 'instruction' to '&*instruction'
-        lid = getLID(&*instruction, fileID);
+        lid = dputil::getLID(&*instruction, fileID);
         if (lid == 0) {
           continue;
 }
@@ -68,7 +71,7 @@ void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSe
         Variable v(varName, varType, varDefLine, readAccess, writeAccess);
 
         if (lid > (*bbCU)->endLine) {
-          bbCU = next(bbCU, 1);
+          bbCU = std::next(bbCU, 1);
         }
         if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
           (*bbCU)->globalVariableNames.insert(v);

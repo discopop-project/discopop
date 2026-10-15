@@ -13,18 +13,26 @@
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BinaryOperator;
+using llvm::CallInst;
+using llvm::Constant;
+using llvm::ConstantInt;
+using llvm::GlobalVariable;
+using llvm::Instruction;
+using llvm::LoadInst;
+using llvm::PtrToIntInst;
+using llvm::StoreInst;
+using llvm::Twine;
+using llvm::Value;
 
-void DiscoPoP::instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id) {
+void DiscoPoP::instrumentLoad(LoadInst *toInstrument, std::int32_t llvm_ir_instruction_id) {
 
-  LID lid = getLID(toInstrument, fileID);
+  LID lid = dputil::getLID(toInstrument, fileID);
   if (lid == 0) {
     return;
 }
 
-  vector<Value *> args;
+  std::vector<Value *> args;
 
   args.push_back(ConstantInt::get(Int64, llvm_ir_instruction_id));
 

@@ -23,14 +23,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 #ifdef SKIP_DUP_INSTR
-void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
+void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, std::int64_t count) {
 #else
 void __dp_read(LID lid, ADDR addr, const char *var) {
 #endif
@@ -47,8 +46,8 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   function_manager->reset_call(lid);
 
   if (DP_DEBUG) {
-    cout << "instLoad at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
-         << endl;
+    std::cout << "instLoad at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
+         << std::endl;
   }
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
@@ -67,7 +66,7 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
 #endif
   current.isRead = true;
   // add current call path state identifier to lid for later retrieval
-  current.lid = lid | (static_cast<uint64_t>(current_callpath_state->get_id()) << 32);
+  current.lid = lid | (static_cast<std::uint64_t>(current_callpath_state->get_id()) << 32);
   current.var = var;
   current.AAvar = reinterpret_cast<std::int64_t>(var);
 

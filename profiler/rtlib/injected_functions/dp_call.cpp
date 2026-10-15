@@ -23,14 +23,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID lid, int32_t instructionID) {
+void __dp_call(LID lid, std::int32_t instructionID) {
   DP_CALLBACK_SCOPE(CALL);
 
   // The location of the call site and its instruction id, which the function manager pairs with

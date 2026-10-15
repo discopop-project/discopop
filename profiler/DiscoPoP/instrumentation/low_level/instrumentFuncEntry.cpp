@@ -12,14 +12,25 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::ArrayType;
+using llvm::BasicBlock;
+using llvm::ConstantInt;
+using llvm::Function;
+using llvm::GlobalVariable;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::PHINode;
+using llvm::StringRef;
+using llvm::Type;
+using llvm::Value;
+using llvm::cast;
+using llvm::errs;
+using llvm::isa;
 
 void DiscoPoP::instrumentFuncEntry(Function &F) {
   BasicBlock &entryBB = F.getEntryBlock();
   LID lid = 0;
-  int32_t isStart = 0;
+  std::int32_t isStart = 0;
 
   StringRef fn = F.getName();
   if (fn.str() == "main"){
@@ -40,7 +51,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 
       IRBuilder<> IRB(insertBefore->getNextNode());
 
-      vector<Value *> args;
+      std::vector<Value *> args;
       args.push_back(lidConstant(lid));
       args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
 
@@ -50,8 +61,8 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
       args.push_back(startAddr);
 
       Value *endAddr = startAddr;
-      uint64_t numElements = 1;
-      uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();
+      std::uint64_t numElements = 1;
+      std::uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();
       if (Global_it->getValueType()->isArrayTy()) {
         // unpack potentially multidimensional allocations
         Type *typeToParse = Global_it->getValueType();
@@ -88,7 +99,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
   // of the basic block, but we need the first valid LID to
   // get the entry line of the function.
   for (BasicBlock::iterator BI = entryBB.begin(), EI = entryBB.end(); BI != EI; ++BI) {
-    lid = getLID(&*BI, fileID);
+    lid = dputil::getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
       IRBuilder<> IRB(&*entryBB.begin());
       // the third argument (function entry id) is set to the call's own instruction id in

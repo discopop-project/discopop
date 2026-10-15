@@ -12,17 +12,19 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::Loop;
+using llvm::Value;
 
-void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id, Loop *L) {
+void DiscoPoP::instrumentLoopExit(BasicBlock *bb, std::int32_t id, Loop *L) {
   // see getLoopExitLID for exit blocks without a valid LID of their own
   LID lid = getLoopExitLID(bb, L);
   if (lid == 0) {
     return;
   }
-  vector<Value *> args;
+  std::vector<Value *> args;
   args.push_back(lidConstant(lid));
   args.push_back(ConstantInt::get(Int32, id));
   args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids

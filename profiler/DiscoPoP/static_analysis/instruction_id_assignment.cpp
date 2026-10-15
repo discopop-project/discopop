@@ -12,9 +12,21 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::CallInst;
+using llvm::ConstantInt;
+using llvm::Function;
+using llvm::FunctionCallee;
+using llvm::IRBuilder;
+using llvm::Instruction;
+using llvm::LLVMContext;
+using llvm::MDNode;
+using llvm::MDString;
+using llvm::Module;
+using llvm::Type;
+using llvm::cast;
+using llvm::dyn_cast;
+using llvm::isa;
 
 void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
   for (Function &F : M) {
@@ -26,15 +38,15 @@ void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
           Function* F = ci->getCalledFunction();
           if(F){
             auto fn = F->getName();
-            if (fn.find("__dp_loop_incr") != string::npos)
+            if (fn.find("__dp_loop_incr") != std::string::npos)
             {
               // assign missing unique instruction id
               LLVMContext& ctx = BI->getContext();
-              int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
-              MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
+              std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+              MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
               BI->setMetadata("dp.md.instr.id", N);
               // fill instructionID to lineID mapping file
-              instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
+              instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << dputil::decodeLID(dputil::getLID(&*BI, fileID)) << "\n";
             }
           }
         }
@@ -44,7 +56,7 @@ void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
 }
 
 void DiscoPoP::update_argument_instruction_ids(Module &M){
-  cout << "Updating argument instruction ids...\n";
+  std::cout << "Updating argument instruction ids...\n";
   for (Function &F : M) {
     for(BasicBlock &BB: F){
       for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
@@ -54,32 +66,32 @@ void DiscoPoP::update_argument_instruction_ids(Module &M){
           Function* F = ci->getCalledFunction();
           if(F){
             auto fn = F->getName();
-            if (fn.find("__dp_loop_entry") != string::npos)
+            if (fn.find("__dp_loop_entry") != std::string::npos)
             {
               // Get InstructionID of callinstruction
               MDNode* md = BI->getMetadata("dp.md.instr.id");
-              int32_t callInstructionID = 0;
+              std::int32_t callInstructionID = 0;
               if(md){
                 // Metadata exists
                 std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
                 callInstructionID_str.erase(0, 15);
-                callInstructionID = stoi(callInstructionID_str);
+                callInstructionID = std::stoi(callInstructionID_str);
               }
               // update the function argument
               if(callInstructionID != 0){
                 ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
               }
             }
-            if (fn.find("__dp_loop_incr") != string::npos)
+            if (fn.find("__dp_loop_incr") != std::string::npos)
             {
               // Get InstructionID of callinstruction
               MDNode* md = BI->getMetadata("dp.md.instr.id");
-              int32_t callInstructionID = 0;
+              std::int32_t callInstructionID = 0;
               if(md){
                 // Metadata exists
                 std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
                 callInstructionID_str.erase(0, 15);
-                callInstructionID = stoi(callInstructionID_str);
+                callInstructionID = std::stoi(callInstructionID_str);
               }
               // update the function argument
               if(callInstructionID != 0){
@@ -90,21 +102,21 @@ void DiscoPoP::update_argument_instruction_ids(Module &M){
             {
               // the instruction id of the entry call identifies the function at runtime, see
               // callpath_function_entries.txt
-              int32_t callInstructionID = get_dp_instruction_id(&*BI);
+              std::int32_t callInstructionID = get_dp_instruction_id(&*BI);
               if(callInstructionID != 0){
                 ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
               }
             }
-            if (fn.find("__dp_loop_exit") != string::npos)
+            if (fn.find("__dp_loop_exit") != std::string::npos)
             {
               // Get InstructionID of callinstruction
               MDNode* md = BI->getMetadata("dp.md.instr.id");
-              int32_t callInstructionID = 0;
+              std::int32_t callInstructionID = 0;
               if(md){
                 // Metadata exists
                 std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
                 callInstructionID_str.erase(0, 15);
-                callInstructionID = stoi(callInstructionID_str);
+                callInstructionID = std::stoi(callInstructionID_str);
               }
               // update the function argument
               if(callInstructionID != 0){

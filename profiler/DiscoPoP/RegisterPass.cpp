@@ -48,7 +48,19 @@ ModulePass *createDiscoPoPPass() {
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include "DiscoPoP.hpp"
-using namespace llvm;
+using llvm::Function;
+using llvm::FunctionAnalysisManager;
+using llvm::Module;
+using llvm::ModuleAnalysisManager;
+using llvm::ModulePassManager;
+using llvm::OptimizationLevel;
+using llvm::PassBuilder;
+using llvm::PassInfoMixin;
+using llvm::PassPluginLibraryInfo;
+using llvm::PreservedAnalyses;
+using llvm::ThinOrFullLTOPhase;
+using llvm::createModuleToFunctionPassAdaptor;
+using llvm::errs;
 
 
 namespace {

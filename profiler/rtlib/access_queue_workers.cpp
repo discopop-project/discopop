@@ -29,7 +29,6 @@
 #include <sched.h>
 #endif
 
-using namespace std;
 
 namespace __dp {
 
@@ -170,9 +169,9 @@ void *processFirstAccessQueue(void *arg) {
 
   if (DP_DEBUG) {
 #ifdef __linux__
-    cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
+    std::cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
 #else
-    cout << "thread " << id << " exits... \n";
+    std::cout << "thread " << id << " exits... \n";
 #endif
   }
 
@@ -253,9 +252,9 @@ void *processSecondAccessQueue(void *arg) {
 
   if (DP_DEBUG) {
 #ifdef __linux__
-    cout << "thread " << id << " processing secondAccessQueue on core " << sched_getcpu() << " exits... \n";
+    std::cout << "thread " << id << " processing secondAccessQueue on core " << sched_getcpu() << " exits... \n";
 #else
-    cout << "thread " << id << " processing secondAccessQueue exits... \n";
+    std::cout << "thread " << id << " processing secondAccessQueue exits... \n";
 #endif
   }
 

@@ -22,14 +22,13 @@
 #include <set>
 #include <string>
 
-using namespace std;
 
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, int64_t /*numBytes*/) {
+void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, std::int64_t /*numBytes*/) {
   DP_CALLBACK_SCOPE(NEW);
 }
 }

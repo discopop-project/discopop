@@ -19,8 +19,6 @@
 
 #include <iostream>
 
-using namespace std;
-using namespace dputil;
 
 namespace __dp {
 
@@ -44,24 +42,24 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
 
 
   if (DP_DEBUG) {
-    cout << "inserted dep [" << decodeLID(curr) << ", ";
+    std::cout << "inserted dep [" << dputil::decodeLID(curr) << ", ";
     switch (type) {
     case RAW:
-      cout << "RAW";
+      std::cout << "RAW";
       break;
     case WAR:
-      cout << "WAR";
+      std::cout << "WAR";
       break;
     case WAW:
-      cout << "WAW";
+      std::cout << "WAW";
       break;
     case INIT:
-      cout << "INIT";
+      std::cout << "INIT";
       break;
     default:
       break;
     }
-    cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
+    std::cout << ", " << dputil::decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << std::endl;
   }
 }
 

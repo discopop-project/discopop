@@ -12,9 +12,17 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::DILocation;
+using llvm::DebugLoc;
+using llvm::Function;
+using llvm::Instruction;
+using llvm::MDNode;
+using llvm::SmallVector;
+using llvm::SmallVectorImpl;
+using llvm::StringRef;
+using llvm::Value;
+using llvm::dyn_cast;
 
 std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
   std::string lid = "LOOPENDNOTFOUND";
@@ -51,7 +59,7 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
 
       for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
         StringRef exitType = (*EI)->getName().split('.').first;
-        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != string::npos) &&
+        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != std::string::npos) &&
             (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
           RealExitBlocks.push_back(*EI);
         } else {
@@ -62,7 +70,7 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
           for (unsigned int i = 0; i < numSucc; ++i) {
             BasicBlock *succ = TI->getSuccessor(i);
             exitType = succ->getName().split('.').first;
-            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != string::npos) &&
+            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != std::string::npos) &&
                 (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
               RealExitBlocks.push_back(succ);
             }
@@ -88,14 +96,14 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
         for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
              ++EI) {
           BasicBlock *currentBB = *EI;
-          vector<Value *> args;
+          std::vector<Value *> args;
           LID lid = 0;
 
           for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
             lid = dp_reduction::getLID(&*BI, file_id);
-            uint64_t ulid = static_cast<uint64_t>(lid);
+            std::uint64_t ulid = static_cast<std::uint64_t>(lid);
             if (ulid != 0) {
-              return to_string(ulid % MAXLNO);
+              return std::to_string(ulid % MAXLNO);
             }
           }
         }
@@ -113,7 +121,7 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
         if (DILocation *DIL = dyn_cast<DILocation>(LoopID->getOperand(i))) {
           if (!Start) {
             if (foundEnd) {
-              lid = to_string(DebugLoc(DIL)->getLine());
+              lid = std::to_string(DebugLoc(DIL)->getLine());
 
               break;
             }               foundEnd = true;

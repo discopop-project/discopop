@@ -12,11 +12,16 @@
 
 #include "DiscoPoP.hpp"
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
+using llvm::BasicBlock;
+using llvm::BranchInst;
+using llvm::ConstantInt;
+using llvm::IRBuilder;
+using llvm::Region;
+using llvm::Value;
+using llvm::cast;
+using llvm::isa;
 
-void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap) {
+void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap) {
   /* Create calls to count taken branches inbetween CUs during execution */
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
@@ -29,16 +34,16 @@ void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, map<string, v
           // prepare IRBuilder to insert instrumentation
           IRBuilder<> IRB(branchInst);
           // get BBId and CU IDS of the source
-          string source_BBID = bb->getName().str();
+          std::string source_BBID = bb->getName().str();
           for (auto source_cu : BBIDToCUIDsMap[source_BBID]) {
             // get BBIds of all targets
             for (unsigned int i = 0; i < branchInst->getNumSuccessors(); i++) {
-              string successor_BBID = branchInst->getSuccessor(i)->getName().str();
+              std::string successor_BBID = branchInst->getSuccessor(i)->getName().str();
               // get CUs of all targets
               for (auto target_cu : BBIDToCUIDsMap[successor_BBID]) {
                 // add instrumentation prior to the branch instruction
-                vector<Value *> args;
-                string source_and_target = source_cu->ID + ";" + target_cu->ID;
+                std::vector<Value *> args;
+                std::string source_and_target = source_cu->ID + ";" + target_cu->ID;
                 args.push_back(getOrInsertVarName_dynamic(source_and_target, IRB));
                 args.push_back(branchInst->getCondition());
                 bool counter_active_on_cmp_value = (i == 0 ? 1 : 0);
