@@ -26,7 +26,6 @@ using namespace dputil;
 // Initializations
 void DiscoPoP::setupDataTypes() {
   Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
-  Int8 = const_cast<IntegerType *>(IntegerType::getInt8Ty(*ThisModuleContext));
   Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
   Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
   CharPtr = PointerType::getUnqual(Type::getInt8Ty(*ThisModuleContext));
@@ -81,13 +80,6 @@ void DiscoPoP::setupCallbacks() {
 
   DpTakenBranchCounterIncr =
       ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);
-}
-
-DiscoPoP::~DiscoPoP() {
-  if (ocfg.is_open()) {
-    ocfg.flush();
-    ocfg.close();
-  }
 }
 
 // DPReduction end
