@@ -1,34 +1,42 @@
 ---
 layout: default
-title: Visual Studio Code Extension
+title: VS Code extension
 parent: Setup
-nav_order: 2
+nav_order: 4
 ---
 
-# How to Setup The Visual Studio Code Extension for DiscoPoP
+# VS Code extension
 
-Using the DiscoPoP VS Code extension is the recommended way to get started using DiscoPoP, especially when your projects use the CMake build system.
+The DiscoPoP VS Code extension is an extension to the [GUI](../tools/GUI.md). It lets you browse the parallelization suggestions and the hotspots that DiscoPoP identified, and apply suggestions, inside the editor. The main way to use DiscoPoP is the GUI (`discopop_gui`) or the [command line tools](../examples/walk_through.md); the extension is an optional addition for those who prefer to stay in VS Code.
 
-## Prerequisites
+![Suggestions in the DiscoPoP VS Code extension](../assets/README/Screenshot_1.png)
 
-- [DiscoPoP](https://github.com/discopop-project/discopop) is installed: Check out [How to install DiscoPoP](./discopop.md) before following this guide.
-- The [HotspotDetection](https://github.com/discopop-project/Hotspot-Detection) is installed. The setup procedure is the same as for DiscoPoP.
-- [VS Code](https://code.visualstudio.com/) is installed.
-- OS: Linux or Windows with [WSL](https://code.visualstudio.com/docs/remote/wsl-tutorial) are supported.
+## What DiscoPoP needs to provide
 
-## Setup
+The extension reads results, it does not replace the analysis. Before you open a project in the extension, analyze it with DiscoPoP (GUI or command line), so that a `.discopop` directory exists in the project:
 
-Install the [DiscoPoP extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) from the VS Code marketplace.
+- the explorer results (run the *Pattern Detection* tab of the GUI or `discopop_explorer` inside `.discopop`) for the suggestions and their patches, and
+- the results of the hotspot detection, if you want to see hotspots.
 
-## Next Steps
+## Install the extension
 
-You can get started to use the VS Code extension right away. Check out the [Example Walkthrough](../examples/walk_through_gui.md) for more information.
+1. Install [VS Code](https://code.visualstudio.com/) (Linux, or Windows with [WSL](https://code.visualstudio.com/docs/remote/wsl-tutorial)).
+2. Install the [DiscoPoP extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) from the VS Code marketplace.
+3. Install DiscoPoP itself as described in [Installation](./discopop.md).
 
+## Open the results of a project
 
-## Troubleshooting: Common Issues
+The explorer prints this procedure when it finishes. To browse the results of an analyzed project:
 
-If you have any trouble to setup the tools, the following tips might help you. If you still run into problems during setup or usage, please [create an issue on github](https://github.com/discopop-project/discopop-gui-vscode/issues).
+1. Open the DiscoPoP view in VS Code (by default in the left sidebar).
+2. In *Configurations*, add a configuration with `+` and choose *ViewOnly*.
+3. Select a name and provide the path of the `.discopop` directory of your project.
+4. Load the results (clock-like icon).
 
-- Make sure to install compatible versions of DiscoPoP, the HotspotDetection and the VS Code extension. The latest released versions of all tools should always be compatible.
-- DiscoPoP must be build within `<path/to/discopop>/build`. Builds in other locations are currently not supported. In the extension settings: provide `<path/to/discopop>`, **not** `<path/to/discopop>/build` in the 'DiscoPoP Root setting.
-- The HotspotDetection must be built within `<path/to/hotspot-detection>/build`. Builds in other locations are currently not supported. In the extension settings: provide `<path/to/hotspot-detection>`, **not** `<path/to/hotspot-detection>/build` in the 'Hotspot Detection Root' setting.
+The [VS Code extension walk-through](../examples/walk_through_vscode.md) shows these steps with the example program.
+
+## Troubleshooting
+
+Use compatible versions of DiscoPoP and the extension: the latest released versions should always work together. If you run into problems, create an issue in the [extension's repository](https://github.com/discopop-project/discopop-gui-vscode/issues).
+<!-- UNVERIFIED: this is the old organization name; the repository was not found under tuda-hpclab, and whether it moved is not confirmed. -->
+<!-- UNVERIFIED: that the current extension version reads the results of this DiscoPoP version without the DiscoPoP build directory (the old documentation required a build in <root>/build). -->

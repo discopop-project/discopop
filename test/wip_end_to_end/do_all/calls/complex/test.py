@@ -2,7 +2,6 @@
 import copy
 import os
 import pathlib
-import subprocess
 import unittest
 
 import jsonpickle
@@ -10,8 +9,6 @@ import jsonpickle
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from test.utils.existence.existence_utils import check_patterns_for_FN, check_patterns_for_FP
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
-from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
-from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
 from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
@@ -20,7 +17,7 @@ from discopop_library.DependencyComparator.dependency_comparator import run as r
 
 class TestMethods(unittest.TestCase):
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         current_dir = pathlib.Path(__file__).parent.resolve()
         dp_build_dir = run_config_provider(
             ConfigProviderArguments(
@@ -52,18 +49,18 @@ class TestMethods(unittest.TestCase):
         cmd = "discopop_explorer --enable-patterns doall,reduction"
         run_cmd(cmd, os.path.join(src_dir, ".discopop"), env_vars)
 
-        self.src_dir = src_dir
-        self.env_vars = env_vars
+        cls.src_dir = src_dir
+        cls.env_vars = env_vars
 
-        test_output_file = os.path.join(self.src_dir, ".discopop", "explorer", "detection_result_dump.json")
+        test_output_file = os.path.join(cls.src_dir, ".discopop", "explorer", "detection_result_dump.json")
         # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
-        self.test_output: DetectionResult = jsonpickle.decode(tmp_str)
+        cls.test_output: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
 
     @classmethod
-    def tearDownClass(self):
-        run_cmd("make veryclean", self.src_dir, self.env_vars)
+    def tearDownClass(cls):
+        run_cmd("make veryclean", cls.src_dir, cls.env_vars)
 
     def test(self):
         for pattern_type in self.test_output.patterns.__dict__:

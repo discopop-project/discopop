@@ -20,67 +20,52 @@ In a nutshell, DiscoPoP performs the following steps:
 * identify parallel patterns that can be used to parallelize a code region,
 * and finally, suggest corresponding OpenMP parallelization constructs and clauses to programmers.
 
-DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code that can be transferred into the LLVM IR.
-
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
-## Getting started
-Follow the steps in [setup](https://tuda-hpclab.github.io/discopop/setup/discopop/) to install DiscoPoP.
-To setup the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) (recommended for general use of the framework), please follow [these steps](https://tuda-hpclab.github.io/discopop/setup/vscx/).
+## Prerequisites
+You need Python 3.11 or newer, LLVM/clang 19-22 with development files, CMake 3.28 or newer, a C++20 compiler, the Boost headers, and Tk with a display for the GUI. The profiler is built during the installation.
 
-For a brief introduction to the [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop), please follow the [walk-through example](https://tuda-hpclab.github.io/discopop/examples/walk_through_gui/).
-For a brief introduction to the command line tools, please refer to the [tools overview](https://tuda-hpclab.github.io/discopop/Tools) and follow the [command-line walk-through example](https://tuda-hpclab.github.io/discopop/examples/walk_through/).
+On Debian and Ubuntu:
+```bash
+sudo apt install python3 python3-pip python3-venv python3-tk build-essential cmake git llvm-19-dev clang-19 clang-tools-19 libomp-19-dev libboost-dev
+```
+Replace 19 with 20, 21, or 22 for a newer LLVM release. Ubuntu 24.04 packages LLVM 19 and 20, Debian 13 packages 19 and 22; other versions are available from [apt.llvm.org](https://apt.llvm.org).
 
-For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://tuda-hpclab.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://tuda-hpclab.github.io/discopop/Tools).
+For Arch-based distributions (`pacman`) and macOS (Homebrew), see the [installation page](https://tuda-hpclab.github.io/discopop/setup/discopop/). These routes are not tested in CI.
 
 ## Installation
-To simplify the setup we provide a Debian package via the [Release Assets](https://github.com/tuda-hpclab/discopop/releases/latest).
-
-## TL;DR - Example
-If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://tuda-hpclab.github.io/discopop/setup/discopop/).
-
-The following example installs DiscoPoP for `users`, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
-In case any issues arise during the process, please refer to the detailed [setup instructions](https://tuda-hpclab.github.io/discopop/Setup), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
-
-### Prerequisites
-- Download and install `.deb` package from [latest Release](https://github.com/tuda-hpclab/discopop/releases/latest).
-- Install the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop)
-### Example
-Instrument and execute the code.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install discopop
 ```
-# create a copy of the example code
-cp -r /opt/DiscoPoP/example discopop_example
-cd discopop_example
+To install from a checkout of this repository, see the [installation page](https://tuda-hpclab.github.io/discopop/setup/discopop/).
 
-# instrument and build the example code
-discopop_cxx example.cpp -o example
-
-# execute instrumented code
-./example
+## Starting the GUI
+Your project has to build with the compilers and flags given in `$CC`/`$CXX` and `$CFLAGS`/`$CXXFLAGS`. Start the GUI in the project directory:
+```bash
+cd <your project>
+discopop_gui
 ```
+On the first start, a wizard asks for your compile script and an execution script, and creates the first configuration. See [Getting started](https://tuda-hpclab.github.io/discopop/getting_started/) for the details.
 
-Execute the pattern analysis on the gathered data.
-```
-# identify parallel patterns
-cd .discopop
-discopop_explorer
-```
+## What the GUI can do
+Detect parallel patterns: the Execute tab manages the profiling and the Pattern Detection tab analyzes the profiling data of your program in order to identify and present parallelization suggestions in the form of OpenMP constructs and corresponding patches.
 
-Navigate to the `DiscoPoP` extension tab in Visual Studio Code to browse the created parallelization suggestions.
-Analyzing new projects, like the example code will lead to the automatic creation of a project configuration in the `Configurations` view.
-By default, the current timestamp will be used as the configuration label (in the following screenshots, `03_12_2025-16_27_15`).
-Click the clock-like `Load Results` button next to the configuration name to load the identified parallelization suggestions.
-Suggestions can be browsed, previewed, and applied via the `Suggestions` view, or the added annotations (`Potential Parallelism(count)`) in the analyzed source code.
-<br />
-<br />
-![Screenshot of the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_1.png)
-<br />
-<br />
-The following screenshot shows an exemplary suggestion preview.
-<br />
-<br />
-![Screenshot of the suggestion preview in the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_2.png)
+![Pattern Detection tab after a detection run](docs/assets/screenshots/gui_pattern_detection.svg)
 
+Find the combination that pays off: the Autotuning tab measures combinations of the suggestions on your program and shows the speedup of each.
+
+![Autotuning tab with the measured combinations](docs/assets/screenshots/gui_autotuning.svg)
+
+## Documentation
+* [Getting started](https://tuda-hpclab.github.io/discopop/getting_started/): install DiscoPoP and work through the GUI.
+* [Manual](https://tuda-hpclab.github.io/discopop/manual/): installation options, examples, all tools and the data they produce.
+* [MCP server](https://tuda-hpclab.github.io/discopop/tools/MCP_server/): lets AI assistants run DiscoPoP.
+* [VS Code extension](https://tuda-hpclab.github.io/discopop/setup/vscx/): an extension to the GUI for browsing suggestions in the editor.
+
+## Contact
+In case any issues arise, please contact us via GitHub messages or by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.

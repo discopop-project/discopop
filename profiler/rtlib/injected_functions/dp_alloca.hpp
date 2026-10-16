@@ -1,0 +1,29 @@
+/*
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
+#pragma once
+
+#include "DPTypes.hpp"
+
+namespace dp {
+
+/******* Instrumentation function *******/
+extern "C" {
+
+#ifdef SKIP_DUP_INSTR
+void __dp_alloca(LID lid, char* var, ADDR start_addr, ADDR end_addr, int64_t num_bytes, int64_t num_elements);
+#else
+void __dp_alloca(LID lid, char* var, ADDR start_addr, ADDR end_addr, int64_t num_bytes, int64_t num_elements);
+#endif
+}
+
+}  // namespace dp

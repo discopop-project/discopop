@@ -1,0 +1,208 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+#include_directories(
+#    ../share/include
+#    )
+
+# Runtime library sources and build flags.
+#
+# Split in two because the benchmark variants below recompile one half and reuse the other. The
+# callback half is every translation unit whose generated code depends on callback_body_enabled(),
+# i.e. everything that includes callback_scope.hpp; the shared half compiles to the same objects
+# in every variant. Keep a new source on the right side of that line: a callback file that ends up
+# in the shared list would silently be built once and shared by all variants.
+set(DiscoPoP_CALLBACK_SOURCES
+        injected_functions/dp_alloca.cpp
+        injected_functions/dp_call.cpp
+        injected_functions/dp_decl.cpp
+        injected_functions/dp_delete.cpp
+        injected_functions/dp_func_entry.cpp
+        injected_functions/dp_func_exit.cpp
+        injected_functions/dp_incr_taken_branch_counter.cpp
+        injected_functions/dp_landing_pad.cpp
+        injected_functions/dp_loop_entry.cpp
+        injected_functions/dp_loop_exit.cpp
+        injected_functions/dp_loop_incr.cpp
+        injected_functions/dp_new.cpp
+        injected_functions/dp_read.cpp
+        injected_functions/dp_report_bb.cpp
+        injected_functions/dp_report_bb_pair.cpp
+        injected_functions/dp_write.cpp
+
+        lifecycle/runtime_shutdown.cpp
+        )
+
+set(DiscoPoP_SHARED_SOURCES
+        output_paths.cpp
+        runtimeFunctions.cpp
+        dependency_analysis.cpp
+        dependency_output.cpp
+        access_queue_workers.cpp
+        runtimeFunctionsGlobals.cpp
+        memory/Signature.cpp
+
+
+        injected_functions/dp_add_bb_deps.cpp
+        injected_functions/dp_finalize.cpp
+        injected_functions/dp_loop_output.cpp
+        injected_functions/dp_taken_branch_counter_output.cpp
+
+        hybrid_analysis/bb_deps.cpp
+
+        lifecycle/runtime_startup.cpp
+
+        static_callstate_transitions/CallState.cpp
+        static_callstate_transitions/CallStateGraph.cpp
+        static_callstate_transitions/utils.cpp
+        )
+
+set(DiscoPoP_SOURCES ${DiscoPoP_SHARED_SOURCES} ${DiscoPoP_CALLBACK_SOURCES})
+
+# What every library built from the runtime sources needs: DiscoPoP_RT, and the variants for the benchmarks below.
+# The flags are the runtime's own, they do not depend on how LLVM was built; the C++ standard comes from
+# CMAKE_CXX_STANDARD, without the compiler's extensions.
+function(dp_configure_runtime_target target)
+        target_link_libraries(${target} PUBLIC DiscoPoP_RT_Includes Threads::Threads PRIVATE DiscoPoP_Boost DiscoPoP_Warnings)
+        target_compile_options(${target} PRIVATE -fno-rtti)
+        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON CXX_EXTENSIONS OFF)
+        # the runtime is optimized in builds without optimization flags of their own, too
+        if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+                target_compile_options(${target} PRIVATE -O2)
+        endif()
+endfunction()
+
+# add_custom_target(DiscoPoP)
+
+add_library(DiscoPoP_RT STATIC
+        ${DiscoPoP_SOURCES})
+
+# The include roots of the runtime: its sources, the headers shared with the pass (timer.hpp, debug_print.hpp)
+# and the third party headers are included relative to these, never through "../". PUBLIC through the link
+# below, so that the unit tests and benchmarks compiling against the runtime use the same names.
+add_library(DiscoPoP_RT_Includes INTERFACE)
+target_include_directories(DiscoPoP_RT_Includes INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../share/include
+        )
+# SYSTEM: the warnings of the third party code are not ours to fix
+target_include_directories(DiscoPoP_RT_Includes SYSTEM INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
+        )
+
+# Boost comes with DiscoPoP_Boost; it is set up in profiler/CMakeLists.txt
+dp_configure_runtime_target(DiscoPoP_RT)
+
+# DP_SANITIZER_FLAGS is set by the top-level profiler CMakeLists (DP_SANITIZERS).
+# PUBLIC: targets linking DiscoPoP_RT (e.g. DiscoPoP_UT) get instrumented and
+# linked against the sanitizer runtime, too.
+if(DP_SANITIZER_FLAGS)
+        target_compile_options(DiscoPoP_RT PUBLIC ${DP_SANITIZER_FLAGS})
+        target_link_options(DiscoPoP_RT PUBLIC ${DP_SANITIZER_FLAGS})
+endif()
+
+# The runtime again, once with none of the callback bodies and once per callback with only that
+# one (see callback_body_enabled() in callback_scope.hpp). Together they take the cost of
+# instrumentation apart: what the added calls cost by themselves, and what each callback's body
+# adds on top of them.
+#
+# Built here rather than next to the benchmarks that use them, because dp_configure_runtime_target() above
+# sets the flags of the runtime and libraries that are compared have to be compiled identically.
+# None of them is installed or linked by anything the profiler ships: they export the same symbols
+# as DiscoPoP_RT, so an instrumented program linked against one of them would profile partially or
+# not at all.
+if(DP_BUILD_UNITTESTS STREQUAL "1")
+        # the half that does not depend on which callbacks are switched on, compiled once and
+        # reused by every variant -- which is what keeps the extra runtime libraries cheap
+        add_library(DiscoPoP_RT_BenchmarkShared OBJECT ${DiscoPoP_SHARED_SOURCES})
+        dp_configure_runtime_target(DiscoPoP_RT_BenchmarkShared)
+
+        # the CallbackId enumerators from callback_scope.hpp. The library name carries the
+        # enumerator so that a driver can go from one to the other without a table.
+        set(DiscoPoP_RT_BENCHMARK_CALLBACKS
+                ALLOCA CALL DECL DELETE FUNC_ENTRY FUNC_EXIT INCR_TAKEN_BRANCH_COUNTER
+                LANDING_PAD LOOP_ENTRY LOOP_EXIT LOOP_INCR NEW READ REPORT_BB REPORT_BB_PAIR WRITE)
+
+        add_library(DiscoPoP_RT_EmptyCallbacks STATIC
+                ${DiscoPoP_CALLBACK_SOURCES}
+                $<TARGET_OBJECTS:DiscoPoP_RT_BenchmarkShared>)
+        target_compile_definitions(DiscoPoP_RT_EmptyCallbacks PUBLIC DP_BENCHMARK_EMPTY_CALLBACKS)
+        set(DiscoPoP_RT_BENCHMARK_TARGETS DiscoPoP_RT_BenchmarkShared DiscoPoP_RT_EmptyCallbacks)
+
+        foreach(dp_callback IN LISTS DiscoPoP_RT_BENCHMARK_CALLBACKS)
+                add_library(DiscoPoP_RT_Only_${dp_callback} STATIC
+                        ${DiscoPoP_CALLBACK_SOURCES}
+                        $<TARGET_OBJECTS:DiscoPoP_RT_BenchmarkShared>)
+                target_compile_definitions(DiscoPoP_RT_Only_${dp_callback} PUBLIC
+                        DP_BENCHMARK_ONLY_CALLBACK=${dp_callback})
+                list(APPEND DiscoPoP_RT_BENCHMARK_TARGETS DiscoPoP_RT_Only_${dp_callback})
+        endforeach()
+
+        foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
+                dp_configure_runtime_target(${dp_variant})
+                # kept out of compile_commands.json: they compile the sources of DiscoPoP_RT again with
+                # other definitions, and clangd would otherwise pick one of them for a file of the runtime
+                set_target_properties(${dp_variant} PROPERTIES EXPORT_COMPILE_COMMANDS OFF)
+        endforeach()
+
+        # one target to ask for all of them, so a driver does not have to know the list
+        add_custom_target(DiscoPoP_RT_BenchmarkVariants DEPENDS ${DiscoPoP_RT_BENCHMARK_TARGETS})
+endif()
+
+# forward compiler flags
+if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)
+        if(NOT ${DP_PTHREAD_COMPATIBILITY_MODE} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_PTHREAD_COMPATIBILITY_MODE=${DP_PTHREAD_COMPATIBILITY_MODE})
+                message(STATUS "WARNING: DiscoPoP configuration: DP_PTHREAD_COMPATIBILITY_MODE enabled. Reduces profiling speed.")
+        endif()
+endif()
+
+if(DEFINED DP_RTLIB_VERBOSE)
+        if(NOT ${DP_RTLIB_VERBOSE} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_RTLIB_VERBOSE=${DP_RTLIB_VERBOSE})
+        endif()
+endif()
+
+if(DEFINED DP_NUM_WORKERS)
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
+endif()
+
+if(DEFINED DP_INTERNAL_TIMER)
+        if(NOT ${DP_INTERNAL_TIMER} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_INTERNAL_TIMER=${DP_INTERNAL_TIMER})
+                message(STATUS "WARNING: DiscoPoP configuration: DP_INTERNAL_TIMER enabled. Debug setting. Reduces profiling speed.")
+        endif()
+endif()
+
+# end of compiler flags
+
+# The benchmark variants have to see exactly the configuration above, or their measurements would
+# describe a runtime nobody builds. Copied off the target rather than repeated, so that an option
+# added to the list above cannot be forgotten here.
+if(DiscoPoP_RT_BENCHMARK_TARGETS)
+        get_target_property(DiscoPoP_RT_FORWARDED_DEFINITIONS DiscoPoP_RT INTERFACE_COMPILE_DEFINITIONS)
+        if(DiscoPoP_RT_FORWARDED_DEFINITIONS)
+                foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
+                        target_compile_definitions(${dp_variant} PUBLIC ${DiscoPoP_RT_FORWARDED_DEFINITIONS})
+                endforeach()
+        endif()
+        # the sanitizer flags (DP_SANITIZERS) as well, so that a sanitized build does not compare
+        # instrumented with uninstrumented libraries
+        get_target_property(DiscoPoP_RT_FORWARDED_OPTIONS DiscoPoP_RT INTERFACE_COMPILE_OPTIONS)
+        get_target_property(DiscoPoP_RT_FORWARDED_LINK_OPTIONS DiscoPoP_RT INTERFACE_LINK_OPTIONS)
+        foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
+                if(DiscoPoP_RT_FORWARDED_OPTIONS)
+                        target_compile_options(${dp_variant} PUBLIC ${DiscoPoP_RT_FORWARDED_OPTIONS})
+                endif()
+                if(DiscoPoP_RT_FORWARDED_LINK_OPTIONS)
+                        target_link_options(${dp_variant} PUBLIC ${DiscoPoP_RT_FORWARDED_LINK_OPTIONS})
+                endif()
+        endforeach()
+endif()
+
+install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION discopop-profiler.libs)

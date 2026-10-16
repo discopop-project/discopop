@@ -1,19 +1,14 @@
 # type: ignore
 import os
 import pathlib
-import subprocess
 import unittest
 
 import jsonpickle
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
-from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
-from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
-from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
-from discopop_library.DependencyComparator.dependency_comparator import run as run_comparator
 
 
 class TestMethods(unittest.TestCase):
@@ -63,7 +58,7 @@ class TestMethods(unittest.TestCase):
         # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
-        test_output: DetectionResult = jsonpickle.decode(tmp_str)
+        test_output: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
 
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])

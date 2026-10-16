@@ -1,0 +1,60 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+# clang-tidy checks of the profiler's C++ code (pass and runtime library), following the
+# Google C++ Style Guide (https://google.github.io/styleguide/cppguide.html).
+# Run them via scripts/dev/check_cpp_style.sh.
+Checks: >
+  -*,
+  google-*,
+  -google-readability-todo,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  modernize-use-default-member-init,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-using,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-identifier-naming
+HeaderFilterRegex: '.*/profiler/(DiscoPoP|rtlib|share)/.*'
+CheckOptions:
+  # https://google.github.io/styleguide/cppguide.html#Naming
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.FunctionCase: CamelCase
+  # the callbacks the pass injects are looked up by their names
+  readability-identifier-naming.FunctionIgnoredRegexp: '^__dp_.*'
+  readability-identifier-naming.MethodCase: CamelCase
+  # names LLVM's pass manager looks up (run, isRequired, name) and those of STL-like containers
+  readability-identifier-naming.MethodIgnoredRegexp: '^(run|isRequired|name|begin|end|size|empty|clear|reserve)$'
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.LocalConstantCase: lower_case
+  readability-identifier-naming.ConstantParameterCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantPrefix: k
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassConstantPrefix: k
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  readability-identifier-naming.PublicMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberCase: lower_case
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

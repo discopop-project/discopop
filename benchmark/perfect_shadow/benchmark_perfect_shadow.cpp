@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../rtlib/memory/PerfectShadow.hpp"
+#include "memory/PerfectShadow.hpp"
 
 // General functions
 
@@ -52,15 +52,15 @@ static void benchmark_perfect_shadow_test(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow{};
+    auto shadow = dp::PerfectShadow{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.testInRead(addr);
+      std::ignore = shadow.TestInRead(addr);
     }
 
     state.PauseTiming();
@@ -80,15 +80,15 @@ static void benchmark_perfect_shadow_insert(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow{};
+    auto shadow = dp::PerfectShadow{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.insertToRead(addr, 1);
+      std::ignore = shadow.InsertToRead(addr, 1);
     }
 
     state.PauseTiming();
@@ -108,15 +108,15 @@ static void benchmark_perfect_shadow_update(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow{};
+    auto shadow = dp::PerfectShadow{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      shadow.updateInRead(addr, 1);
+      shadow.UpdateInRead(addr, 1);
     }
 
     state.PauseTiming();
@@ -136,15 +136,15 @@ static void benchmark_perfect_shadow_remove(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow{};
+    auto shadow = dp::PerfectShadow{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      shadow.removeFromRead(addr);
+      shadow.RemoveFromRead(addr);
     }
 
     state.PauseTiming();
@@ -164,44 +164,44 @@ static void benchmark_perfect_shadow(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow{};
+    auto shadow = dp::PerfectShadow{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (test_read_address(addr)) {
-        std::ignore = shadow.testInRead(addr);
+        std::ignore = shadow.TestInRead(addr);
       }
 
       if (test_write_address(addr)) {
-        std::ignore = shadow.testInWrite(addr);
+        std::ignore = shadow.TestInWrite(addr);
       }
 
       if (insert_read_address(addr)) {
-        std::ignore = shadow.insertToRead(addr, 1);
+        std::ignore = shadow.InsertToRead(addr, 1);
       }
 
       if (insert_write_address(addr)) {
-        std::ignore = shadow.insertToWrite(addr, 2);
+        std::ignore = shadow.InsertToWrite(addr, 2);
       }
 
       if (update_read_address(addr)) {
-        shadow.updateInRead(addr, 3);
+        shadow.UpdateInRead(addr, 3);
       }
 
       if (update_write_address(addr)) {
-        shadow.updateInWrite(addr, 4);
+        shadow.UpdateInWrite(addr, 4);
       }
 
       if (remove_read_address(addr)) {
-        shadow.removeFromRead(addr);
+        shadow.RemoveFromRead(addr);
       }
 
       if (remove_write_address(addr)) {
-        shadow.removeFromWrite(addr);
+        shadow.RemoveFromWrite(addr);
       }
     }
 
@@ -224,15 +224,15 @@ static void benchmark_perfect_shadow_2_test(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow2>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow2{};
+    auto shadow = dp::PerfectShadow2{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.testInRead(addr);
+      std::ignore = shadow.TestInRead(addr);
     }
 
     state.PauseTiming();
@@ -252,15 +252,15 @@ static void benchmark_perfect_shadow_2_insert(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow2>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow2{};
+    auto shadow = dp::PerfectShadow2{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.insertToRead(addr, 1);
+      std::ignore = shadow.InsertToRead(addr, 1);
     }
 
     state.PauseTiming();
@@ -280,15 +280,15 @@ static void benchmark_perfect_shadow_2_update(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow2>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow2{};
+    auto shadow = dp::PerfectShadow2{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      shadow.updateInRead(addr, 1);
+      shadow.UpdateInRead(addr, 1);
     }
 
     state.PauseTiming();
@@ -308,15 +308,15 @@ static void benchmark_perfect_shadow_2_remove(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow2>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow2{};
+    auto shadow = dp::PerfectShadow2{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      shadow.removeFromRead(addr);
+      shadow.RemoveFromRead(addr);
     }
 
     state.PauseTiming();
@@ -336,44 +336,44 @@ static void benchmark_perfect_shadow_2(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::PerfectShadow2>{};
+  auto dumping_ground = std::vector<dp::PerfectShadow2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto shadow = __dp::PerfectShadow2{};
+    auto shadow = dp::PerfectShadow2{};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (test_read_address(addr)) {
-        std::ignore = shadow.testInRead(addr);
+        std::ignore = shadow.TestInRead(addr);
       }
 
       if (test_write_address(addr)) {
-        std::ignore = shadow.testInWrite(addr);
+        std::ignore = shadow.TestInWrite(addr);
       }
 
       if (insert_read_address(addr)) {
-        std::ignore = shadow.insertToRead(addr, 1);
+        std::ignore = shadow.InsertToRead(addr, 1);
       }
 
       if (insert_write_address(addr)) {
-        std::ignore = shadow.insertToWrite(addr, 2);
+        std::ignore = shadow.InsertToWrite(addr, 2);
       }
 
       if (update_read_address(addr)) {
-        shadow.updateInRead(addr, 3);
+        shadow.UpdateInRead(addr, 3);
       }
 
       if (update_write_address(addr)) {
-        shadow.updateInWrite(addr, 4);
+        shadow.UpdateInWrite(addr, 4);
       }
 
       if (remove_read_address(addr)) {
-        shadow.removeFromRead(addr);
+        shadow.RemoveFromRead(addr);
       }
 
       if (remove_write_address(addr)) {
-        shadow.removeFromWrite(addr);
+        shadow.RemoveFromWrite(addr);
       }
     }
 
