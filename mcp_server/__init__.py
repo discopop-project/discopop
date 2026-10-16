@@ -9,7 +9,12 @@
 
 """DiscoPoP MCP Server - Model Context Protocol server for DiscoPoP profiling tools."""
 
-__version__ = "0.0.1a1"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("discopop_mcp_server")
+except PackageNotFoundError:  # run from a source checkout without installing
+    __version__ = "unknown"
 
 
 def cli() -> None:

@@ -583,8 +583,10 @@ mypy mcp_server/server.py
 
 ### Missing dependencies
 ```bash
-# Reinstall the server with its dependencies (mcp, jsonpickle, termcolor, uvicorn, starlette)
-venv/bin/python -m pip install ./mcp_server
+# Reinstall the server with its dependencies (mcp, jsonpickle, termcolor, uvicorn, starlette, discopop-library,
+# discopop-explorer); from a checkout, pass all packages in one command, as the server requires the library and
+# explorer versions of the checkout
+venv/bin/python -m pip install . ./profiler ./explorer ./library ./GUI ./hotspot_detection ./mcp_server
 ```
 
 ## License
