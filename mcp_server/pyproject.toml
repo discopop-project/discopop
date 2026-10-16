@@ -36,6 +36,9 @@ dependencies = [
     # mcp 2.x replaced the low-level Server decorator API (@server.list_tools() /
     # @server.call_tool()) with constructor-based handlers; server.py still uses the 1.x API.
     "mcp>=1.0,<2",
+    # the tools call the project manager and read the explorer's results in-process
+    "discopop-library>=0.0.1a11",
+    "discopop-explorer>=0.0.1a3",
     "jsonpickle",
     "termcolor>=2.0",
     "uvicorn>=0.20",
@@ -61,14 +64,11 @@ Documentation = "https://www.discopop.tu-darmstadt.de/"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 
-[tool.setuptools.packages.find]
-where = [".."]
-include = ["mcp_server*"]
-# Namespace discovery would otherwise also pick up the build output inside this
-# directory (mcp_server.build.lib.mcp_server...), nesting it one level deeper per build.
-exclude = ["mcp_server.build*", "mcp_server.dist*"]
-
 [tool.setuptools]
+# this directory is the package itself; mapping it (instead of discovering the package
+# in "..") keeps the sources inside the sdist, so the wheel built from it is not empty
+package-dir = {"mcp_server" = "."}
+packages = ["mcp_server", "mcp_server.tools"]
 zip-safe = true
 # Package data is not needed; with it on, a stale egg-info SOURCES.txt listing
 # build/lib/... files would bring the build output back in as package data.

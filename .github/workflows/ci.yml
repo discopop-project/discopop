@@ -17,8 +17,6 @@ on:
   push:
     branches:
       - master
-      - new_explorer  # This is a temporary addition and should be removed before merging into master!
-      - fix/pr814_ci  # TEMPORARY: full matrix for the CI fixes of PR #814, remove before merging
   pull_request:
   # manual runs, e.g. to get the callback benchmark (callback_benchmark) for a branch
   workflow_dispatch:
@@ -118,7 +116,6 @@ jobs:
           # the full matrix only where code is merged into master (pushes and pull requests targeting it);
           # every other push is checked on one platform to keep development runs short
           if [[ ( "$GITHUB_EVENT_NAME" = "push" && "$GITHUB_REF" = "refs/heads/master" ) \
-             || ( "$GITHUB_EVENT_NAME" = "push" && "$GITHUB_REF" = "refs/heads/fix/pr814_ci" ) \
              || ( "$GITHUB_EVENT_NAME" = "pull_request" && "$PR_BASE_REF" = "master" ) ]]; then
             matrix="{\"include\":[$e_llvm19,$e_llvm20,$e_llvm21,$e_llvm22]}"
             images="[$e_llvm19,$e_llvm20,$e_llvm21,$e_llvm22,$e_tools,$e_leak]"
