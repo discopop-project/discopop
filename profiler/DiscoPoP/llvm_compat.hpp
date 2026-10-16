@@ -20,6 +20,7 @@
 // them is wrapped below.
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/BasicBlock.h"  // getIterator() needs the complete BasicBlock from LLVM 22 on
 #include "llvm/IR/Instruction.h"
 
 namespace llvmcompat {
