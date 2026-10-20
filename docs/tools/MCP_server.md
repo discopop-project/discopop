@@ -47,7 +47,7 @@ Other MCP clients that start servers over stdio need an entry like the following
 ```
 
 ## Tools
-The server offers 15 tools. In workflow order:
+The server offers 12 tools. In workflow order:
 
 | Tool | Purpose |
 |------|---------|
@@ -65,6 +65,8 @@ The server offers 15 tools. In workflow order:
 | `run_configuration` | Build the project as it is and run a configuration with a given thread count; reports the time, the result of `validate.sh`, and the errors and warnings of the build and the run. |
 
 `--tools analysis` hides the four project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`, `delete_execution_configuration`). Use it against a project that is already configured. The default is `--tools all`.
+
+The analysis tools answer in short text, one line per hotspot, suggestion or effect. The setup and pipeline tools answer in JSON that holds the facts of the call and, where useful, a `next_step` hint; an error is `{"status": "error", "message": ..., "next_step": ...}`.
 
 ## Daemon mode
 By default, the client starts one server process per session and the cached data is lost when it ends. `discopop_mcp_server --daemon` runs a persistent server that keeps the loaded analysis data (file mapping, side-effect index) between calls and sessions. It listens on `127.0.0.1`, port `7777` by default (`--daemon-port`). The server that the client starts checks for a daemon on its first tool call and forwards the calls to it; without a daemon, it runs the tools itself. It never starts a daemon. Start the daemon yourself before you start the client:
