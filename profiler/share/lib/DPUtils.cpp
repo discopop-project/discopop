@@ -83,6 +83,13 @@ std::int32_t GetFileId(std::string /*file_mapping*/, std::string full_path_name)
     return 0;
   }
 
+  // CMake compiles probe programs (CMakeCCompilerId.c, TryCompile-*/testCCompiler.c) below the build
+  // directory of the project. They are not part of it, and the scratch ones are deleted again, so
+  // registering them only leaves entries of files that no longer exist.
+  if (full_path_name.find("/CMakeFiles/") != std::string::npos) {
+    return 0;
+  }
+
   // Keep FileMapping.txt in an in-memory cache. getFileID is called per-instruction, so
   // re-reading the file on every call dominates the pass runtime.
   static std::map<std::string, std::int32_t> file_id_cache;
