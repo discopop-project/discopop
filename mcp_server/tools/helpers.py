@@ -253,11 +253,11 @@ def setup_next_step(configs_dir: Path) -> str:
     if not names:
         return "Call create_execution_configuration to describe how the compiled program is run."
     hotspot_hint = (
-        f", passing hotspot_config_names (e.g. {names[:2]}) so that run_auto_tuning can use the hotspot-guided search"
+        f", passing hotspot_config_names (e.g. {names[:2]}) for the hotspot ranking of the suggestions"
         if len(names) >= 2
         else (
-            "; adding a second configuration with a different input size enables hotspot detection "
-            "via hotspot_config_names, which improves run_auto_tuning"
+            "; adding a second configuration with a different input size and passing it as "
+            "hotspot_config_names improves the hotspot ranking of the suggestions"
         )
     )
     return (
@@ -851,14 +851,29 @@ class ToolContext:
 
     @staticmethod
     def source_mtimes(project_path: str) -> dict[Path, float]:
-        """The mtime of every source file under project_path, excluding the .discopop subtree."""
+        """The mtime of every source file under project_path.
+
+        Not searched: the .discopop subtree, version control, and build trees. A CMake build tree
+        (a directory with a CMakeCache.txt, or CMakeFiles) holds generated sources such as
+        CMakeCCompilerId.c that every build rewrites, so counting them would mark the analysis stale
+        right after the pipeline's own build.
+        """
         source_exts = {".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".hh"}
+        ignored_dirs = {".discopop", ".git", "CMakeFiles"}
         mtimes: dict[Path, float] = {}
-        for f in Path(project_path).rglob("*"):
-            if ".discopop" in f.parts:
-                continue
-            if f.suffix.lower() in source_exts and f.is_file():
-                mtimes[f] = f.stat().st_mtime
+        for dirpath, dirnames, filenames in os.walk(project_path):
+            dirnames[:] = [
+                d
+                for d in dirnames
+                if d not in ignored_dirs and not os.path.isfile(os.path.join(dirpath, d, "CMakeCache.txt"))
+            ]
+            for name in filenames:
+                if os.path.splitext(name)[1].lower() in source_exts:
+                    f = Path(dirpath) / name
+                    try:
+                        mtimes[f] = f.stat().st_mtime
+                    except OSError:
+                        continue  # removed while walking
         return mtimes
 
     @staticmethod

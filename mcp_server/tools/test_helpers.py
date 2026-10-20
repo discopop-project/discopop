@@ -68,12 +68,12 @@ class TestSetupState(unittest.TestCase):
         self.__write("small/execute.sh")
         self.assertIn("gather_data", setup_next_step(self.configs_dir))
 
-    def test_a_single_configuration_is_told_how_to_enable_hotspot_detection(self) -> None:
+    def test_a_single_configuration_is_told_about_a_second_one_for_the_hotspot_ranking(self) -> None:
         self.__write("compile.sh", "$CXX $CXXFLAGS main.cpp -o app\n")
         self.__write("small/execute.sh")
         self.assertIn("second configuration", setup_next_step(self.configs_dir))
 
-    def test_two_configurations_are_proposed_for_hotspot_detection(self) -> None:
+    def test_two_configurations_are_proposed_for_the_hotspot_ranking(self) -> None:
         self.__write("compile.sh", "$CXX $CXXFLAGS main.cpp -o app\n")
         self.__write("small/execute.sh")
         self.__write("medium/execute.sh")
@@ -244,3 +244,25 @@ class TestLogCall(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_source_mtimes_ignores_build_trees(tmp_path: Path) -> None:
+    """Generated sources of a CMake build must not count as project sources: every build rewrites them."""
+    files = {
+        "md.cpp": True,
+        "src/util.h": True,
+        "build/CMakeCache.txt": False,
+        "build/CMakeFiles/3.28.3/CompilerIdC/CMakeCCompilerId.c": False,
+        "out/CMakeCache.txt": False,
+        "out/generated.cpp": False,  # inside a CMake build tree below another name than "build"
+        ".discopop/FileMapping.cpp": False,
+        ".git/hooks/x.c": False,
+    }
+    for name in files:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("")
+
+    found = {p.relative_to(tmp_path).as_posix() for p in ToolContext.source_mtimes(str(tmp_path))}
+
+    assert found == {name for name, is_source in files.items() if is_source}

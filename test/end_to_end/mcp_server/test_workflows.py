@@ -103,8 +103,14 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(result.is_error, result)
             data = result.data
             self.assertEqual(data["status"], "success")
-            self.assertFalse(data["hotspot_detection_enabled"])
-            for step in ("instrumentation", "profiling", "pattern_detection", "build_restore"):
+            for step in (
+                "hotspot_instrumentation",
+                "hotspot_analysis",
+                "instrumentation",
+                "profiling",
+                "pattern_detection",
+                "build_restore",
+            ):
                 self.assertEqual(data["steps"][step]["status"], "success", (step, data["steps"][step]))
             self.assertGreaterEqual(data["suggestions_found"], 1)
             self.assertIn("run_auto_tuning", data["next_step"])
@@ -113,9 +119,8 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             result = await server.call("get_project_status", {"project_path": project})
             self.assertFalse(result.is_error, result)
             status = result.data
-            for step in ("instrumentation", "profiling", "pattern_detection", "patch_generation"):
+            for step in ("hotspot_detection", "instrumentation", "profiling", "pattern_detection", "patch_generation"):
                 self.assertFalse(status["pipeline"][step]["stale"], (step, status["pipeline"]))
-            self.assertEqual(status["pipeline"]["hotspot_detection"], {"done": False})
             self.assertGreaterEqual(status["suggestions"], 1)
             self.assertEqual(status["applied_suggestions"], [])
             self.assertIn("run_auto_tuning", status["next_step"])
@@ -248,15 +253,15 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             os.utime(self.source, (future, future))
             result = await gather_data(server, project)
             self.assertTrue(result.is_error, result)
-            self.assertIn("Instrumentation failed", result.data["message"])
+            self.assertIn("Hotspot detection failed", result.data["message"])
 
             result = await server.call("get_project_status", {"project_path": project})
             self.assertFalse(result.is_error, result)
             pipeline = result.data["pipeline"]
-            self.assertEqual(pipeline["instrumentation"], {"done": False}, pipeline)
-            self.assertEqual(pipeline["profiling"], {"done": False}, pipeline)
+            self.assertEqual(pipeline["hotspot_detection"], {"done": False}, pipeline)
+            self.assertTrue(pipeline["instrumentation"]["stale"], pipeline)
             self.assertTrue(pipeline["pattern_detection"]["stale"], pipeline)
-            self.assertIn("No analysis results exist yet", result.data["next_step"])
+            self.assertIn("sources changed after the last analysis", result.data["next_step"])
 
 
 def _effects(data: dict[str, Any]) -> set[tuple[str, str, str]]:
@@ -395,18 +400,18 @@ class TestFailurePaths(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(result.is_error, result)
             data = result.data
             self.assertEqual(data["status"], "error")
-            self.assertIn("Instrumentation failed", data["message"])
-            instrumentation = data["steps"]["instrumentation"]
+            self.assertIn("Hotspot detection failed", data["message"])
+            instrumentation = data["steps"]["hotspot_instrumentation"]
             self.assertNotEqual(instrumentation["returncode"], 0)
             self.assertIn("no_such_file.cpp", instrumentation["stderr"])
             # the hint points at the build script and the tool that fixes it
             self.assertIn("compile.sh", data["next_step"])
             self.assertIn("set_compile_script", data["next_step"])
-            self.assertNotIn("profiling", data["steps"])
+            self.assertNotIn("instrumentation", data["steps"])
 
             result = await server.call("get_project_status", {"project_path": project})
             self.assertFalse(result.is_error, result)
-            for step in ("instrumentation", "profiling", "pattern_detection", "patch_generation"):
+            for step in ("hotspot_detection", "instrumentation", "profiling", "pattern_detection", "patch_generation"):
                 self.assertEqual(result.data["pipeline"][step], {"done": False}, result.data["pipeline"])
             self.assertNotIn("suggestions", result.data)
 
@@ -439,10 +444,11 @@ class TestFailurePaths(unittest.IsolatedAsyncioTestCase):
             result = await gather_data(server, project)
             self.assertTrue(result.is_error, result)
             data = result.data
-            self.assertIn("Profiling failed", data["message"])
-            self.assertEqual(data["steps"]["instrumentation"]["status"], "success")
-            self.assertEqual(data["steps"]["profiling"]["returncode"], 3)
-            self.assertIn("program reported a failure", data["steps"]["profiling"]["stderr"])
+            self.assertIn("Hotspot detection failed", data["message"])
+            self.assertEqual(data["steps"]["hotspot_instrumentation"]["status"], "success")
+            (hotspot_run,) = data["steps"]["hotspot_profiling"]
+            self.assertEqual(hotspot_run["returncode"], 3)
+            self.assertIn("program reported a failure", hotspot_run["stderr"])
             self.assertIn("create_execution_configuration", data["next_step"])
 
             result = await server.call("get_project_status", {"project_path": project})
