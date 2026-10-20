@@ -10,7 +10,7 @@ nav_order: 10
 `discopop_mcp_server`
 
 ## Purpose
-The DiscoPoP MCP server lets an LLM agent (for example Claude Code or OpenCode) drive DiscoPoP through the [Model Context Protocol](https://modelcontextprotocol.io/). The agent can configure a project, profile it, ask where the program spends its time, get ranked parallelization suggestions, learn why a loop was not parallelized and which data a function reads and writes, without reading the large `.discopop` artefacts itself. DiscoPoP only analyses: the agent applies the suggestions by editing the source code. Every answer is based on an actual execution, so it captures aliasing that reading the code misses.
+The DiscoPoP MCP server lets an LLM agent (for example Claude Code or OpenCode) drive DiscoPoP through the [Model Context Protocol](https://modelcontextprotocol.io/). The agent can configure a project, profile it, ask where the program spends its time, get ranked parallelization suggestions, learn why a loop was not parallelized and which data a function reads and writes, without reading the large `.discopop` artefacts itself. DiscoPoP only analyses: the agent applies the suggestions by editing the source code. Every answer is based on data dependences measured in an actual execution, so it is reliable and captures aliasing that reading the code misses; judging dependences from the source alone is error-prone, which makes the wait for the profiling run worthwhile.
 
 Use it when you want an agent to parallelize C/C++ code, to check whether code can safely run in parallel, or to find out which data a function or code region reads and writes (for example to check that a refactoring preserves the data flow).
 
