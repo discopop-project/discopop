@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Optional
 from unittest import mock
 
-from discopop_explorer.side_effects.result import Effect, EffectSite, FunctionInfo, SideEffects
+from discopop_explorer.side_effects.result import Effect, EffectSite, FunctionInfo, OutsideName, SideEffects
 from discopop_explorer.side_effects.schema import FORMAT_VERSION, dependency_file_info, export_path, save_export
 from mcp_server.argument_coercion import coerce_arguments, validation_error
 from mcp_server.tools import get_side_effects
@@ -240,12 +240,21 @@ class TestGetSideEffects(unittest.TestCase):
 
     def test_an_entry_names_kind_qualifiers_aliases_and_lines(self) -> None:
         effect = _effect(
-            "p", kind="parameter", through_pointer=True, member_of="s", outside_names=["rij", "pos"], lines=(12, 15)
+            "p",
+            kind="parameter",
+            through_pointer=True,
+            member_of="s",
+            outside_names=[OutsideName("rij", 1), OutsideName("pos", 1)],
+            lines=(12, 15),
         )
         self.assertIn(
             "- p (parameter, through pointer, member of s), also called rij, pos: line 12; line 15",
             self.__query([effect]),
         )
+
+    def test_aliases_in_other_files_carry_the_file(self) -> None:
+        effect = _effect("p", kind="parameter", outside_names=[OutsideName("rij", 1), OutsideName("pos", 2)])
+        self.assertIn(f"p (parameter), also called rij, pos (in {OTHER_FILE}):", self.__query([effect]))
 
     def test_data_that_was_only_referenced_is_marked(self) -> None:
         self.assertIn("(global, referenced in the code, not observed)", self.__query([_effect("g", source="static")]))

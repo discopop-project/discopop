@@ -26,7 +26,7 @@ from mcp_server.tools.hotspot_text import display_path, resolve_source_path
 
 if TYPE_CHECKING:
     # imported for annotations only: the server starts without discopop_explorer installed
-    from discopop_explorer.side_effects.result import Effect, EffectSite, FunctionInfo, SideEffects
+    from discopop_explorer.side_effects.result import Effect, EffectSite, FunctionInfo, OutsideName, SideEffects
 
 logger = logging.getLogger("discopop-mcp")
 
@@ -84,7 +84,8 @@ TOOL = Tool(
         "The answer is a text: whether the function is pure on the profiled inputs, then its writes and reads, "
         "writes first, each with its name, kind, the lines of the accesses and, for an access in a called "
         "function, the call chain (via). A name is the one at the access; the caller's name for the same data "
-        "is given as 'also called'. 'referenced in the code' marks data the code names but profiling did not "
+        "is given as 'also called', with its file when that differs from the function's. "
+        "'referenced in the code' marks data the code names but profiling did not "
         "observe. Caveats say what profiling cannot see (functions never executed, calls it could not "
         "follow, library code), as then absent effects are unknown, not absent.\n\n"
         f"By default the first {DEFAULT_LIMIT} effects are listed (most significant first), and the last line says "
@@ -178,6 +179,15 @@ def _site_text(site: EffectSite, function: FunctionInfo, files: dict[int, Option
     return text
 
 
+def _outside_text(
+    outside: OutsideName, function: FunctionInfo, files: dict[int, Optional[str]], project_path: str
+) -> str:
+    """The other name; 'pos (in util.h)' when it is used in another file than the function's."""
+    if outside.file_id != function.file_id and files.get(outside.file_id):
+        return f"{outside.name} (in {display_path(project_path, Path(str(files[outside.file_id])))})"
+    return outside.name
+
+
 def _effect_text(effect: Effect, function: FunctionInfo, files: dict[int, Optional[str]], project_path: str) -> str:
     qualifiers = [_KIND_TEXT.get(effect.kind, effect.kind)]
     if effect.through_pointer:
@@ -188,7 +198,8 @@ def _effect_text(effect: Effect, function: FunctionInfo, files: dict[int, Option
         qualifiers.append(f"member of {effect.member_of}")
     text = f"{effect.name} ({', '.join(qualifiers)})"
     if effect.outside_names:
-        text += f", also called {', '.join(effect.outside_names)}"
+        aliases = [_outside_text(outside, function, files, project_path) for outside in effect.outside_names]
+        text += f", also called {', '.join(aliases)}"
     # the function's own sites first, then its file, then by line
     sites = sorted(effect.sites, key=lambda s: (len(s.via), s.file_id != function.file_id, s.file_id, s.line, s.via))
     listed = [_site_text(site, function, files, project_path) for site in sites[:MAX_SITES]]
