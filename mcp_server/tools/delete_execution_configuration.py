@@ -35,7 +35,7 @@ TOOL = Tool(
         "scripts instead, call create_execution_configuration or set_compile_script again. "
         "\n\n"
         "Analysis results gathered with the configuration (profiling data, suggestions, "
-        "hotspots) and its recorded runs in get_execution_results are kept. Cannot be undone."
+        "hotspots) and its recorded runs are kept. Cannot be undone."
     ),
     inputSchema={
         "type": "object",

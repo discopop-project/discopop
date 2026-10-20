@@ -22,7 +22,6 @@ from discopop_library.ProjectManager.configurations.execution import execute_con
 from mcp_server.tools.helpers import (
     ToolContext,
     invalid_configuration_name,
-    recorded_applied_suggestions,
     tail_of_output,
     unknown_configuration_message,
 )
@@ -63,8 +62,7 @@ TOOL = Tool(
         "the program and may abort, so building and running the program by hand afterwards "
         "is safe. "
         "\n\n"
-        "On success, call run_auto_tuning to measure which combination of the generated "
-        "suggestions is fastest (apply=true also applies it); get_parallelization_suggestions lists them."
+        "On success, get_parallelization_suggestions lists the suggestions, hottest first."
     ),
     inputSchema={
         "type": "object",
@@ -787,7 +785,7 @@ def count_suggestions(project_path: str) -> Optional[int]:
 
 
 def next_step_hint(suggestion_count: Optional[int]) -> str:
-    """What to do with the patches that were just generated."""
+    """What to do with the suggestions that were just generated."""
     if suggestion_count == 0:
         return (
             "No parallelization suggestion was found. explain_parallelization tells for a given "
@@ -795,11 +793,8 @@ def next_step_hint(suggestion_count: Optional[int]) -> str:
         )
     found = f"{suggestion_count} parallelization suggestions were generated. " if suggestion_count else ""
     return (
-        found + "Call run_auto_tuning to have DiscoPoP measure which combination of them is "
-        "fastest (add apply=true to apply that combination in the same call) — do this before "
-        "applying anything, since the search needs an un-patched project. "
-        "get_parallelization_suggestions lists the suggestions, and get_data_dependencies "
-        "explains the dependencies behind an individual one."
+        found + "get_parallelization_suggestions lists them, hottest first, and explain_parallelization tells why "
+        "a code region has none. Apply a suggestion by editing the source yourself."
     )
 
 
@@ -923,8 +918,7 @@ def _pipeline(
         # problem in its own message.
         if instr.get("returncode") not in (None, 0):
             result["next_step"] = (
-                "steps.instrumentation.stderr holds the build errors; get_execution_results("
-                "script='compile.sh', failed_only=true, include_output=true) also shows stdout. Fix the build with "
+                "steps.instrumentation.stderr holds the build errors. Fix the build with "
                 "set_compile_script (it must use $CC/$CXX and "
                 "$CFLAGS/$CXXFLAGS), then call gather_data again."
             )
@@ -948,8 +942,7 @@ def _pipeline(
         }
         if prof.get("returncode") not in (None, 0):
             result["next_step"] = (
-                "steps.profiling.stderr holds the program's errors; get_execution_results("
-                "script='execute.sh', failed_only=true, include_output=true) also shows stdout. Fix execute.sh with "
+                "steps.profiling.stderr holds the program's errors. Fix execute.sh with "
                 "create_execution_configuration (a smaller input helps if "
                 "the run timed out), then call gather_data again."
             )
@@ -1009,19 +1002,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             name_error = invalid_configuration_name(name)
             if name_error is not None:
                 return ctx.error(name_error, project_path, "gather_data")
-        # Profiling patched sources analyses the parallel code, and the pattern detection
-        # deletes the applicator's record of what it applied, which a rollback needs.
-        applied, _ = recorded_applied_suggestions(project_path)
-        if applied:
-            return ctx.error(
-                f"The suggestions {applied} are applied to the sources. Analysing them would profile the "
-                "parallelized code, and re-running the pattern detection deletes the record needed to roll "
-                "them back. Roll them back first with manage_patches(action='clear'), then call gather_data "
-                "again.",
-                project_path,
-                "gather_data",
-            )
-
         # A single step (an instrumented run, above all) can take an hour; the heartbeat
         # keeps reporting the step in progress so the client knows the call is alive.
         with ctx.heartbeat():

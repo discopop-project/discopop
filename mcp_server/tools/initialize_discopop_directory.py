@@ -9,7 +9,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from mcp.types import TextContent, Tool, ToolAnnotations
 
@@ -18,9 +18,6 @@ from discopop_library.ProjectManager.utilities.reset import reset_project
 from mcp_server.tools.helpers import (
     COMPILE_SCRIPT_PLACEHOLDER_MARKER,
     ToolContext,
-    applicator_failure_details,
-    recorded_applied_suggestions,
-    run_patch_applicator,
     setup_next_step,
 )
 
@@ -58,7 +55,7 @@ TOOL = Tool(
         "Removes all DiscoPoP analysis artefacts (profiler output, explorer results, "
         "patch files, hotspot data, execution results) while preserving the project "
         "configuration directory (.discopop/project/) so that compile.sh and execution "
-        "configurations are kept intact. Applied suggestions are rolled back first. Use this "
+        "configurations are kept intact. Use this "
         "to force a clean re-run of gather_data when the pipeline is in a broken or "
         "inconsistent state.\n"
         "\n"
@@ -115,24 +112,6 @@ TOOL = Tool(
 )
 
 
-def _roll_back_applied(project_path: str, ctx: ToolContext) -> tuple[list[str], Optional[str]]:
-    """Roll back the applied suggestions; the ids rolled back, and a warning if that failed."""
-    applied, _ = recorded_applied_suggestions(project_path)
-    if not applied:
-        return [], None
-    proc, run_error = run_patch_applicator(project_path, ["--clear"])
-    # 3: nothing was applied after all; 2 (partly rolled back) leaves patches behind
-    if proc is not None and proc.returncode in (0, 3):
-        ctx.log_action(project_path, "initialize_discopop_directory", f"Reset: rolled back {applied}")
-        return applied, None
-    details = run_error if proc is None else applicator_failure_details(proc)[0]
-    return [], (
-        f"The applied suggestions {applied} could not be rolled back ({details}), and the reset deleted "
-        "the record of them. The sources may still contain these patches; revert them by hand, e.g. "
-        "with version control, before analysing the project again."
-    )
-
-
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
@@ -150,9 +129,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
 
         # === Reset mode ===
         if reset:
-            # The reset deletes the applicator's record of what it applied; without it,
-            # applied suggestions could no longer be rolled back.
-            rolled_back, rollback_warning = _roll_back_applied(project_path, ctx)
             pm_args = ctx.make_pm_args(project_path)
             pm_args.reset = True
             pm_args.reset_execution_results = True
@@ -169,10 +145,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 ),
                 "next_step": setup_next_step(p / ".discopop" / "project" / "configs"),
             }
-            if rolled_back:
-                result["rolled_back_suggestions"] = rolled_back
-            if rollback_warning is not None:
-                result["warning"] = rollback_warning
             ctx.log_response("initialize_discopop_directory", result)
             return [TextContent(type="text", text=json.dumps(result))]
 

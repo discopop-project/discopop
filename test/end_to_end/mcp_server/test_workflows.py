@@ -116,7 +116,7 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             ):
                 self.assertEqual(data["steps"][step]["status"], "success", (step, data["steps"][step]))
             self.assertGreaterEqual(data["suggestions_found"], 1)
-            self.assertIn("run_auto_tuning", data["next_step"])
+            self.assertIn("get_parallelization_suggestions", data["next_step"])
             self.assertNotIn("warning", data)
 
             result = await server.call("get_project_status", {"project_path": project})
@@ -125,8 +125,7 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             for step in ("hotspot_detection", "instrumentation", "profiling", "pattern_detection", "patch_generation"):
                 self.assertFalse(status["pipeline"][step]["stale"], (step, status["pipeline"]))
             self.assertGreaterEqual(status["suggestions"], 1)
-            self.assertEqual(status["applied_suggestions"], [])
-            self.assertIn("run_auto_tuning", status["next_step"])
+            self.assertIn("get_parallelization_suggestions", status["next_step"])
 
             # a repeated call finds every result current
             result = await gather_data(server, project)
@@ -172,84 +171,8 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
                 rf"from code\.cpp:{CARRIED_LOOP_LINE + 1} prevents parallelization \(observed during profiling\)\.",
             )
 
-            result = await server.call(
-                "get_data_dependencies",
-                {"project_path": project, "file_path": source, "start_line": LOOP_LINE, "end_line": LOOP_END_LINE},
-            )
-            self.assertFalse(result.is_error, result)
-            deps = result.data["dependencies"]
-            self.assertEqual(set(deps), {"incoming", "outgoing", "intra_region"})
-            self.assertGreater(result.data["num_dependencies"], 0)
-            self.assertEqual(result.data["num_dependencies"], sum(len(v) for v in deps.values()))
-            for entry in (e for bucket in deps.values() for e in bucket):
-                self.assertIn(entry["dep_type"], ("RAW", "WAR", "WAW"))
-
-            result = await server.call(
-                "get_data_dependencies",
-                {
-                    "project_path": project,
-                    "file_path": str(Path(project) / "elsewhere.cpp"),
-                    "start_line": 1,
-                    "end_line": 2,
-                },
-            )
-            self.assertTrue(result.is_error, result)
-            self.assertIn("not found in FileMapping", result.data["message"])
-
-            # --- measure the suggestion; without apply=true the sources stay as they were
-            result = await server.call(
-                "run_auto_tuning",
-                {
-                    "project_path": project,
-                    "config_name": "small",
-                    "suggestion_ids": [pattern_id],
-                    "timeout_seconds": STEP_TIMEOUT_SECONDS,
-                },
-                timeout=PIPELINE_TIMEOUT,
-            )
-            self.assertFalse(result.is_error, result)
-            self.assertEqual(result.data["mode"], "selection")
-            self.assertEqual(result.data["suggestion_ids"], [pattern_id])
-            self.assertEqual(result.data["outcome"], "valid", result.data)
-            self.assertIsInstance(result.data["baseline_runtime"], (int, float))
-            self.assertFalse(result.data["applied"])
+            # DiscoPoP only reads the sources: nothing above has modified them
             self.assertEqual(self.source.read_text(), self.original_source)
-
-            result = await server.call(
-                "run_auto_tuning",
-                {"project_path": project, "config_name": "small", "suggestion_ids": ["999999"]},
-            )
-            self.assertTrue(result.is_error, result)
-            self.assertIn("Unknown suggestion IDs: 999999", result.data["message"])
-
-            # --- apply and roll back
-            result = await server.call(
-                "manage_patches", {"project_path": project, "action": "apply", "suggestion_ids": [pattern_id]}
-            )
-            self.assertFalse(result.is_error, result)
-            self.assertEqual(result.data["status"], "success", result.data)
-            self.assertEqual(result.data["applied_now"], [pattern_id])
-            self.assertIn("#pragma omp parallel for", self.source.read_text())
-
-            result = await server.call("manage_patches", {"project_path": project, "action": "list"})
-            self.assertFalse(result.is_error, result)
-            self.assertEqual(result.data["applied_suggestions"], [pattern_id])
-
-            result = await server.call("get_project_status", {"project_path": project})
-            self.assertEqual(result.data["applied_suggestions"], [pattern_id])
-            self.assertIn("rollback", result.data["next_step"])
-
-            result = await server.call(
-                "manage_patches", {"project_path": project, "action": "rollback", "suggestion_ids": [pattern_id]}
-            )
-            self.assertFalse(result.is_error, result)
-            self.assertEqual(self.source.read_text(), self.original_source)
-            result = await server.call("manage_patches", {"project_path": project, "action": "list"})
-            self.assertEqual(result.data["applied_suggestions"], [])
-
-            result = await server.call("manage_patches", {"project_path": project, "action": "apply"})
-            self.assertTrue(result.is_error, result)
-            self.assertIn("suggestion_ids", result.data["message"])
 
             # --- a later failing build must not leave the old results looking current
             result = await server.call(
@@ -427,25 +350,6 @@ class TestFailurePaths(unittest.IsolatedAsyncioTestCase):
 
             result = await server.call("get_parallelization_suggestions", {"project_path": project})
             self.assertTrue(result.is_error, result)
-
-            result = await server.call(
-                "get_execution_results",
-                {"project_path": project, "script": "compile.sh", "failed_only": True, "include_output": True},
-            )
-            self.assertFalse(result.is_error, result)
-            # the hint names this call as the place to see the failed build's output
-            self.assertGreaterEqual(result.data["num_failed"], 1, result.data)
-            rows = [
-                row
-                for scripts in result.data["execution_results"].values()
-                for settings in scripts.values()
-                for runs in settings.values()
-                for row in runs
-            ]
-            self.assertTrue(
-                any("no_such_file.cpp" in (row.get("stderr") or "") + (row.get("stdout") or "") for row in rows),
-                rows,
-            )
 
     async def test_failing_execute_script(self) -> None:
         project = self.project

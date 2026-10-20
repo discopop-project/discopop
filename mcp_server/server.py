@@ -56,14 +56,10 @@ from mcp_server.tools import (
     gather_data,
     get_configurations,
     get_hotspots,
-    get_data_dependencies,
-    get_execution_results,
     get_parallelization_suggestions,
     get_project_status,
     get_side_effects,
     initialize_discopop_directory,
-    manage_patches,
-    run_auto_tuning,
     set_compile_script,
 )
 from mcp_server.tools.helpers import ProgressReporter, ToolContext
@@ -151,14 +147,12 @@ logger = logging.getLogger("discopop-mcp")
 # is a rule the agent never sees.
 _SERVER_INSTRUCTIONS = (
     "DiscoPoP finds parallelism in C/C++ programs by profiling them: it records the data "
-    "dependencies that actually occur at runtime and turns code that is safe to parallelize "
-    "into OpenMP patches. "
+    "dependencies that actually occur at runtime and suggests where code can safely run in "
+    "parallel (OpenMP). "
     "Use it when the user wants to speed up or parallelize C/C++ code, asks whether code can "
-    "safely run in parallel, or needs to know which data a code region or a function reads and "
-    "writes, e.g. to check that a refactoring preserves the data flow (get_data_dependencies, "
-    "get_side_effects). Its answers "
-    "come from executions, so they capture aliasing that reading the code misses, and "
-    "run_auto_tuning measures which suggestions actually pay off instead of guessing.\n"
+    "safely run in parallel, or needs to know which data a function reads and writes, e.g. to "
+    "check that a refactoring preserves the data flow (get_side_effects). Its answers come from "
+    "executions, so they capture aliasing that reading the code misses.\n"
     "Not suitable when the project cannot be built and run locally, for languages other than "
     "C/C++, or for GPU or distributed-memory parallelism.\n"
     "Cost: profiling an instrumented build takes minutes for small programs, longer for large "
@@ -167,23 +161,22 @@ _SERVER_INSTRUCTIONS = (
     "representative input, as instrumented runs are slower.\n"
     "Workflow: initialize_discopop_directory, set_compile_script and "
     "create_execution_configuration once per project; gather_data to profile and detect "
-    "patterns, ranked by hotspots, with hotspot_config_names (ideally two configurations with "
-    "different input sizes); run_auto_tuning(apply=true) to measure the fastest combination of "
-    "suggestions "
-    "and apply it (without apply=true, apply its selection via manage_patches).\n"
+    "patterns, with hotspot_config_names (ideally two configurations with different input "
+    "sizes) for the hotspot ranking; get_hotspots and get_parallelization_suggestions show where "
+    "the time goes and what to parallelize, explain_parallelization why code has no suggestion. "
+    "You apply suggestions yourself by editing the source: DiscoPoP never modifies it. "
+    "Suggestions rest on the profiled inputs, so check that the changed program still gives "
+    "the same results.\n"
     "Rules: access DiscoPoP data only through these tools and never read .discopop directories "
     "directly: they hold large binary artefacts; the tools return compact summaries. If "
-    "data is missing, run the tool that produces it, usually gather_data. Never choose patches "
-    "by reading them: run_auto_tuning measures that choice, and needs an un-patched project. "
-    "Never apply patches by editing source files; use manage_patches. If the pipeline is in an "
-    "inconsistent state, initialize_discopop_directory(reset=true) clears the analysis artefacts."
+    "data is missing, run the tool that produces it, usually gather_data; run it again after "
+    "changing the sources. If the pipeline is in an inconsistent state, "
+    "initialize_discopop_directory(reset=true) clears the analysis artefacts."
 )
 
 _ALL_TOOLS = [
     get_project_status,
     get_configurations,
-    get_execution_results,
-    get_data_dependencies,
     get_side_effects,
     initialize_discopop_directory,
     set_compile_script,
@@ -193,8 +186,6 @@ _ALL_TOOLS = [
     get_hotspots,
     get_parallelization_suggestions,
     explain_parallelization,
-    run_auto_tuning,
-    manage_patches,
 ]
 
 # The tools that *define* a project rather than analyse one. Together they are a
@@ -297,7 +288,7 @@ async def _run_handler(
 ) -> list[TextContent]:
     """Run a synchronous tool handler without blocking the event loop.
 
-    Handlers block for as long as their tool runs -- gather_data and run_auto_tuning
+    Handlers block for as long as their tool runs -- gather_data
     for minutes to hours. Run on the event loop, they left the server unable to send
     progress or answer anything until they returned. In a worker thread they cannot
     run concurrently, though: handlers change the working directory and share the
@@ -438,7 +429,7 @@ class DiscoPopMCPProxy:
     listening on ``daemon_port``. If one is found, a single ClientSession is
     kept open for the lifetime of this process and all subsequent tool calls
     are forwarded through it — giving the daemon's ToolContext a chance to
-    keep expensive data structures (e.g. DetectionResult) in memory between
+    keep expensive data structures (e.g. the side effect index) in memory between
     calls and across sessions.
 
     The proxy never spawns a daemon on its own. To use the daemon, start it

@@ -8,16 +8,13 @@
 
 import json
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
-from unittest import mock
 
 from mcp_server.tools import (
     create_execution_configuration,
-    gather_data,
     initialize_discopop_directory,
     set_compile_script,
 )
@@ -165,61 +162,6 @@ class TestSetupChain(unittest.TestCase):
         message = json.loads(result[0].text)["message"]
         self.assertIn("'large' not found", message)
         self.assertIn("small", message)
-
-
-class TestAppliedSuggestionsSurviveReanalysis(unittest.TestCase):
-    """The applicator's record of applied suggestions is what a rollback needs; the analysis deletes it."""
-
-    def setUp(self) -> None:
-        self._tmp_dir = tempfile.TemporaryDirectory()
-        self.project_path = self._tmp_dir.name
-        self.ctx = ToolContext(debug=False)
-        initialize_discopop_directory.handle({"project_path": self.project_path}, self.ctx)
-
-    def tearDown(self) -> None:
-        self._tmp_dir.cleanup()
-
-    def test_gather_data_refuses_while_suggestions_are_applied(self) -> None:
-        with (
-            mock.patch.object(gather_data, "recorded_applied_suggestions", return_value=(["3"], None)),
-            mock.patch.object(gather_data, "_pipeline") as pipeline,
-        ):
-            result = gather_data.handle({"project_path": self.project_path, "config_name": "small"}, self.ctx)
-        data = json.loads(result[0].text)
-        self.assertEqual(data["status"], "error")
-        self.assertIn("manage_patches(action='clear')", data["message"])
-        pipeline.assert_not_called()
-
-    def test_a_reset_rolls_the_applied_suggestions_back_first(self) -> None:
-        clear = mock.Mock(return_value=(subprocess.CompletedProcess([], 0, "", ""), None))
-        with (
-            mock.patch.object(
-                initialize_discopop_directory, "recorded_applied_suggestions", return_value=(["3"], None)
-            ),
-            mock.patch.object(initialize_discopop_directory, "run_patch_applicator", clear),
-            mock.patch.object(initialize_discopop_directory, "reset_project") as reset,
-        ):
-            reset.side_effect = lambda _args: self.assertEqual(clear.call_count, 1)
-            result = initialize_discopop_directory.handle({"project_path": self.project_path, "reset": True}, self.ctx)
-        data = json.loads(result[0].text)
-        self.assertEqual(clear.call_args.args[1], ["--clear"])
-        self.assertEqual(data["rolled_back_suggestions"], ["3"])
-        self.assertNotIn("warning", data)
-
-    def test_a_reset_whose_rollback_fails_warns_that_patches_may_remain(self) -> None:
-        failed = subprocess.CompletedProcess([], 1, "patch: can't find file", "")
-        with (
-            mock.patch.object(
-                initialize_discopop_directory, "recorded_applied_suggestions", return_value=(["3"], None)
-            ),
-            mock.patch.object(initialize_discopop_directory, "run_patch_applicator", return_value=(failed, None)),
-            mock.patch.object(initialize_discopop_directory, "reset_project"),
-        ):
-            result = initialize_discopop_directory.handle({"project_path": self.project_path, "reset": True}, self.ctx)
-        data = json.loads(result[0].text)
-        self.assertEqual(data["status"], "success")
-        self.assertIn("by hand", data["warning"])
-        self.assertNotIn("rolled_back_suggestions", data)
 
 
 class TestLogCall(unittest.TestCase):

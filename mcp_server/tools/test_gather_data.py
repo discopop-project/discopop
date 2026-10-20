@@ -150,12 +150,12 @@ class TestGatherDataFailureHints(unittest.TestCase):
         result = self.__pipeline(
             instr={"status": "error", "message": "Instrumentation failed (rc=1).", "returncode": 1}
         )
-        self.assertIn("get_execution_results", result["next_step"])
+        self.assertIn("steps.instrumentation.stderr", result["next_step"])
         self.assertIn("set_compile_script", result["next_step"])
 
     def test_a_failed_run_points_at_its_output_and_the_execute_script(self) -> None:
         result = self.__pipeline(prof={"status": "error", "message": "Profiling failed (rc=139).", "returncode": 139})
-        self.assertIn("get_execution_results", result["next_step"])
+        self.assertIn("steps.profiling.stderr", result["next_step"])
         self.assertIn("create_execution_configuration", result["next_step"])
 
     def test_a_step_refused_before_running_gets_no_invented_cause(self) -> None:
