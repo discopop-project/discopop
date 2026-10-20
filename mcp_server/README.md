@@ -115,7 +115,7 @@ The server offers 12 tools. In workflow order: `initialize_discopop_directory`, 
 
 DiscoPoP only reads the sources: it never modifies them. The agent applies the suggestions itself, by editing the code.
 
-The tools that answer questions about the analysis return a short **text**, not a data structure: one line per hotspot, suggestion or effect, most significant first. Where a list is cut, its last line says how much was left out, and a `limit` parameter lists more. Paths are shown relative to the project. Errors are returned as `{"status": "error", "message": ..., "next_step": ...}`.
+The tools that answer questions about the analysis return a short **text**, not a data structure: one line per hotspot, suggestion or effect, most significant first. Where a list is cut, its last line says how much was left out, and a `limit` parameter lists more. Paths are shown relative to the project. The setup, configuration and pipeline tools return JSON. A successful result holds just the facts of the call plus, where there is a sensible follow-up, a `next_step` hint; it carries neither a `status` nor the `project_path` the caller sent. Errors are returned as `{"status": "error", "message": ..., "next_step": ...}`, and the server marks them as errors (`isError`); `status` appears nowhere else at the top level (the entries of `gather_data`'s `steps` carry their own `status`).
 
 ### `initialize_discopop_directory`
 

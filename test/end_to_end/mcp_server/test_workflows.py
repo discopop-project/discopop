@@ -105,7 +105,7 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             result = await gather_data(server, project)
             self.assertFalse(result.is_error, result)
             data = result.data
-            self.assertEqual(data["status"], "success")
+            self.assertNotIn("status", data)
             for step in (
                 "hotspot_instrumentation",
                 "hotspot_analysis",

@@ -56,8 +56,7 @@ class TestDiscoPopMCPServer(unittest.TestCase):
         self.assertEqual(len(result), 1)
         text_content = result[0].text
         data = json.loads(text_content)
-        self.assertEqual(data["status"], "success")
-        self.assertEqual(data["project_path"], "/test/project")
+        self.assertNotIn("status", data)
         self.assertIn("configurations", data)
 
 

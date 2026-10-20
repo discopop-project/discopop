@@ -815,7 +815,6 @@ def _cancelled_result(project_path: str, steps: dict[str, Any]) -> dict[str, Any
     plain rebuild after the pipeline depends on knowing what was compiled in place."""
     return {
         "status": "error",
-        "project_path": project_path,
         "message": "Cancelled by the client.",
         "cancelled": True,
         "steps": steps,
@@ -890,7 +889,6 @@ def _pipeline(
         failed_step = _failed_hotspot_step(steps)
         return {
             "status": "error",
-            "project_path": project_path,
             "message": f"Hotspot detection failed. See steps.{failed_step} for details.",
             "steps": steps,
             "next_step": (
@@ -912,7 +910,6 @@ def _pipeline(
     if instr["status"] not in ("success", "skipped"):
         result: dict[str, Any] = {
             "status": "error",
-            "project_path": project_path,
             "message": "Instrumentation failed. See steps.instrumentation for details.",
             "steps": steps,
         }
@@ -939,7 +936,6 @@ def _pipeline(
     if prof["status"] not in ("success", "skipped"):
         result = {
             "status": "error",
-            "project_path": project_path,
             "message": "Profiling failed. See steps.profiling for details.",
             "steps": steps,
         }
@@ -963,7 +959,6 @@ def _pipeline(
     if detection["status"] not in ("success", "skipped"):
         result = {
             "status": "error",
-            "project_path": project_path,
             "message": "Pattern detection failed. See steps.pattern_detection for details.",
             "steps": steps,
             "next_step": (
@@ -979,8 +974,6 @@ def _pipeline(
     sys.stderr.flush()
 
     result = {
-        "status": "success",
-        "project_path": project_path,
         "steps": steps,
     }
     # What to do with the patches is the question this pipeline exists to raise, and a
@@ -1027,7 +1020,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                     warning = str(restore.get("message") or "The plain rebuild failed.")
                     result["warning"] = f"{result['warning']} {warning}" if result.get("warning") else warning
 
-        ctx.log_response("gather_data", result)
+        ctx.log_response("gather_data", result, project_path)
         return [TextContent(type="text", text=json.dumps(result))]
 
     except Exception as e:

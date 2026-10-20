@@ -551,15 +551,14 @@ class ToolContext:
             )
             self.log_to_file(project_path, "→ CALL", tool_name, args_summary)
 
-    def log_response(self, tool_name: str, result: Any) -> None:
+    def log_response(self, tool_name: str, result: Any, project_path: str = "") -> None:
         logger.info(f"← Outgoing response: {tool_name}")
         if self.debug:
             logger.debug(f"  Result: {json.dumps(result if isinstance(result, dict) else str(result), indent=2)}")
         if isinstance(result, dict):
-            project_path = result.get("project_path", "")
             if not project_path:
                 return
-            status = result.get("status", "?")
+            status = "error" if result.get("status") == "error" else "ok"
             extras = {
                 k: v
                 for k in (

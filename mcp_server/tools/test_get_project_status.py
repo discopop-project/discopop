@@ -66,7 +66,7 @@ class TestGetProjectStatus(unittest.TestCase):
 
     def test_an_uninitialized_project_is_pointed_at_initialization(self) -> None:
         data = self.__handle()
-        self.assertEqual(data["status"], "success")
+        self.assertNotIn("status", data)
         self.assertFalse(data["initialized"])
         self.assertIn("initialize_discopop_directory", data["next_step"])
         self.assertNotIn("pipeline", data)

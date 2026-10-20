@@ -135,8 +135,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             reset_project(pm_args)
             ctx.log_action(project_path, "initialize_discopop_directory", "Reset: removed analysis artefacts")
             result: dict[str, Any] = {
-                "status": "success",
-                "project_path": project_path,
                 "reset": True,
                 "message": (
                     "Analysis artefacts removed (.discopop/profiler, .discopop/explorer, "
@@ -145,7 +143,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 ),
                 "next_step": setup_next_step(p / ".discopop" / "project" / "configs"),
             }
-            ctx.log_response("initialize_discopop_directory", result)
+            ctx.log_response("initialize_discopop_directory", result, project_path)
             return [TextContent(type="text", text=json.dumps(result))]
 
         configs_dir = p / ".discopop" / "project" / "configs"
@@ -157,12 +155,10 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         expected = ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json", "compile.sh"]
         if configs_dir.exists() and all((configs_dir / name).exists() for name in expected):
             result = {
-                "status": "success",
-                "project_path": project_path,
                 "already_initialized": True,
                 "next_step": setup_next_step(configs_dir),
             }
-            ctx.log_response("initialize_discopop_directory", result)
+            ctx.log_response("initialize_discopop_directory", result, project_path)
             return [TextContent(type="text", text=json.dumps(result))]
 
         configs_dir.mkdir(parents=True, exist_ok=True)
@@ -215,13 +211,11 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             skipped.append(str(compile_sh.relative_to(p)))
 
         result = {
-            "status": "success",
-            "project_path": project_path,
             "created_files": created,
             "skipped_files": skipped,
             "next_step": setup_next_step(configs_dir),
         }
-        ctx.log_response("initialize_discopop_directory", result)
+        ctx.log_response("initialize_discopop_directory", result, project_path)
         return [TextContent(type="text", text=json.dumps(result))]
 
     except Exception as e:

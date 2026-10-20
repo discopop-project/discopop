@@ -123,7 +123,7 @@ class TestArgumentValidation(unittest.IsolatedAsyncioTestCase):
             async with mcp_session() as server:
                 result = await server.call("initialize_discopop_directory", {"project_path": project, "reset": "false"})
                 self.assertFalse(result.is_error, result)
-                self.assertEqual(result.data["status"], "success")
+                self.assertNotIn("status", result.data)
 
 
 class TestSetupWorkflow(unittest.IsolatedAsyncioTestCase):
@@ -165,7 +165,7 @@ class TestSetupWorkflow(unittest.IsolatedAsyncioTestCase):
                 {"project_path": project, "base_cc": "gcc", "base_cxx": "g++", "cxxflags": "-O2"},
             )
             self.assertFalse(result.is_error, result)
-            self.assertEqual(result.data["status"], "success")
+            self.assertNotIn("status", result.data)
             created = {Path(f).name for f in result.data["created_files"]}
             self.assertEqual(
                 created,

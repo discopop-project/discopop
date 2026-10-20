@@ -460,7 +460,7 @@ class TestFailedHotspotDetectionFailsTheCall(unittest.TestCase):
 
     def test_successful_hotspot_detection_goes_on_to_the_pipeline(self) -> None:
         result = self._run(self.ok, self.ok, self.ok)
-        self.assertEqual(result["status"], "success")
+        self.assertNotIn("status", result)
         self.assertEqual(result["steps"]["instrumentation"], self.ok)
 
 
@@ -601,7 +601,7 @@ class TestGatherDataRestoresThePlainBuild(unittest.TestCase):
 
     def test_the_last_build_is_a_plain_one(self) -> None:
         result = self.__handle()
-        self.assertEqual(result["status"], "success")
+        self.assertNotIn("status", result)
         self.assertEqual(self.settings_used[-1], "par_settings.json")
         self.assertEqual(result["steps"]["build_restore"]["status"], "success")
 
@@ -623,7 +623,7 @@ class TestGatherDataRestoresThePlainBuild(unittest.TestCase):
     def test_a_failed_restore_is_reported_but_not_fatal(self) -> None:
         self.restore_returncode = 1
         result = self.__handle()
-        self.assertEqual(result["status"], "success")
+        self.assertNotIn("status", result)
         self.assertEqual(result["steps"]["build_restore"]["status"], "error")
         self.assertIn("instrumented", result["warning"])
 

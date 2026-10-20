@@ -108,18 +108,18 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         dot_dp = Path(project_path) / ".discopop"
         configs_dir = dot_dp / "project" / "configs"
 
-        result: dict[str, Any] = {"status": "success", "project_path": project_path}
+        result: dict[str, Any] = {}
         result["initialized"] = configs_dir.is_dir()
         if not result["initialized"]:
             result["next_step"] = setup_next_step(configs_dir)
-            return _respond(result, ctx)
+            return _respond(result, ctx, project_path)
 
         names = configuration_names(configs_dir)
         result["compile_script_configured"] = compile_script_configured(configs_dir)
         result["configurations"] = names
         if not (result["compile_script_configured"] and names):
             result["next_step"] = setup_next_step(configs_dir)
-            return _respond(result, ctx)
+            return _respond(result, ctx, project_path)
 
         source_mtime = ToolContext.newest_source_mtime(project_path)
         if source_mtime is not None:
@@ -132,7 +132,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             result["suggestions"] = suggestions
         analysis_stale = any(pipeline[step].get("stale") for step in _ANALYSIS_STEPS)
         result["next_step"] = _next_step(configs_dir, names, pipeline, analysis_stale, suggestions)
-        return _respond(result, ctx)
+        return _respond(result, ctx, project_path)
 
     except Exception as e:
         error_msg = f"Error determining the project status: {str(e)}"
@@ -140,6 +140,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
 
 
-def _respond(result: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
-    ctx.log_response("get_project_status", result)
+def _respond(result: dict[str, Any], ctx: ToolContext, project_path: str) -> list[TextContent]:
+    ctx.log_response("get_project_status", result, project_path)
     return [TextContent(type="text", text=json.dumps(result))]

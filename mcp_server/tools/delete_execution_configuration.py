@@ -85,13 +85,11 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         ctx.log_action(project_path, "delete_execution_configuration", f"Deleted config directory: {config_dir}")
 
         result: dict[str, Any] = {
-            "status": "success",
-            "project_path": project_path,
             "config_name": config_name,
             "deleted": str(config_dir),
             "next_step": setup_next_step(configs_dir),
         }
-        ctx.log_response("delete_execution_configuration", result)
+        ctx.log_response("delete_execution_configuration", result, project_path)
         return [TextContent(type="text", text=json.dumps(result))]
 
     except Exception as e:

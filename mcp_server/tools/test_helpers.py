@@ -106,7 +106,7 @@ class TestSetupChain(unittest.TestCase):
 
     def __call(self, tool: Any, **arguments: Any) -> Any:
         data = json.loads(tool.handle({"project_path": self.project_path, **arguments}, self.ctx)[0].text)
-        self.assertEqual(data["status"], "success", data)
+        self.assertNotIn("status", data, data)
         return data
 
     def test_the_results_lead_from_initialization_to_gather_data(self) -> None:
