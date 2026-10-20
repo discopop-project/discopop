@@ -108,7 +108,7 @@ class TestGetParallelizationSuggestions(unittest.TestCase):
             "Suggestion 7: Potential Hotspot Loop main.cpp:20 (3.00 s, 30% of runtime): doall, "
             "#pragma omp parallel for shared(a)",
         )
-        # a loop that is no hotspot is described as a loop, with what was measured
+        # code that is no hotspot is described by its kind, with what was measured
         self.assertEqual(
             lines[3],
             "Suggestion 3: Loop main.cpp:30 (0.01 s, 0% of runtime): doall, #pragma omp parallel for firstprivate(n)",
@@ -155,6 +155,30 @@ class TestGetParallelizationSuggestions(unittest.TestCase):
         self.assertTrue(lines["Suggestion 7"].endswith("nested in suggestion 5; alternative to suggestion 3"))
         self.assertTrue(lines["Suggestion 3"].endswith("nested in suggestion 5; alternative to suggestion 7"))
         self.assertNotIn("nested in", lines["Suggestion 5"])
+
+    def test_a_region_that_is_not_a_loop_is_named_by_its_kind_and_weighed_as_that_kind(self) -> None:
+        # a function region at the line of a (cold) loop must not take the loop's weight, nor the other way round
+        self.__suggest({9: (40, "doall", "#pragma omp task")})
+        self.__hotspots(
+            [_MAIN, {**_loop(5, 40, "YES", 8.0), "typ": "FUNCTION", "name": "work"}, _loop(6, 40, "NO", 0.01)]
+        )
+        log = PatternDecisionLog()
+        log.ran(DETECTOR, TYPES)
+        log.consider(DETECTOR, TYPES, CodeRegion("1:40", 1, 40, 60, "function"))
+        log.finalize(DETECTOR, [cast(Any, _Pattern("1:40", 9))])
+        log.save(str(self.dot_discopop / "explorer" / "pattern_decisions.json"))
+
+        [line] = [text for text in self.__handle().splitlines() if text.startswith("Suggestion 9")]
+        self.assertTrue(line.startswith("Suggestion 9: Hotspot Function main.cpp:40-60 (8.00 s, 80% of runtime)"))
+
+    def test_the_closing_hint_is_not_specific_to_loops_or_to_a_pragma_alone(self) -> None:
+        hint = self.__handle().splitlines()[-1]
+        self.assertNotIn("loop", hint.lower())
+        self.assertIn("change", hint)
+
+    def test_the_description_does_not_limit_suggestions_to_loops(self) -> None:
+        description = get_parallelization_suggestions.TOOL.description or ""
+        self.assertNotIn("loop", description.lower())
 
     def test_no_suggestions_are_reported_as_such(self) -> None:
         for patch in (self.dot_discopop / "patch_generator").glob("*/1.patch"):

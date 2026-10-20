@@ -14,7 +14,6 @@ from typing import Any, Optional
 from mcp.types import TextContent, Tool, ToolAnnotations
 
 from discopop_library.HostpotLoader.detailed_hotspot_loader import HotspotRegionInfo, load_detailed_hotspots
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from mcp_server.tools.helpers import ToolContext
 from mcp_server.tools.hotspot_text import (
     display_path,
@@ -35,16 +34,17 @@ TOOL = Tool(
     annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
     description=(
         "List the parallelization suggestions found by gather_data, hottest first. Each line gives "
-        "the loop (file and lines), how much of the runtime it takes (a Hotspot or Potential Hotspot, "
-        "with its measured runtime and share of the program's), the pattern (doall or reduction) and "
-        "the OpenMP pragma to put directly above the loop, with its data-sharing clauses. "
+        "the code region (its kind, file and lines), how much of the runtime it takes (a Hotspot or "
+        "Potential Hotspot, with its measured runtime and share of the program's), the pattern type "
+        "(e.g. doall or reduction) and the change to make, e.g. the OpenMP pragma with its "
+        "data-sharing clauses to put directly above the region. "
         "Suggestions on the same code are marked as nested in or an alternative to each other. "
         "\n\n"
         "By default the first suggestions are shown and the line at the end says how many are not; "
         "raise limit for more. "
         "\n\n"
-        "A suggestion is a pragma above one loop; apply it by editing the source yourself. "
-        "explain_parallelization tells why a loop without a suggestion was not parallelized."
+        "Apply a suggestion by editing the source yourself. "
+        "explain_parallelization tells why code without a suggestion was not parallelized."
     ),
     inputSchema={
         "type": "object",
@@ -71,7 +71,7 @@ TOOL = Tool(
 def _summarize_patch(patch_content: str) -> tuple[Optional[int], Optional[str]]:
     """The line a patch targets and the pragma it inserts.
 
-    A suggestion is one added pragma above one loop, so those two facts are what a
+    A suggestion is one added pragma above one code region, so those two facts are what a
     summary needs; everything else in the diff is context that only matters when the
     patch is being read rather than chosen between.
     """
@@ -120,8 +120,8 @@ def _suggestion_facts(dot_discopop: Path) -> dict[str, dict[str, Any]]:
     return facts
 
 
-def _regions(dot_discopop: Path) -> dict[str, tuple[int, int, int]]:
-    """Per suggestion id: (file id, first line, last line) of the code it covers, from the
+def _regions(dot_discopop: Path) -> dict[str, tuple[int, int, int, str]]:
+    """Per suggestion id: (file id, first line, last line, kind) of the code it covers, from the
     explorer's pattern decisions; empty for results of versions which did not record them."""
     path = dot_discopop / "explorer" / "pattern_decisions.json"
     if not path.exists():
@@ -133,28 +133,28 @@ def _regions(dot_discopop: Path) -> dict[str, tuple[int, int, int]]:
     except Exception as e:
         logger.warning(f"Failed to load {path}: {e}")
         return {}
-    regions: dict[str, tuple[int, int, int]] = {}
+    regions: dict[str, tuple[int, int, int, str]] = {}
     for decision in log.decisions:
         if decision.outcome != ACCEPTED:
             continue
         region = decision.region
         for pattern in decision.patterns:
-            regions[str(pattern["pattern_id"])] = (region.file_id, region.start_line, region.end_line)
+            regions[str(pattern["pattern_id"])] = (region.file_id, region.start_line, region.end_line, region.kind)
     return regions
 
 
-def _loop_regions(dot_discopop: Path) -> tuple[dict[tuple[int, int], HotspotRegionInfo], float]:
-    """The hotspot region of every loop by (file id, first line), and the runtime of the program."""
+def _hotspot_regions(dot_discopop: Path) -> tuple[dict[tuple[int, int, str], HotspotRegionInfo], float]:
+    """The hotspot region of every loop and function by (file id, first line, kind), and the program's runtime."""
     try:
         regions = load_detailed_hotspots(str(dot_discopop))
     except Exception as e:
         logger.warning(f"Failed to load the hotspot detection results: {e}")
         return {}, 0.0
-    loops = {(r.file_id, r.start_line): r for r in regions if r.node_type == HotspotNodeType.LOOP}
-    return loops, total_runtime(regions)
+    by_place = {(r.file_id, r.start_line, r.node_type.name.lower()): r for r in regions}
+    return by_place, total_runtime(regions)
 
 
-def _relations(pid: str, regions: dict[str, tuple[int, int, int]]) -> dict[str, list[str]]:
+def _relations(pid: str, regions: dict[str, tuple[int, int, int, str]]) -> dict[str, list[str]]:
     """The suggestions on code enclosing this suggestion's, and those on the same code."""
     own = regions.get(pid)
     if own is None:
@@ -164,7 +164,7 @@ def _relations(pid: str, regions: dict[str, tuple[int, int, int]]) -> dict[str, 
     for other, region in regions.items():
         if other == pid or region[0] != own[0]:
             continue
-        if region[1:] == own[1:]:
+        if region[1:3] == own[1:3]:
             same_region.append(other)
         elif region[1] <= own[1] and own[2] <= region[2]:
             nested_in.append(other)
@@ -176,12 +176,12 @@ def _relations(pid: str, regions: dict[str, tuple[int, int, int]]) -> dict[str, 
     return relations
 
 
-def _describe(suggestion: dict[str, Any], loop: Optional[HotspotRegionInfo], total: float) -> str:
-    """One line per suggestion: the loop, its weight, the pattern and the pragma."""
+def _describe(suggestion: dict[str, Any], hotspot: Optional[HotspotRegionInfo], total: float) -> str:
+    """One line per suggestion: the code region, its weight, the pattern and the change."""
     lines = f"{suggestion['line']}-{suggestion['end_line']}" if "end_line" in suggestion else f"{suggestion['line']}"
-    place = f"Loop {suggestion['file']}:{lines}"
-    weight = f" ({runtime_text(loop, total)})" if loop is not None else ""
-    text = f"Suggestion {suggestion['pattern_id']}: {hotspot_prefix(loop)}{place}{weight}: {suggestion['type']}"
+    place = f"{suggestion['kind']} {suggestion['file']}:{lines}"
+    weight = f" ({runtime_text(hotspot, total)})" if hotspot is not None else ""
+    text = f"Suggestion {suggestion['pattern_id']}: {hotspot_prefix(hotspot)}{place}{weight}: {suggestion['type']}"
     text += f", {suggestion['pragma']}"
     if "nested_in" in suggestion:
         text += f"; nested in suggestion {', '.join(suggestion['nested_in'])}"
@@ -216,9 +216,9 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
 
         facts = _suggestion_facts(dot_discopop)
         regions = _regions(dot_discopop)
-        loops, total = _loop_regions(dot_discopop)
+        hotspots, total = _hotspot_regions(dot_discopop)
 
-        # (loop region, suggestion) per patch; a suggestion that changes several files has one per file
+        # (hotspot region, suggestion) per patch; a suggestion that changes several files has one per file
         entries: list[tuple[Optional[HotspotRegionInfo], dict[str, Any]]] = []
         pattern_dirs = sorted(
             (d for d in patch_gen_dir.iterdir() if d.is_dir() and d.name.isdigit()), key=lambda d: int(d.name)
@@ -243,19 +243,24 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                     "type": fact.get("type", "pattern"),
                     "line": line if line is not None else pragma_line,
                     "pragma": pragma or "(no pragma)",
+                    # the doall and reduction patterns are loops; a decision log says it for any region
+                    "kind": (region[3] if region is not None and region[3] else "loop").capitalize(),
                 }
                 if region is not None:
                     suggestion["end_line"] = region[2]
                 suggestion.update(_relations(pid, regions))
-                loop = loops.get((fact["file_id"], line)) if "file_id" in fact and line is not None else None
-                entries.append((loop, suggestion))
+                kind = suggestion["kind"].lower()
+                hotspot = (
+                    hotspots.get((fact["file_id"], line, kind)) if "file_id" in fact and line is not None else None
+                )
+                entries.append((hotspot, suggestion))
 
-        # the longest running first; loops without a measurement keep their order after them
+        # the longest running first; regions without a measurement keep their order after them
         entries.sort(key=lambda e: -e[0].max_val if e[0] is not None else float("inf"))
         shown = entries[:limit]
 
         lines = [f"{len({s['pattern_id'] for _, s in entries})} parallelization suggestions, hottest first:"]
-        lines += [_describe(s, loop, total) for loop, s in shown]
+        lines += [_describe(s, hotspot, total) for hotspot, s in shown]
         if len(shown) < len(entries):
             lines.append(
                 f"{len(entries) - len(shown)} more suggestions not shown (limit={limit}); "
@@ -263,12 +268,12 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             )
         if entries:
             lines.append(
-                "Apply a suggestion by adding its pragma directly above the loop. explain_parallelization tells why "
-                "a loop has no suggestion."
+                "Apply a suggestion by making the change it shows (an OpenMP pragma goes directly above the code it "
+                "names). explain_parallelization tells why code has no suggestion."
             )
         else:
             lines[0] = "No parallelization suggestions."
-            lines.append("explain_parallelization tells why a loop was not parallelized.")
+            lines.append("explain_parallelization tells why code was not parallelized.")
         text = "\n".join(lines)
         ctx.log_action(project_path, TOOL.name, f"Listed {len(shown)} of {len(entries)} suggestions")
         return [TextContent(type="text", text=text)]
