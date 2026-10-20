@@ -34,7 +34,7 @@ ANALYSIS_TOOLS = {
     "get_side_effects",
     "gather_data",
     "get_hotspots",
-    "get_parallelization_patches",
+    "get_parallelization_suggestions",
     "explain_parallelization",
     "run_auto_tuning",
     "manage_patches",
@@ -309,7 +309,7 @@ class TestSetupWorkflow(unittest.IsolatedAsyncioTestCase):
 
             # --- tools that need analysis results report so instead of failing obscurely
             before_analysis: list[tuple[str, dict[str, Any]]] = [
-                ("get_parallelization_patches", {}),
+                ("get_parallelization_suggestions", {}),
                 ("manage_patches", {"action": "list"}),
                 ("explain_parallelization", {"file_path": str(Path(project) / "code.cpp"), "start_line": 1}),
                 ("get_side_effects", {"function": "main"}),

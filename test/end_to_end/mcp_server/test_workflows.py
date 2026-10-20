@@ -14,6 +14,7 @@ installed.
 """
 
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -133,28 +134,21 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("build_restore", result.data["steps"])
 
             # --- the suggestion for the loop
-            result = await server.call("get_parallelization_patches", {"project_path": project})
+            result = await server.call("get_parallelization_suggestions", {"project_path": project})
             self.assertFalse(result.is_error, result)
-            patches = result.data["patches"]
-            self.assertGreaterEqual(result.data["num_suggestions"], 1)
-            loop_patches = [p for p in patches if p.get("line") == LOOP_LINE]
-            self.assertTrue(loop_patches, patches)
-            patch = loop_patches[0]
-            pattern_id = patch["pattern_id"]
-            self.assertEqual(Path(patch["source_file"]).resolve(), self.source.resolve())
-            self.assertEqual(patch["type"], "doall")
-            self.assertIn("#pragma omp parallel for", patch["patch_content"])
-
-            result = await server.call(
-                "get_parallelization_patches", {"project_path": project, "detail": "summary", "pattern_id": pattern_id}
+            self.assertRegex(result.text, r"^\d+ parallelization suggestions, hottest first:")
+            [line] = [
+                text
+                for text in result.text.splitlines()
+                if re.search(rf"Loop code\.cpp:{LOOP_LINE}(-\d+)? ", text) and ": doall," in text
+            ]
+            match = re.match(
+                r"Suggestion (\d+): (Potential )?(Hotspot )?Loop \S+ \(.* s, \d+% of runtime\): doall, (.*)", line
             )
-            self.assertFalse(result.is_error, result)
-            self.assertEqual(result.data["num_suggestions"], 1)
-            [entry] = result.data["files"]
-            [summary] = entry["suggestions"]
-            self.assertEqual(summary["pattern_id"], pattern_id)
-            self.assertIn("#pragma omp parallel for", summary["pragma"])
-            self.assertNotIn("patch_content", summary)
+            self.assertIsNotNone(match, line)
+            assert match is not None
+            pattern_id = match.group(1)
+            self.assertIn("#pragma omp parallel for", match.group(4))
 
             # --- why: the decision for the loop, and its data dependencies
             result = await server.call(
@@ -415,7 +409,7 @@ class TestFailurePaths(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result.data["pipeline"][step], {"done": False}, result.data["pipeline"])
             self.assertNotIn("suggestions", result.data)
 
-            result = await server.call("get_parallelization_patches", {"project_path": project})
+            result = await server.call("get_parallelization_suggestions", {"project_path": project})
             self.assertTrue(result.is_error, result)
 
             result = await server.call(

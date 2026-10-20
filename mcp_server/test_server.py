@@ -96,7 +96,7 @@ class TestToolSets(unittest.TestCase):
         # everything the analysis route needs is still there
         for expected in (
             "gather_data",
-            "get_parallelization_patches",
+            "get_parallelization_suggestions",
             "run_auto_tuning",
             "manage_patches",
             "get_side_effects",

@@ -30,7 +30,7 @@ TOOL = Tool(
         "Explain why DiscoPoP did or did not suggest a parallelization for the code at the given "
         "lines. Returns every code region that pattern detection considered and that overlaps "
         "them, innermost first, with its outcome: 'accepted' (with the ids of the suggestions, "
-        "for get_parallelization_patches), 'rejected' (with the reasons, e.g. the data dependency "
+        "for get_parallelization_suggestions), 'rejected' (with the reasons, e.g. the data dependency "
         "between iterations that prevents it, with variable and source/sink lines), or "
         "'not_reported' (it passed the checks, but no suggestion for it is part of the result, e.g. "
         "because its pattern type was not enabled; reasons, if present, say why). "
@@ -115,7 +115,7 @@ def _region(decision: Any, file_mapping: dict[int, Path]) -> dict[str, Any]:
         "outcome": decision.outcome,
     }
     if decision.patterns:
-        # strings, as get_parallelization_patches takes and returns them
+        # strings, as get_parallelization_suggestions takes and returns them
         entry["suggestions"] = [{"type": p["type"], "pattern_id": str(p["pattern_id"])} for p in decision.patterns]
     if decision.reasons:
         entry["reasons"] = [_reason(r, file_mapping) for r in decision.reasons[:MAX_REASONS_PER_REGION]]
@@ -148,7 +148,7 @@ def _next_step(decisions: list[Any], file_path: str) -> Optional[str]:
             "it more often (create_execution_configuration, then gather_data)."
         )
     if any(d.outcome == "accepted" for d in decisions):
-        steps.append("get_parallelization_patches(pattern_ids=[...]) shows an accepted suggestion.")
+        steps.append("get_parallelization_suggestions lists the accepted suggestions.")
     return " ".join(steps) if steps else None
 
 

@@ -128,7 +128,7 @@ class TestExplainParallelization(unittest.TestCase):
         self.assertIn("start_line=10, end_line=30", data["next_step"])
 
     def test_an_accepted_region_points_at_its_suggestions(self) -> None:
-        self.assertIn("get_parallelization_patches(pattern_ids=", self.__handle(start_line=7)["next_step"])
+        self.assertIn("get_parallelization_suggestions", self.__handle(start_line=7)["next_step"])
 
     def test_a_range_matches_every_overlapping_region(self) -> None:
         self.assertEqual(self.__handle(start_line=1, end_line=100)["num_regions"], 3)

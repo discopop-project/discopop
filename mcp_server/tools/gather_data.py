@@ -64,7 +64,7 @@ TOOL = Tool(
         "is safe. "
         "\n\n"
         "On success, call run_auto_tuning to measure which combination of the generated "
-        "suggestions is fastest (apply=true also applies it); get_parallelization_patches lists them."
+        "suggestions is fastest (apply=true also applies it); get_parallelization_suggestions lists them."
     ),
     inputSchema={
         "type": "object",
@@ -798,7 +798,7 @@ def next_step_hint(suggestion_count: Optional[int]) -> str:
         found + "Call run_auto_tuning to have DiscoPoP measure which combination of them is "
         "fastest (add apply=true to apply that combination in the same call) — do this before "
         "applying anything, since the search needs an un-patched project. "
-        "get_parallelization_patches lists the suggestions, and get_data_dependencies "
+        "get_parallelization_suggestions lists the suggestions, and get_data_dependencies "
         "explains the dependencies behind an individual one."
     )
 
