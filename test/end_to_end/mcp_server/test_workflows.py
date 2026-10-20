@@ -45,6 +45,8 @@ STEP_TIMEOUT_SECONDS = 300
 # the do-all loop in src/code.cpp
 LOOP_LINE = 14
 LOOP_END_LINE = 17
+# the loop after it, which carries a dependency from one iteration to the next
+CARRIED_LOOP_LINE = 19
 
 COMPILE_SCRIPT = "$CXX $CXXFLAGS code.cpp -o prog\n"
 
@@ -155,9 +157,20 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
                 "explain_parallelization", {"project_path": project, "file_path": source, "start_line": LOOP_LINE}
             )
             self.assertFalse(result.is_error, result)
-            accepted = [r for r in result.data["regions"] if r["outcome"] == "accepted"]
-            self.assertTrue(accepted, result.data)
-            self.assertIn(pattern_id, [s["pattern_id"] for r in accepted for s in r.get("suggestions", [])])
+            self.assertIn(f"suggestion {pattern_id} (doall)", result.text)
+
+            result = await server.call(
+                "explain_parallelization",
+                {"project_path": project, "file_path": source, "start_line": CARRIED_LOOP_LINE + 1},
+            )
+            self.assertFalse(result.is_error, result)
+            self.assertIn(f"Loop code.cpp:{CARRIED_LOOP_LINE}-", result.text)
+            self.assertIn("not parallelizable.", result.text)
+            self.assertRegex(
+                result.text,
+                rf"- RAW dependency to code\.cpp:{CARRIED_LOOP_LINE + 1} via elements of variable x "
+                rf"from code\.cpp:{CARRIED_LOOP_LINE + 1} prevents parallelization \(observed during profiling\)\.",
+            )
 
             result = await server.call(
                 "get_data_dependencies",
