@@ -258,12 +258,20 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
             self.assertIn("sources changed after the last analysis", result.data["next_step"])
 
 
-def _effects(data: dict[str, Any]) -> set[tuple[str, str, str]]:
-    """(access, kind, name) of every listed effect of a get_side_effects result."""
+def _effects(text: str) -> set[tuple[str, str, str]]:
+    """(access, kind, name) of every effect listed in the text of a get_side_effects result."""
+    sections = {"Writes:": "write", "Reads:": "read", "Referenced in the code, access unknown:": "unknown"}
     found: set[tuple[str, str, str]] = set()
-    for access, bucket in (("write", "writes"), ("read", "reads"), ("unknown", "unknown_access")):
-        for effect in data.get(bucket, []):
-            found.add((access, effect["kind"], effect["name"]))
+    access = ""
+    for line in text.splitlines():
+        if line in sections:
+            access = sections[line]
+        elif line.startswith("- ") and access:
+            match = re.match(r"- (\S+) \((global|parameter|other memory)[,)]", line)
+            assert match is not None, line
+            found.add((access, match.group(2).split()[0], match.group(1)))
+        else:
+            access = "" if not line.startswith("- ") else access
     return found
 
 
@@ -288,11 +296,10 @@ class TestSideEffects(unittest.IsolatedAsyncioTestCase):
             result = await gather_data(server, project)
             self.assertFalse(result.is_error, result)
 
-            async def query(function: str, **extra: Any) -> dict[str, Any]:
+            async def query(function: str, **extra: Any) -> str:
                 result = await server.call("get_side_effects", {"project_path": project, "function": function, **extra})
                 self.assertFalse(result.is_error, result)
-                self.assertEqual(result.data["status"], "success", result)
-                return result.data
+                return result.text
 
             expected: dict[str, set[tuple[str, str, str]]] = {
                 "pure_add": set(),
@@ -318,27 +325,22 @@ class TestSideEffects(unittest.IsolatedAsyncioTestCase):
             }
             for function, effects in expected.items():
                 with self.subTest(function=function):
-                    data = await query(function)
-                    self.assertEqual(_effects(data), effects, data)
+                    text = await query(function)
+                    self.assertEqual(_effects(text), effects, text)
 
-            data = await query("pure_add")
-            self.assertEqual(data["coverage"], "executed")
-            self.assertIs(data["pure_on_observed_inputs"], True)
+            text = await query("pure_add")
+            self.assertIn("Pure on the profiled inputs", text)
+            self.assertNotIn("Caveat", text)
 
-            data = await query("wrapper")
-            (write,) = data["writes"]
-            self.assertEqual(write["sites"][0]["via"], ["write_through_param(int*, int)"])
+            text = await query("wrapper")
+            self.assertRegex(text, r"- p \(parameter.*: line \d+ via write_through_param\(int\*, int\)")
 
-            data = await query("wrapper", include_callees=False)
-            self.assertEqual(_effects(data), set(), data)
-
-            data = await query("read_const_table")
-            (read,) = data["reads"]
-            self.assertEqual((read["name"], read["source"]), ("g_table", "static"))
-            self.assertIs(data["pure_on_observed_inputs"], True)
+            text = await query("read_const_table")
+            self.assertIn("- g_table (global, referenced in the code, not observed)", text)
+            self.assertIn("Pure on the profiled inputs", text)
 
             # main aggregates the effects of everything it calls, also beyond the inlining depth
-            data = await query("main")
+            text = await query("main", limit=100)
             self.assertLessEqual(
                 {
                     ("write", "global", "g_counter"),
@@ -348,27 +350,28 @@ class TestSideEffects(unittest.IsolatedAsyncioTestCase):
                     ("read", "global", "g_seq"),
                     ("write", "global", "calls"),
                 },
-                _effects(data),
-                data,
+                _effects(text),
+                text,
             )
-            self.assertIs(data["pure_on_observed_inputs"], False)
+            self.assertIn("Not pure: it writes", text)
 
-            data = await query("clear")
-            self.assertIn("memset", data["unprofiled_calls"])
-            self.assertIsNone(data["pure_on_observed_inputs"])
+            text = await query("clear")
+            self.assertIn("calls whose accesses were not observed (library code):", text)
+            self.assertIn("memset", text)
+            self.assertIn("Purity is undecided.", text)
 
-            data = await query("log_value")
-            self.assertTrue(data["performs_file_io"])
-            self.assertIs(data["pure_on_observed_inputs"], False)
+            text = await query("log_value")
+            self.assertIn("Not pure: it performs file I/O.", text)
 
-            data = await query("never_called")
-            self.assertEqual(data["coverage"], "not_executed")
-            self.assertEqual({(e["name"], e["source"]) for e in data["writes"]}, {("g_unused", "static")})
+            text = await query("never_called")
+            self.assertIn("Caveat: Never executed during profiling", text)
+            self.assertEqual(_effects(text), {("write", "global", "g_unused")})
+            self.assertIn("- g_unused (global, referenced in the code, not observed)", text)
 
-            self.assertEqual((await query("recurse"))["coverage"], "partial")
-            self.assertEqual((await query("chain1"))["coverage"], "partial")
-            self.assertEqual((await query("chain7"))["coverage"], "untracked")
-            self.assertEqual((await query("pointer_target"))["coverage"], "untracked")
+            self.assertIn("Caveat: Some calls could not be followed", await query("recurse"))
+            self.assertIn("Caveat: Some calls could not be followed", await query("chain1"))
+            self.assertIn("Caveat: Executed, but none of its calls", await query("chain7"))
+            self.assertIn("Caveat: Executed, but none of its calls", await query("pointer_target"))
 
             result = await server.call("get_side_effects", {"project_path": project, "function": "no_such_function"})
             self.assertTrue(result.is_error, result)
