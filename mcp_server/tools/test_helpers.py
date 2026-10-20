@@ -19,6 +19,9 @@ from mcp_server.tools import (
     set_compile_script,
 )
 from mcp_server.tools.helpers import (
+    MAX_WARNINGS,
+    diagnostics,
+    warning_fields,
     ToolContext,
     compile_script_configured,
     configuration_names,
@@ -208,3 +211,30 @@ def test_source_mtimes_ignores_build_trees(tmp_path: Path) -> None:
     found = {p.relative_to(tmp_path).as_posix() for p in ToolContext.source_mtimes(str(tmp_path))}
 
     assert found == {name for name, is_source in files.items() if is_source}
+
+
+def test_diagnostics_find_the_warnings_and_errors_of_compilers_and_runtimes() -> None:
+    output = (
+        "main.cpp:3:5: warning: unused variable 'x' [-Wunused-variable]\n"
+        "main.cpp:3:5: warning: unused variable 'x' [-Wunused-variable]\n"
+        "main.cpp:9:1: error: expected ';'\n"
+        "note: this is no diagnostic\n"
+        "OMP: Warning #96: Cannot form a team.\n"
+        "clang: fatal error: no input files\n"
+    )
+    assert diagnostics(output, None) == [
+        "main.cpp:3:5: warning: unused variable 'x' [-Wunused-variable]",
+        "main.cpp:9:1: error: expected ';'",
+        "OMP: Warning #96: Cannot form a team.",
+        "clang: fatal error: no input files",
+    ]
+
+
+def test_warning_fields_leave_out_errors_cap_and_count() -> None:
+    assert warning_fields("all fine\n", "") == {}
+    assert warning_fields("main.cpp:1: error: x\n") == {}
+    many = "".join(f"a.c:{n}: warning: w{n}\n" for n in range(8))
+    fields = warning_fields(many)
+    assert fields["warnings"][:5] == [f"a.c:{n}: warning: w{n}" for n in range(5)]
+    assert fields["warnings"][5] == "3 more warnings."
+    assert len(fields["warnings"]) == MAX_WARNINGS + 1

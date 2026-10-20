@@ -85,6 +85,7 @@ class TestToolSets(unittest.TestCase):
         for expected in (
             "gather_data",
             "get_parallelization_suggestions",
+            "run_configuration",
             "get_side_effects",
         ):
             self.assertIn(expected, names)

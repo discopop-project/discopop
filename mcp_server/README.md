@@ -111,7 +111,7 @@ Once registered, ask the agent, for example: "Profile this project and paralleli
 
 ## Available Tools
 
-The server offers 11 tools. In workflow order: `initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration` (once per project; `delete_execution_configuration` and `get_configurations` manage them), `get_project_status`, `gather_data`, `get_hotspots`, `get_parallelization_suggestions`, `explain_parallelization` and `get_side_effects`. The setup tools are hidden by `--tools analysis`.
+The server offers 12 tools. In workflow order: `initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration` (once per project; `delete_execution_configuration` and `get_configurations` manage them), `get_project_status`, `gather_data`, `get_hotspots`, `get_parallelization_suggestions`, `explain_parallelization`, `get_side_effects` and `run_configuration`. The setup tools are hidden by `--tools analysis`.
 
 DiscoPoP only reads the sources: it never modifies them. The agent applies the suggestions itself, by editing the code.
 
@@ -209,7 +209,7 @@ Answers in one cheap, read-only call where a project stands in the DiscoPoP work
 
 ### `gather_data`
 
-Runs the complete data collection pipeline and detects patterns: hotspot detection (compile with hotspot instrumentation, run once per configuration in `hotspot_config_names`, classify regions as YES/MAYBE/NO), then instrumentation, profiling with `config_name`, and `discopop_explorer`. The suggestions are ranked by the hotspots, so a failing hotspot step fails the call and stops the pipeline; the error names the step (`steps.hotspot_instrumentation`, `steps.hotspot_profiling` or `steps.hotspot_analysis`) and carries the end of its error output. A step is skipped when its outputs are newer than the sources. Afterwards the project is rebuilt without instrumentation (see below).
+Runs the complete data collection pipeline and detects patterns: hotspot detection (compile with hotspot instrumentation, run once per configuration in `hotspot_config_names`, classify regions as YES/MAYBE/NO), then instrumentation, profiling with `config_name`, and `discopop_explorer`. The suggestions are ranked by the hotspots, so a failing hotspot step fails the call and stops the pipeline; the error names the step (`steps.hotspot_instrumentation`, `steps.hotspot_profiling` or `steps.hotspot_analysis`) and carries the end of its error output. A step is skipped when its outputs are newer than the sources. A step that succeeded lists the warnings of its build or run under `warnings` (at most 5, then the number of the rest); a step that failed carries the end of its error output under `stderr`. Afterwards the project is rebuilt without instrumentation (see below).
 
 **Parameters:**
 - `project_path` (string, required): Absolute path to the project root
@@ -296,6 +296,33 @@ The first line names the function and where it is defined, the second says wheth
 - `file_path` (string, optional), `line` (integer, optional): The definition, to disambiguate. An ambiguous name is answered with the list of candidates
 - `limit` (integer, optional): Maximum number of effects to list. Default `20`
 
+### `run_configuration`
+
+Builds the project as it is now, without instrumentation, and runs an execution configuration: to check that the changes of the agent compile and give the same result, and to measure how long the program takes, e.g. with different thread counts. It uses the project's compile script with `par_settings.json` (`seq_settings.json` as the fallback) and the configuration's `execute.sh`, with `OMP_NUM_THREADS` set to `threads`. The sources are never modified. The runs are recorded in `.discopop/project/execution_results.json`, like those of the project manager and the GUI.
+
+The answer is a text: whether the build and the run succeeded, the time (the median of `repetitions`; the program's own timing output when the configuration extracts one), the result of the configuration's `validate.sh` if it has one (built with its `compile_validate.sh` if that exists), the errors and warnings of the build and of the run, and the end of the program's output. Without a `validate.sh` only the exit code is checked, and the answer says so.
+
+```
+Configuration 'medium' with 4 threads: built and ran successfully in 0.99 s (median of 3 runs).
+There is no validate.sh, so the output was not checked; only the exit code.
+Build warnings (2):
+- md.cpp:12:5: warning: unused variable 'x' [-Wunused-variable]
+- md.cpp:40:9: warning: ignoring #pragma omp parallel [-Wunknown-pragmas]
+Output (the end):
+    Elapsed cpu time for main computation:
+    ...
+```
+
+A failed build lists its errors and does not run the program. A failed run gives the exit code, the errors and what the program wrote to stderr; a timeout is reported as one. Warnings are the lines containing `warning:` (or the OpenMP runtime's `Warning #n:`), at most 5 each, with the number of the rest.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `config_name` (string, required): The execution configuration to run
+- `threads` (integer, optional): Number of OpenMP threads. Default: the number of CPUs
+- `repetitions` (integer, optional): How often to run it; the median time is reported. Default `1`
+- `rebuild` (boolean, optional): Build before running; `false` runs the last build again, e.g. for another thread count. Default `true`
+- `timeout_seconds` (integer, optional): Maximum time of the build and of each run. Default `3600`
+
 ## Logging Output
 
 The server logs all incoming and outgoing communication:
@@ -327,9 +354,9 @@ If a piece of information appears to be missing from the available tools, the co
 
 ### The route to parallelized code
 
-`gather_data` → `get_hotspots` / `get_parallelization_suggestions` → edit the source yourself → build and run the program and check that it still gives the same results.
+`run_configuration` (the time of the unmodified program) → `gather_data` → `get_hotspots` / `get_parallelization_suggestions` → edit the source yourself → `run_configuration` again (does it build, give the same results, and run faster?).
 
-DiscoPoP never modifies the sources: the agent applies a suggestion by making the change it shows (for an OpenMP pragma: adding it directly above the code region it names). The suggestions rest on the profiled inputs, so the changed program has to be checked, with its output compared to the sequential one and its runtime measured. A combination of suggestions that looks sensible is regularly slower than the sequential program (fork/join overhead on short loops), so parallelize the hotspots first, and measure. `explain_parallelization` tells why a region has no suggestion, e.g. which dependency between iterations prevents it, and whether a restructuring of the code could remove it.
+DiscoPoP never modifies the sources: the agent applies a suggestion by making the change it shows (for an OpenMP pragma: adding it directly above the code region it names). The suggestions rest on the profiled inputs, so the changed program has to be checked with `run_configuration`: its output compared to the sequential one (a `validate.sh` does this automatically) and its runtime measured, with the thread counts that matter. A combination of suggestions that looks sensible is regularly slower than the sequential program (fork/join overhead on short loops), so parallelize the hotspots first, and measure. `explain_parallelization` tells why a region has no suggestion, e.g. which dependency between iterations prevents it, and whether a restructuring of the code could remove it.
 
 After changing the sources, call `gather_data` again: `get_project_status` marks the analysis as stale, as it no longer describes the code.
 

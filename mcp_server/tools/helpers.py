@@ -10,6 +10,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 import threading
@@ -27,6 +28,39 @@ if TYPE_CHECKING:
     from discopop_explorer.side_effects.analysis import SideEffectIndex
 
 logger = logging.getLogger("discopop-mcp")
+
+
+# One line of a compiler, a runtime or a program that reports a problem: "warning: ...", "error: ...",
+# "OMP: Warning #96: ...".
+_DIAGNOSTIC = re.compile(r"\b(warning|error|fatal error)\b(\s*#\d+)?\s*:", re.IGNORECASE)
+MAX_DIAGNOSTIC_CHARS = 200
+# Warnings a step of gather_data lists in its result; the number of the rest is given.
+MAX_WARNINGS = 5
+
+
+def diagnostics(*outputs: Any) -> list[str]:
+    """The warning and error lines of the outputs of a build or a run, each once, in order."""
+    found: list[str] = []
+    for output in outputs:
+        for line in str(output or "").splitlines():
+            line = line.strip()
+            if _DIAGNOSTIC.search(line) and line not in found:
+                found.append(line if len(line) <= MAX_DIAGNOSTIC_CHARS else line[:MAX_DIAGNOSTIC_CHARS] + "...")
+    return found
+
+
+def warning_fields(*outputs: Any) -> dict[str, Any]:
+    """`warnings` for the result of a step that succeeded: the first warning lines and how many more there are.
+
+    Empty when there are none, so that a step without warnings says nothing.
+    """
+    warnings = [line for line in diagnostics(*outputs) if not re.search(r"\berror\b", line, re.IGNORECASE)]
+    if not warnings:
+        return {}
+    listed = warnings[:MAX_WARNINGS]
+    if len(warnings) > len(listed):
+        listed.append(f"{len(warnings) - len(listed)} more warnings.")
+    return {"warnings": listed}
 
 
 # How much of a script's stdout or stderr a tool returns. The end of the output is

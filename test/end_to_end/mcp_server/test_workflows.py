@@ -171,6 +171,25 @@ class TestHappyPath(unittest.IsolatedAsyncioTestCase):
                 rf"from code\.cpp:{CARRIED_LOOP_LINE + 1} prevents parallelization \(observed during profiling\)\.",
             )
 
+            # --- build and run the program as it is; the sources stay as they are
+            result = await server.call(
+                "run_configuration",
+                {"project_path": project, "config_name": "small", "threads": 2, "repetitions": 2},
+                timeout=PIPELINE_TIMEOUT,
+            )
+            self.assertFalse(result.is_error, result)
+            self.assertRegex(
+                result.text,
+                r"^Configuration 'small' with 2 threads: built and ran successfully in [\d.]+ s \(median of 2 runs\)\.",
+            )
+            self.assertIn("There is no validate.sh", result.text)
+            self.assertIn("The program printed nothing.", result.text)
+
+            result = await server.call(
+                "run_configuration", {"project_path": project, "config_name": "small", "rebuild": False, "threads": 1}
+            )
+            self.assertIn("with 1 thread: built and ran successfully", result.text)
+
             # DiscoPoP only reads the sources: nothing above has modified them
             self.assertEqual(self.source.read_text(), self.original_source)
 
@@ -350,6 +369,13 @@ class TestFailurePaths(unittest.IsolatedAsyncioTestCase):
 
             result = await server.call("get_parallelization_suggestions", {"project_path": project})
             self.assertTrue(result.is_error, result)
+
+            # the build error reaches the agent that runs the program, too
+            result = await server.call("run_configuration", {"project_path": project, "config_name": "small"})
+            self.assertFalse(result.is_error, result)
+            self.assertIn("the build failed", result.text)
+            self.assertIn("no_such_file.cpp", result.text)
+            self.assertIn("the program was not run", result.text)
 
     async def test_failing_execute_script(self) -> None:
         project = self.project

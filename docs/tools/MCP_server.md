@@ -62,6 +62,7 @@ The server offers 15 tools. In workflow order:
 | `get_parallelization_suggestions` | List the suggestions, hottest first, with the pragma to add. |
 | `explain_parallelization` | Explain in a text why code at given lines was or was not suggested for parallelization, e.g. which dependency prevents it. |
 | `get_side_effects` | Describe in a text the data a function reads and writes outside of itself, including its callees. |
+| `run_configuration` | Build the project as it is and run a configuration with a given thread count; reports the time, the result of `validate.sh`, and the errors and warnings of the build and the run. |
 
 `--tools analysis` hides the four project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`, `delete_execution_configuration`). Use it against a project that is already configured. The default is `--tools all`.
 
@@ -75,7 +76,7 @@ Use the same `--daemon-port` for the daemon and for the client entry.
 ## Rules for agents
 - Access DiscoPoP data only through the tools. Never read `.discopop` directories: they contain large binary artefacts, and the tools return compact summaries.
 - If data is missing, run the tool that produces it, usually `gather_data`.
-- Apply a suggestion by editing the source yourself; DiscoPoP never modifies it. The suggestions rest on the profiled inputs, so check that the changed program still gives the same results, and measure its runtime. Call `gather_data` again after changing the sources.
+- Apply a suggestion by editing the source yourself; DiscoPoP never modifies it. The suggestions rest on the profiled inputs, so check with `run_configuration` that the changed program still gives the same results, and measure its runtime before and after. Call `gather_data` again after changing the sources.
 - If the pipeline is in an inconsistent state, call `initialize_discopop_directory(reset=true)`.
 
 ## Relation to the project manager and the GUI

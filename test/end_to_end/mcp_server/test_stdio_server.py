@@ -34,6 +34,7 @@ ANALYSIS_TOOLS = {
     "get_hotspots",
     "get_parallelization_suggestions",
     "explain_parallelization",
+    "run_configuration",
 }
 
 

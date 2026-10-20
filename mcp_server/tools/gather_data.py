@@ -23,6 +23,7 @@ from mcp_server.tools.helpers import (
     ToolContext,
     invalid_configuration_name,
     tail_of_output,
+    warning_fields,
     unknown_configuration_message,
 )
 
@@ -62,6 +63,8 @@ TOOL = Tool(
         "the program and may abort, so building and running the program by hand afterwards "
         "is safe. "
         "\n\n"
+        "A step that succeeded lists the warnings of its build or run under 'warnings'; a step that failed "
+        "carries the end of its error output under 'stderr'. "
         "On success, get_parallelization_suggestions lists the suggestions, hottest first."
     ),
     inputSchema={
@@ -235,7 +238,7 @@ def _hotspot_instrument(
             "compiled_in_place": True,
         }
     ctx.log_action(project_path, "gather_data", f"Hotspot instrumentation succeeded in {elapsed}s")
-    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True}
+    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True, **warning_fields(stdout, stderr)}
 
 
 def _hotspot_profiling_single(
@@ -325,7 +328,7 @@ def _hotspot_profiling_single(
         "gather_data",
         f"Hotspot profiling done in {elapsed}s: {len(result_files)} run(s) accumulated",
     )
-    return {"status": "success", "elapsed_time": elapsed}
+    return {"status": "success", "elapsed_time": elapsed, **warning_fields(stderr)}
 
 
 def _hotspot_analysis(
@@ -498,7 +501,7 @@ def _instrument_project(
             "compiled_in_place": True,
         }
     ctx.log_action(project_path, "gather_data", f"Instrumentation succeeded in {elapsed}s")
-    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True}
+    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True, **warning_fields(stdout, stderr)}
 
 
 def _discard_partial_output(path: Path, project_path: str, ctx: ToolContext) -> None:
@@ -592,7 +595,7 @@ def _run_profiling(
             **_stderr_fields(stderr),
         }
     ctx.log_action(project_path, "gather_data", f"Profiling complete in {elapsed}s")
-    return {"status": "success", "elapsed_time": elapsed}
+    return {"status": "success", "elapsed_time": elapsed, **warning_fields(stderr)}
 
 
 def _run_pattern_detection(

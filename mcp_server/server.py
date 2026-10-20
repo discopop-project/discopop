@@ -60,6 +60,7 @@ from mcp_server.tools import (
     get_project_status,
     get_side_effects,
     initialize_discopop_directory,
+    run_configuration,
     set_compile_script,
 )
 from mcp_server.tools.helpers import ProgressReporter, ToolContext
@@ -165,8 +166,8 @@ _SERVER_INSTRUCTIONS = (
     "sizes) for the hotspot ranking; get_hotspots and get_parallelization_suggestions show where "
     "the time goes and what to parallelize, explain_parallelization why code has no suggestion. "
     "You apply suggestions yourself by editing the source: DiscoPoP never modifies it. "
-    "Suggestions rest on the profiled inputs, so check that the changed program still gives "
-    "the same results.\n"
+    "run_configuration builds and runs the program (time, errors): run it before and after "
+    "your changes. Suggestions rest on the profiled inputs: check that the results stay the same.\n"
     "Rules: access DiscoPoP data only through these tools and never read .discopop directories "
     "directly: they hold large binary artefacts; the tools return compact summaries. If "
     "data is missing, run the tool that produces it, usually gather_data; run it again after "
@@ -186,6 +187,7 @@ _ALL_TOOLS = [
     get_hotspots,
     get_parallelization_suggestions,
     explain_parallelization,
+    run_configuration,
 ]
 
 # The tools that *define* a project rather than analyse one. Together they are a

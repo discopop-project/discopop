@@ -373,6 +373,47 @@ class TestHotspotDetectionAlwaysRuns(unittest.TestCase):
         self.assertEqual(self._requested_hotspot_configs(hotspot_config_names=["a", "b"]), ["a", "b"])
 
 
+class TestWarningsOfSuccessfulSteps(unittest.TestCase):
+    """What a build or a run warned about reaches the agent although the step succeeded."""
+
+    def setUp(self) -> None:
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp_dir.cleanup)
+        self.project_path = self._tmp_dir.name
+        configs = os.path.join(self.project_path, ".discopop", "project", "configs")
+        os.makedirs(os.path.join(configs, CONFIG_NAME))
+        for name in ("compile.sh", "dp_settings.json", "hd_settings.json"):
+            with open(os.path.join(configs, name), "w") as f:
+                f.write("{}\n")
+        with open(os.path.join(configs, CONFIG_NAME, "execute.sh"), "w") as f:
+            f.write("#!/bin/bash\n")
+        self.ctx = ToolContext(debug=False)
+
+    def __instrument(self, stdout: str, stderr: str) -> dict[str, Any]:
+        def build(**_kwargs: Any) -> Tuple[int, float, str, str]:
+            # the instrumented build writes Data.xml
+            profiler = os.path.join(self.project_path, ".discopop", "profiler")
+            os.makedirs(profiler, exist_ok=True)
+            with open(os.path.join(profiler, "Data.xml"), "w") as f:
+                f.write("<x/>")
+            return (0, 1.0, stdout, stderr)
+
+        with mock.patch.object(gather_data, "execute_configuration", side_effect=build):
+            return gather_data._instrument_project(self.project_path, CONFIG_NAME, 60, True, self.ctx, None)
+
+    def test_the_warnings_of_the_instrumentation_build_are_listed(self) -> None:
+        result = self.__instrument("", "".join(f"a.cpp:{n}:1: warning: w{n}\n" for n in range(7)))
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(len(result["warnings"]), 6)
+        self.assertEqual(result["warnings"][0], "a.cpp:0:1: warning: w0")
+        self.assertEqual(result["warnings"][-1], "2 more warnings.")
+
+    def test_a_step_without_warnings_says_nothing(self) -> None:
+        result = self.__instrument("built\n", "")
+        self.assertEqual(result["status"], "success")
+        self.assertNotIn("warnings", result)
+
+
 class TestFailedHotspotDetectionFailsTheCall(unittest.TestCase):
     """Without the hotspots there is nothing to rank the suggestions by, so the pipeline stops."""
 
