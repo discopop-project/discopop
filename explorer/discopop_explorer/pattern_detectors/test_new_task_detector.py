@@ -32,18 +32,25 @@ def _lines(file_id: int, first: int, last: int) -> List[str]:
     return [f"{file_id}:{n}" for n in range(first, last + 1)]
 
 
-def _context(scope: List[str], node: Node | None = None) -> Any:
+def _context(scope: List[str], node: Node | None = None, instructions: List[int] | None = None) -> Any:
     return SimpleNamespace(
         get_code_scope=lambda pet, inclusive=False: list(scope),
+        get_instruction_scope=lambda pet, inclusive=False: list(instructions or []),
         get_first_pet_node=lambda pet: node,
     )
 
 
-def _detect(parent_node: Node, parent_scope: List[str], task_scopes: List[List[str]]) -> Tuple[Any, Any]:
+def _detect(
+    parent_node: Node,
+    parent_scope: List[str],
+    task_scopes: List[List[str]],
+    task_instructions: List[List[int]] | None = None,
+) -> Tuple[Any, Any]:
     """The tasks and the parallel region the detector reports for one group of tasks."""
+    instructions = task_instructions or [[] for _ in task_scopes]
     tpc = SimpleNamespace(
         parent_context=_context(parent_scope, parent_node),
-        registered_tasks=[_context(scope) for scope in task_scopes],
+        registered_tasks=[_context(scope, None, ids) for scope, ids in zip(task_scopes, instructions)],
     )
     patterns = identify_simple_tasking(SimpleNamespace(pet=None), [tpc])  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
@@ -79,6 +86,15 @@ def test_the_two_recursive_calls_of_fib_are_two_tasks_in_one_region(fib_group: T
 def test_the_tasks_of_fib_cover_one_statement_each(fib_group: Tuple[Any, Any]) -> None:
     tasks, _ = fib_group
     assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
+
+
+def test_tasks_and_region_carry_the_instructions_of_the_tasks(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    tasks, regions = _detect(parent, ["3:29", "3:35"], [["3:31"], ["3:32"]], [[849, 850], [853, 854]])
+    assert [t.instruction_ids for t in tasks] == [[849, 850], [853, 854]]
+    assert regions[0].instruction_ids == [849, 850, 853, 854]
 
 
 def test_a_group_without_scope_inside_its_parent_is_skipped(isolated_pattern_id_cwd: Any, make_node: MakeNode) -> None:

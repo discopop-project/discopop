@@ -110,6 +110,10 @@ Other findings:
    explorer queries move module by module (explorer: 138 uses of `LineID` in 27 files, 236 of
    `start_line`/`end_line`; library about 130). The MCP server stays line-based (presentation).
 
+Stage 4 progress: `Context.get_instruction_scope` (done); `instruction_ids` on TASK and
+PARALLELREGION entries of `patterns.json` (done; fib: task 31 = 847-850, task 32 = 851-854); open:
+the same for do-all and reduction (loop body), then the explorer's line queries module by module.
+
 Each stage gets its own tests and commit.
 
 ## 4. Caveats

@@ -61,6 +61,8 @@ class TaskParallelismInfo(PatternInfo):
         self.critical_sections: List[str] = []
         self.atomic_sections: List[str] = []
         self.task_group: List[int] = []
+        # the instructions of the task (instruction ids of this build), see design/instruction_focus.md
+        self.instruction_ids: List[int] = []
 
     def __str__(self) -> str:
         return (
@@ -102,6 +104,10 @@ class ParallelRegionInfo(PatternInfo):
         self.type = type
         self.task_group: List[int] = [] if task_group is None else task_group
         self.contains_patterns: List[int] = [] if contained_tasks is None else [t.pattern_id for t in contained_tasks]
+        # the instructions of the contained tasks (instruction ids of this build)
+        self.instruction_ids: List[int] = list(
+            dict.fromkeys(i for t in (contained_tasks or []) for i in t.instruction_ids)
+        )
 
     def __str__(self) -> str:
         return (

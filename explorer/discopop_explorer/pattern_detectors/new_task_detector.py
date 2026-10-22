@@ -213,6 +213,7 @@ def identify_simple_tasking(
             tpi.region_end_line = str(
                 task_scope_max
             )  # LineID(str(tpc_parent_pet_node.file_id) + ":" + str(task_scope_max))
+            tpi.instruction_ids = task.get_instruction_scope(ctg.pet, inclusive=True)
             tpi.standalone_pattern = False
             tpi.applicable_pattern = False
             pattern_objects.append(tpi)
