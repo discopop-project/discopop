@@ -1718,10 +1718,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     if isinstance(current, TGStartIterationNode) and (
                         cast(TGStartIterationNode, it_start).parent_loop_pet_node_id == current.parent_loop_pet_node_id
                     ):
-                        if entered_equivalent_iterations == -1:
-                            entered_equivalent_iterations += 1
-                        else:
-                            raise ValueError("Invalid iteration structure found at node: " + current.get_label())
+                        # the first start is the one of the iteration itself, further ones belong to inlined
+                        # instances of the same loop (a recursive call in the body) nested in it
+                        entered_equivalent_iterations += 1
                     for succ in self.get_successors(current):
                         if succ not in it_visited:
                             it_queue.append((succ, entered_equivalent_iterations))
