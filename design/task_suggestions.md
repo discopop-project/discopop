@@ -78,8 +78,12 @@ Implausible groups are flagged, not hidden (see 3.3).
       match the hotspot by file id and name (not by line). Say "no hotspot data" if there is
       no match or no export. State that the runtime is the scope's, not the region's, and
       that recursive functions are counted inclusively.
-- [x] Flags (done except the single-statement flag, left out: it would flag the real fib tasks): identical spans of two tasks, overlapping spans, unknown end line (262143),
-      task body that ends in a `return` or is a closing brace, single-statement tasks.
+- [x] Flags: identical spans of two tasks, overlapping spans, unknown end line (262143),
+      task body that ends in a `return` or is a closing brace.
+- [-] Single-statement flag: dropped. It is not helpful for a statement that is or contains a
+      function call (maintainer), which covers the real fib tasks and most others. Only worth
+      reconsidering for statements without any call (e.g. a plain assignment), if such groups
+      turn out to be noise.
 - [x] Do not use the first `@@` line or the default kind `Loop` for tasks.
 - [ ] Relations (`nested_in` / alternative) for task regions and doall loops, e.g. a region
       inside the loop of a doall suggestion.
