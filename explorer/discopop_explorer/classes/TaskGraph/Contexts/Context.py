@@ -55,6 +55,11 @@ class Context(object):
         self.state_ids = []
         self.creation_index = next(Context._creation_counter)
 
+    def __hash__(self) -> int:
+        # not the address: the contexts are kept in sets (contained contexts, dependencies, successions), whose
+        # iteration order follows the hashes and would differ from run to run. The creation order is deterministic.
+        return self.creation_index
+
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
         Returns the nodes contained in the current context.

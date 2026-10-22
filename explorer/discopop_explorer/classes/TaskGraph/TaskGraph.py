@@ -14,7 +14,7 @@ import re
 import signal  # noqa: F401  used by the commented-out code
 import logging
 import sys
-from typing import Any, Deque, Dict, FrozenSet, List, NamedTuple, Optional, Set, Tuple, Union, cast
+from typing import Any, Collection, Deque, Dict, FrozenSet, List, NamedTuple, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
@@ -1482,7 +1482,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 # an inner loop inside an outer iteration that is copied first would never be
                 # duplicated (neither in the original nor in the copy). The order is made
                 # deterministic, as get_descendants follows set iteration order.
-                pairs: List[Tuple[TGStartIterationNode, TGEndIterationNode, Set[TGNode]]] = []
+                pairs: List[Tuple[TGStartIterationNode, TGEndIterationNode, Dict[TGNode, None]]] = []
                 for sin in sorted(filtered_start_iteration_nodes, key=self.__pet_node_order):
                     for ein in sorted(filtered_end_iteration_nodes, key=self.__pet_node_order):
                         # only consider pairs with equal corresponding pet_node_id's
@@ -1551,7 +1551,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning function contexts...")
         for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             descendants = self.get_descendants(function_node)
-            function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
+            # in a deterministic order: the creation order of the contexts is used as their identity
+            function_start_nodes = sorted(
+                (n for n in descendants if isinstance(n, TGStartFunctionNode)), key=self.__pet_node_order
+            )
             for fsn in function_start_nodes:
                 function_context = FunctionContext(fsn.pet_node_id)
                 function_context.add_node(fsn)
@@ -1689,7 +1692,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
             # search loop iteration starts
             iteration_starts: List[TGNode] = []
-            for n in general_loop_nodes:
+            # in a deterministic order: the iteration contexts are created in this order
+            for n in sorted(general_loop_nodes, key=self.__pet_node_order):
                 if isinstance(n, TGStartIterationNode) and (n.parent_loop_pet_node_id == node.pet_node_id):
                     iteration_starts.append(n)
 
@@ -2493,7 +2497,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     logger.info("Maximum call path depth of " + str(call_path_limit) + " reached.")
                     break
                 modification_found = False
-                descendants = self.get_descendants(self.root)
+                # in a deterministic order: the inlined copies are created in this order
+                descendants = sorted(self.get_descendants(self.root), key=self.__pet_node_order)
                 calling_nodes: List[TGNode] = []
                 for node in descendants:
                     if (
@@ -2980,7 +2985,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         logger.info("--> classify context entry nodes")
         visited: Set[TGNode] = set()
-        context_entry_nodes: Set[TGNode] = set()
+        # ordered: the work nodes are inserted in this order, and the order of a set differs from run to run
+        context_entry_nodes: Dict[TGNode, None] = dict()
         for node in progress(work_nodes):
             if node in visited:
                 continue
@@ -3012,7 +3018,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 # node will be handled as part of another context
                 visited.add(node)
                 continue
-            context_entry_nodes.add(node)
+            context_entry_nodes[node] = None
 
         logger.info("--> inserting work start and end nodes...")
         for node in progress(context_entry_nodes):
@@ -5237,15 +5243,17 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
-    ) -> Set[TGNode]:
+    ) -> Dict[TGNode, None]:
+        """The nodes of an iteration, in the order they are found. A dict serves as the ordered set: the nodes are
+        copied in this order, and the order of a set (hashed by address) differs from run to run."""
         queue: Deque[TGNode] = deque([iteration_entry])
         visited: Set[TGNode] = set()
-        iteration_nodes: Set[TGNode] = set()
+        iteration_nodes: Dict[TGNode, None] = dict()
         while len(queue) > 0:
             current_source = queue.popleft()
             visited.add(current_source)
             if nx.has_path(self.graph, current_source, iteration_exit):
-                iteration_nodes.add(current_source)
+                iteration_nodes[current_source] = None
 
             # do not consider successors of iteration end node
             if current_source == iteration_exit:
@@ -5436,7 +5444,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __copy_iteration_subgraph(
         self,
         copied_nodes: Dict[TGNode, TGNode],
-        iteration_nodes: Set[TGNode],
+        iteration_nodes: Collection[TGNode],
         iteration_entry: TGNode,
         iteration_exit: TGNode,
     ) -> Tuple[Dict[TGNode, TGNode], List[TGNode], TGNode, TGNode]:

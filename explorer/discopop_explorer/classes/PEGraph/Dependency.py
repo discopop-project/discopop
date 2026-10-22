@@ -91,5 +91,10 @@ class Dependency:
         self.source_state_id = None
         self.sink_state_id = None
 
+    def __hash__(self) -> int:
+        # not the address: dependencies are kept in sets (with their contexts), whose iteration order follows the
+        # hashes and would differ from run to run. Equality stays the identity, so collisions are harmless.
+        return hash((self.source_instruction_id or -1, self.sink_instruction_id or -1))
+
     def __str__(self) -> str:
         return self.var_name if self.var_name is not None else str(self.etype)

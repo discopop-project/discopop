@@ -160,11 +160,14 @@ Implausible groups are flagged, not hidden (see 3.3).
       verified (what the patch generator makes of `PARALLELREGION` in the `task` list; `UnpackedSuggestion` handles
       `task` and `parallel_region` separately; the line the tool prints for a task patch is unexplained). Check the
       generated patches for fib, fft and the loop tasks, and fix what is wrong.
-- [ ] **Nondeterministic task detection.** The same profile gives different results from run to run: for `put(&a,k);
-      put(&b,n+1); if (a+b>0) ...` (callees writing through pointers) the explorer sometimes returns the group and
-      sometimes none; the number of simplification steps of the ContextTaskGraph differs. Not driven by
-      `PYTHONHASHSEED` (probably sets of objects hashed by address). Find the source and make it deterministic; it
-      blocks end-to-end tests of groups of this kind.
+- [x] **Nondeterministic task detection.** The same profile gave different groups from run to run (sometimes none).
+      Causes, all sets or dicts ordered by the address of objects: the iteration nodes copied by the loop
+      duplication, the work nodes inserted, the calling nodes inlined, the function and iteration contexts created
+      (`TaskGraph.py`); the contexts and dependences are kept in sets, so `Context.__hash__` and
+      `Dependency.__hash__` are no longer the address. `split_taskable_control_sequence` now visits the nodes in
+      program order, so of overlapping candidates (`put(&a); put(&b); if (a + b)`: the pairs (a, b) and (b, if)) the
+      earlier is split first. The explorer gives the same result on one profile, with any `PYTHONHASHSEED`; fft: the same
+      44 entries. Test: `test/end_to_end/task_pointer_flow`.
 - [ ] **Docs.** Update the documentation where necessary (`docs/tools/MCP_server.md`, the explorer docs and the
       description of the new `patterns.json` fields `task_dependences`, `after_dependences`, `shared`, `private`,
       `first_private`, `jumpInstructionIDs` in `Data.xml`) once the data flow work is finished.
