@@ -83,6 +83,7 @@ def _detect(
     instruction_lines: Dict[int, str] | None = None,
     task_cus: List[List[Node]] | None = None,
     pet: Any = None,
+    observed: Set[Tuple[int, int]] | None = None,
 ) -> Tuple[Any, Any]:
     """The tasks and the parallel region the detector reports for one group of tasks."""
     instructions = task_instructions or [[] for _ in task_scopes]
@@ -96,7 +97,7 @@ def _detect(
     lines = instruction_lines or {}
     lines_of = lambda ids: [lines[i] for i in ids if i in lines]  # noqa: E731
     pet = pet or SimpleNamespace(get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of)
-    patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc])  # type: ignore[arg-type, list-item]
+    patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc], observed)  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
     return tasks, regions
@@ -169,6 +170,47 @@ def test_the_spans_follow_the_lines_of_the_instructions_of_the_tasks(
     )
     assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
     assert (int(regions[0].region_start_line), int(regions[0].region_end_line)) == (31, 32)
+
+
+def _group_with_dependences(
+    make_node: MakeNode, observed: Set[Tuple[int, int]], ids: List[List[int]]
+) -> Tuple[Any, Any]:
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    lines = {i: f"3:{30 + n}" for n, task in enumerate(ids) for i in task}
+    return _detect(parent, ["3:29", "3:40"], [[f"3:{30 + n}"] for n in range(len(ids))], ids, lines, observed=observed)
+
+
+def test_a_group_whose_neighbouring_tasks_depend_on_each_other_is_dropped(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    """health: check_patients_inside writes what check_patients_assess reads. The simplification found the pair in a
+    copy of the code the profile's dependences did not reach; the dependence of another copy is the same instructions.
+    """
+    tasks, regions = _group_with_dependences(make_node, {(849, 853)}, [[849, 850], [853, 854]])
+    assert tasks == [] and regions == []
+
+
+def test_a_dependence_of_an_earlier_task_on_a_later_one_does_not_count(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    tasks, regions = _group_with_dependences(make_node, {(853, 849)}, [[849, 850], [853, 854]])
+    assert len(tasks) == 2 and len(regions) == 1
+
+
+def test_tasks_that_depend_on_a_non_neighbour_only_stay_a_group(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    """The dependence is a depend clause (task_dependences), no reason to drop the group."""
+    tasks, _ = _group_with_dependences(make_node, {(1, 5)}, [[1, 2], [3, 4], [5, 6]])
+    assert len(tasks) == 3
+
+
+def test_instructions_both_tasks_reach_do_not_make_them_dependent(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    """fib: both calls reach the whole function (the recursion), which depends on itself."""
+    tasks, _ = _group_with_dependences(make_node, {(1, 3), (1, 2), (3, 1)}, [[1, 2], [1, 3]])
+    assert len(tasks) == 2
 
 
 def test_a_group_without_scope_inside_its_parent_is_skipped(isolated_pattern_id_cwd: Any, make_node: MakeNode) -> None:
