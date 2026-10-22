@@ -6,11 +6,13 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -20,9 +22,14 @@ from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     ParallelRegionInfo,
     TaskParallelismInfo,
+    TPIType,
 )
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.StatusReporting.console import stage
 
 try:
@@ -180,8 +187,6 @@ def identify_simple_tasking(
 
     for tpc in simplification_results:
 
-        from discopop_explorer.classes.patterns.TaskParallelismInfo import TPIType
-
         if tpc.parent_context is None:
             continue
         tpc_parent_pet_node = tpc.parent_context.get_first_pet_node(ctg.pet)
@@ -293,4 +298,81 @@ def identify_simple_tasking(
         # close task group
         task_group_num += 1
 
+    return patterns
+
+
+def _hotspot_functions(
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+) -> Optional[Set[Tuple[int, str]]]:
+    """(file id, name) of the functions classified as hotspot. None, if there is no hotspot information."""
+    if not hotspots:
+        return None
+    return {
+        (file_id, name)
+        for entries in hotspots.values()
+        for file_id, _, node_type, name, _ in entries
+        if node_type == HotspotNodeType.FUNCTION
+    }
+
+
+def identify_loop_tasking(
+    pet: PEGraphX,
+    do_all_patterns: List[DoAllInfo],
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+    first_task_group: int,
+) -> List[PatternInfo]:
+    """Loops whose iterations are independent (do-all) and whose body calls a function that is a hotspot are suggested
+    as one task per iteration, e.g. the recursive calls in the loop of ``fft_aux`` (omp-tasks: ``task`` on the call
+    and a ``taskwait`` after the loop). Without hotspot information, every call qualifies. The tasks are created
+    inside the loop and have to be joined after it; the parallel region belongs to the caller.
+    The loop is not a task candidate itself if its body does not call anything: do-all is the better suggestion then.
+    """
+    patterns: List[PatternInfo] = []
+    hotspot_functions = _hotspot_functions(hotspots)
+    # instruction id of a call -> the function it calls
+    callees: Dict[int, Node] = dict()
+    for cu in all_nodes(pet, CUNode):
+        for call in cu.node_calls:
+            if call.get("callInstId") is not None and call["cuid"] in pet.g:
+                callees[int(call["callInstId"])] = pet.node_at(NodeID(call["cuid"]))
+
+    task_group_num = first_task_group
+    for do_all in do_all_patterns:
+        called = [
+            callees[i]
+            for i in do_all.instruction_ids
+            if i in callees
+            and (hotspot_functions is None or (callees[i].file_id, callees[i].name) in hotspot_functions)
+        ]
+        if len(called) == 0:
+            continue
+        loop_node = pet.node_at(NodeID(do_all.node_id))
+        loop_line = str(loop_node.start_position())
+        lines = [
+            int(line.split(":")[1])
+            for line in pet.get_line_ids_of_instructions(do_all.instruction_ids)
+            if int(line.split(":")[0]) == loop_node.file_id
+        ]
+        # the body: the lines of the loop without its header
+        body_lines = [line for line in lines if line != loop_node.start_line] or lines
+        if len(body_lines) == 0:
+            continue
+        task = TaskParallelismInfo(loop_node, TPIType.TASK, ["#pragma omp task"], str(min(body_lines)), [], [], [])
+        task.region_end_line = str(max(body_lines))
+        task.task_group.append(task_group_num)
+        task.instruction_ids = list(do_all.instruction_ids)
+        task.loop_start_line = loop_line
+        task.standalone_pattern = False
+        task.applicable_pattern = False
+        region = ParallelRegionInfo(
+            loop_node,
+            TPIType.PARALLELREGION,
+            loop_node.start_line,
+            max(body_lines),
+            task_group=[task_group_num],
+            contained_tasks=[task],
+        )
+        region.loop_start_line = loop_line
+        patterns += [task, region]
+        task_group_num += 1
     return patterns

@@ -24,7 +24,9 @@ from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.patterns.TaskParallelismInfo import ParallelRegionInfo, TaskParallelismInfo
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.pattern_detectors.new_task_detector import identify_simple_tasking
+from discopop_explorer.pattern_detectors.new_task_detector import identify_loop_tasking, identify_simple_tasking
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 MakeNode = Callable[..., Node]
 BuildPetGraph = Callable[..., Any]
@@ -212,3 +214,64 @@ def test_the_invalid_task_of_a_group_of_three_is_dropped(
     )
     assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
     assert len(regions) == 1
+
+
+# --- one task per iteration of a do-all loop ---------------------------------
+
+
+def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: bool = True) -> Tuple[Any, Any]:
+    """fft_aux: ``for (k = 0; k < n; k += m) { fft_aux(...); }`` on lines 2951-2953 (the call on 2952)."""
+    header = make_node(
+        "3:10",
+        NodeType.CU,
+        start_line=2951,
+        end_line=2951,
+        node_calls=[{"cuid": "3:99", "atLine": "3:2952", "callInstId": "7"}] if calls else [],
+    )
+    function = make_node("3:99", NodeType.FUNC, name="fft_aux")
+    pet = build_pet_graph([header, function])
+    pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "8": "3:2953"}
+    do_all = SimpleNamespace(node_id="3:10", instruction_ids=[5, 6, 7, 8])
+    return pet, do_all
+
+
+def _hotspots(*names: str) -> Any:
+    return {HotspotType.YES: [(3, 2907, HotspotNodeType.FUNCTION, name, 1.0) for name in names]}
+
+
+def test_a_call_to_a_hotspot_function_in_a_do_all_loop_is_a_task_per_iteration(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    patterns = identify_loop_tasking(pet, [do_all], _hotspots("fft_aux"), first_task_group=4)
+    tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
+    regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
+    assert len(tasks) == 1 and len(regions) == 1
+    assert _span(tasks[0]) == (2952, 2953)  # the body, without the line of the loop header
+    assert (regions[0].region_start_line, regions[0].region_end_line) == ("2951", "2953")
+    assert tasks[0].loop_start_line == regions[0].loop_start_line == "3:2951"
+    assert tasks[0].task_group == regions[0].task_group == [4]
+    assert tasks[0].instruction_ids == [5, 6, 7, 8]
+    assert regions[0].contains_patterns == [tasks[0].pattern_id]
+
+
+def test_a_call_to_a_function_that_is_no_hotspot_is_no_task(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    assert identify_loop_tasking(pet, [do_all], _hotspots("compute_w_coefficients"), first_task_group=0) == []
+
+
+def test_without_hotspot_information_every_call_qualifies(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    assert len(identify_loop_tasking(pet, [do_all], {}, first_task_group=0)) == 2
+    assert len(identify_loop_tasking(pet, [do_all], None, first_task_group=0)) == 2
+
+
+def test_a_do_all_loop_without_a_call_is_no_task_loop(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph, calls=False)
+    assert identify_loop_tasking(pet, [do_all], None, first_task_group=0) == []
