@@ -117,7 +117,9 @@ PARALLELREGION entries of `patterns.json` (done; fib: task 31 = 847-850, task 32
 TaskGraph: dependence ends are looked up by instruction id first (exact CU/context),
 lines only for ends no CU holds (done; no change on the fixtures, fib, fft); open: the other line queries
 module by module (inventory: `LineID` 139 uses in 206 files; most in `TaskGraph.py` 19, `GPULoop.py` 13, `Context.py` 10,
-the do-all/reduction/task detectors 7-9 each, `Node.py` 8). The MCP server does not show instruction ids:
+the do-all/reduction/task detectors 7-9 each, `Node.py` 8). The line view: `PEGraphX.instruction_lines` (from
+`instructionID_to_lineID_mapping.txt`) and `get_line_ids_of_instructions`; `affected_line_ids` of do-all and reduction
+are derived from the pattern's instructions (lines of called functions in the body included, comment lines not). The MCP server does not show instruction ids:
 they are too detailed for it and stay behind a more abstract layer (maintainer).
 
 Each stage gets its own tests and commit.

@@ -23,6 +23,8 @@ from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import Loo
 readlineToCUIdMap = defaultdict(set)  # type: ignore
 # Map from the id of an instruction to the id of the CU that holds it. Exact, in contrast to the line maps.
 instructionToCUIdMap: Dict[int, str] = dict()
+# Map from the id of an instruction to its line (file id:line). Instructions without position are not listed.
+instructionToLineMap: Dict[int, str] = dict()
 # Map to record which line belongs to write set of nodes. LID -> NodeIds
 writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
@@ -151,6 +153,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 line_num = line_id_split[1]
                 _column_num = line_id_split[2]
                 instruction_to_line_id_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
+                instructionToLineMap[int(instruction_id)] = str(file_id) + ":" + str(line_num)
 
     for line in dep_fd.readlines() + static_dependency_lines:
         dep_fields = line.split()

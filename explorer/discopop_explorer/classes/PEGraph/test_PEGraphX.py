@@ -36,6 +36,18 @@ def test_node_at_returns_the_node_added_to_the_graph(make_node: MakeNode, build_
     assert pet.node_at(cu.id) is cu
 
 
+# --- get_line_ids_of_instructions ---------------------------------------------
+
+
+def test_the_lines_of_instructions_are_listed_once_and_those_without_position_are_skipped(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet = build_pet_graph([make_node("1:1", NodeType.CU)])
+    pet.instruction_lines = {"10": "3:31", "11": "3:31", "12": "3:32"}  # 13 has no position
+    assert pet.get_line_ids_of_instructions([12, 10, 13, 11]) == ["3:32", "3:31"]
+    assert pet.get_line_ids_of_instructions([]) == []
+
+
 # --- get_node_parent_id -------------------------------------------------------
 
 

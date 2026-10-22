@@ -11,7 +11,7 @@ from __future__ import annotations
 import copy
 import itertools
 import random
-from typing import Dict, List, Tuple, Set, Optional, cast, Any
+from typing import Dict, Iterable, List, Tuple, Set, Optional, cast, Any
 
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
@@ -51,12 +51,14 @@ except (ImportError, ModuleNotFoundError):
 
 from discopop_explorer.utilities.PEGraphConstruction.parser import (
     instructionToCUIdMap,
+    instructionToLineMap,
     readlineToCUIdMap,
     writelineToCUIdMap,
 )
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_dependency, parse_cu
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.variable import Variable
 import logging
 
@@ -105,6 +107,9 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
     reduction_vars: List[Dict[str, str]]
     main: Node
     pos: Dict[Any, Any]
+    # line (file id:line) of the instructions that have one, keyed by the instruction id as str (json keys).
+    # The lines are a view derived from the instructions, see design/instruction_focus.md.
+    instruction_lines: Dict[str, str]
 
     def __init__(
         self,
@@ -120,6 +125,13 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             if node.name == "main":
                 self.main = node
         self.pos = pos
+        self.instruction_lines = dict()
+
+    def get_line_ids_of_instructions(self, instruction_ids: Iterable[int]) -> List[LineID]:
+        """The lines of the instructions, each once, in the order of the instructions. Instructions without a
+        position contribute no line."""
+        lines = (self.instruction_lines.get(str(i)) for i in instruction_ids)
+        return [LineID(line) for line in dict.fromkeys(line for line in lines if line is not None)]
 
     @classmethod
     def from_parsed_input(
@@ -216,7 +228,9 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
-        return cls(g, reduction_vars, pos, visualizer)
+        pet = cls(g, reduction_vars, pos, visualizer)
+        pet.instruction_lines = {str(i): line for i, line in instructionToLineMap.items()}
+        return pet
 
     def validate(self) -> None:
         logger = logging.getLogger("Explorer")

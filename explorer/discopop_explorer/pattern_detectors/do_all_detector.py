@@ -74,11 +74,7 @@ class DoAllInfo(PatternInfo):
         self.affected_cu_ids = [n.id for n in affected_cus]
         # the instructions of the loop body (instruction ids of this build), see design/instruction_focus.md
         self.instruction_ids: List[int] = instruction_ids_of(affected_cus)
-        self.affected_line_ids: List[LineID] = []
-        for node in affected_cus:
-            self.affected_line_ids += [
-                lid for lid in node.get_contained_line_ids() if lid not in self.affected_line_ids
-            ]
+        self.affected_line_ids: List[LineID] = pet.get_line_ids_of_instructions(self.instruction_ids)
         self.affected_functions = [
             str(f.start_position()) + ":" + f.name for f in [get_parent_function(pet, node)]
         ]  # get_all_parent_functions(pet, node)]
