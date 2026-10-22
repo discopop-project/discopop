@@ -112,6 +112,9 @@ class ParallelRegionInfo(PatternInfo):
         )
         # set if the tasks are created per iteration of a loop: the line of the loop (file id:line)
         self.loop_start_line: Optional[str] = None
+        # set if the tasks are created per iteration of a loop: the last line of the loop (file id:line), where the
+        # parallel region has to end; the tasks themselves end before it (the closing brace of the body)
+        self.loop_end_line: Optional[str] = None
         # a later task depends on an earlier one: {"from_task", "to_task" (pattern ids), "variable", "kind": RAW | WAR}
         self.task_dependences: List[Dict[str, Any]] = []
         # the code after the region depends on a task: {"task" (pattern id), "variable", "kind": RAW | WAR, "line"}

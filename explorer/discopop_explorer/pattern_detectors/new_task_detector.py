@@ -12,6 +12,7 @@ import warnings
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
@@ -418,6 +419,14 @@ def identify_loop_tasking(
             contained_tasks=[task],
         )
         region.loop_start_line = loop_line
+        # the pattern's node may be the first CU of the loop instead of the loop: take the end of the loop itself
+        loop_ends = [
+            loop.end_line
+            for loop in all_nodes(pet, LoopNode)
+            if loop.file_id == loop_node.file_id and loop.start_line == loop_node.start_line
+        ]
+        if len(loop_ends) > 0:
+            region.loop_end_line = f"{loop_node.file_id}:{max(loop_ends)}"
         region.after_dependences = [
             {"task": task.pattern_id, "variable": a.variable, "kind": a.kind, "line": a.line} for a in after
         ]
