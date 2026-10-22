@@ -95,8 +95,6 @@ Not verified:
 
 - The staged `dp_common/` paths in the output (see above); decide whether to map them back to
   `common/` or leave them.
-- `gather_data` should perhaps tell when task detection did not run, because "0 suggestions"
-  is misleading then (fib).
 - `get_project_status` reported the hotspot and profiling data as stale after the maintainer's
   manual run (source timestamp newer than the profiling). Check whether the compile script's
   copy step into `dp_common/` is the cause; it would make every re-run look stale.

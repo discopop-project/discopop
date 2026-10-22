@@ -102,7 +102,8 @@ Other findings:
    CU). `account`/`rebuild` in `createCUs.cpp` derive lines, phases, sizes and counts from the
    instruction list, so a moved head or a cautious-property split leaves no stale lines (2a: both
    findings are gone). The fib xfail passes: the real run gives the tasks (31,31) and (32,32).
-   Not done: CUs of statements without a call still end where they did (phase/scope/cautious
+   Arguments on continuation lines (later lines than the call, e.g. `fft_twiddle_gen`) belong to the head too; before,
+   the call was split from them and fft got three bogus task entries (84 → 87). Not done: CUs of statements without a call still end where they did (phase/scope/cautious
    splits); the incremental data of the scope split is not rebuilt. fft: still 4 doall (incl.
    `fft_aux`, line 2951).
 4. **Migration.** `instruction_scope` beside `get_code_scope` in the task graph contexts;

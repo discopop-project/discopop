@@ -41,7 +41,8 @@ using llvm::Value;
 
 namespace {
 // The head of the statement a call belongs to: the trailing instructions of a CU that evaluate the operands of the
-// call. They share its line and follow the last store, call or terminator of the CU (the end of the statement before).
+// call. They follow the last store, call or terminator of the CU (the end of the statement before) and are not on a
+// line before the call's: the arguments of a call continued on the next lines come before the call, but have later lines.
 // Returns the position of the first one: the number of instructions if there is no head, 0 if the CU consists of
 // nothing else.
 size_t StatementHeadStart(const std::vector<llvm::Instruction*>& instructions, llvm::Instruction* call, int file_id) {
@@ -49,7 +50,7 @@ size_t StatementHeadStart(const std::vector<llvm::Instruction*>& instructions, l
   size_t start = instructions.size();
   while (start > 0) {
     llvm::Instruction* previous = instructions[start - 1];
-    if (dputil::GetLid(previous, file_id) != call_lid || isa<StoreInst>(previous) || isa<CallBase>(previous) ||
+    if (dputil::GetLid(previous, file_id) < call_lid || isa<StoreInst>(previous) || isa<CallBase>(previous) ||
         previous->isTerminator()) {
       break;
     }

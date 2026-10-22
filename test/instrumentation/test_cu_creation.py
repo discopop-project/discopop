@@ -12,18 +12,7 @@ from typing import Dict, List, Tuple
 from .utilities import InstrumentationTestCase
 
 
-class TestCuCreation(InstrumentationTestCase):
-    SOURCE = """
-        int fib(int n) {
-          int x, y;
-          if (n < 2) return n;
-          x = fib(n - 1);                     // @first
-          y = fib(n - 2);                     // @second
-          return x + y;
-        }
-        int main() { return fib(6); }
-        """
-
+class CuCreationCase(InstrumentationTestCase):
     def cus(self) -> Dict[str, Tuple[List[int], List[int]]]:
         """``id -> (instruction ids, call instruction ids)`` of the CUs of ``Data.xml``."""
         with open(os.path.join(self.program.directory, ".discopop", "profiler", "Data.xml")) as f:
@@ -49,6 +38,19 @@ class TestCuCreation(InstrumentationTestCase):
         assert len(holders) == 1, holders
         return holders[0]
 
+
+class TestCuCreation(CuCreationCase):
+    SOURCE = """
+        int fib(int n) {
+          int x, y;
+          if (n < 2) return n;
+          x = fib(n - 1);                     // @first
+          y = fib(n - 2);                     // @second
+          return x + y;
+        }
+        int main() { return fib(6); }
+        """
+
     def test_the_cu_of_a_call_holds_the_call_instruction(self) -> None:
         for marker in ("first", "second"):
             instructions, calls = self.cu_of_call_on(marker)
@@ -61,3 +63,24 @@ class TestCuCreation(InstrumentationTestCase):
             # everything up to the call belongs to the statement of the call, e.g. not the store of the one before
             up_to_call = instructions[: instructions.index(calls[0]) + 1]
             self.assertEqual({self.program.line_of_marker(marker)}, set(self.lines_of(up_to_call)))
+
+
+class TestCuCreationContinuedArguments(CuCreationCase):
+    SOURCE = """
+        void work(int *a, int b, int c);
+        void split(int *a, int n) {
+          int m = n / 2;
+          work(a, m,                          // @first
+               n - m);
+        }
+        int main() { int a[4]; split(a, 4); return 0; }
+        void work(int *a, int b, int c) { a[0] = b + c; }
+        """
+
+    def test_the_arguments_on_the_next_line_are_in_the_cu_of_the_call(self) -> None:
+        instructions, calls = self.cu_of_call_on("first")
+        first = self.program.line_of_marker("first")
+        before_call = instructions[: instructions.index(calls[0])]
+        # the subtraction on the continuation line is evaluated before the call, but is not the store of ``m``
+        self.assertIn(first + 1, self.lines_of(before_call))
+        self.assertNotIn(first - 1, self.lines_of(before_call))

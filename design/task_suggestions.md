@@ -121,7 +121,7 @@ Implausible groups are flagged, not hidden (see 3.3).
       `if ... else if` chain as parallel tasks (fft: 2944-2949, 2959-2964).
 - [ ] **Task bodies.** `return` statements and closing braces are reported as task bodies
       (fft 2917-2918, fib/bots_main 440); snap spans to whole statements.
-- [ ] **Overlapping spans.** Task 2 of the fib group starts at the line of task 1
+- [x] **Overlapping spans** (fixed by the CU split, `design/instruction_focus.md`). Task 2 of the fib group starts at the line of task 1
       (31-32 against 31-31); derive the spans per task without the shared scope lines.
 - [ ] **Unknown end line.** Replace the sentinel 262143 by a real end line, or omit it.
 - [ ] **Join points.** Report what is read after the region (fib: `x`, `y` at line 34), so
