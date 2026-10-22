@@ -212,6 +212,9 @@ def identify_simple_tasking(
         return int(lid.split(":")[1])
 
     task_group_num = 0
+    # a recursive function is inlined once per level, which gives one copy of a group per context instance; a group
+    # is reported once per (parent node, line ranges and instructions of its tasks)
+    seen_groups: Set[Tuple[NodeID, Tuple[Tuple[int, int, Tuple[int, ...]], ...]]] = set()
 
     for tpc in simplification_results:
 
@@ -309,6 +312,13 @@ def identify_simple_tasking(
 
         if invalid:
             continue
+        group_key = (
+            tpc_parent_pet_node.id,
+            tuple((lines[1], lines[2], tuple(tpi.instruction_ids)) for lines, tpi in zip(task_lines, pattern_objects)),
+        )
+        if group_key in seen_groups:
+            continue
+        seen_groups.add(group_key)
         # register found patterns
         for tpi in pattern_objects:
             patterns.append(tpi)

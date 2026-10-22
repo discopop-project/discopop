@@ -43,7 +43,7 @@ how much they block:
 1. **Crash on loops with recursive calls** (health, floorplan, uts): fixed by `39af76fc`. After it the
    explorer finishes on health (11 s) and uts (4 s); floorplan does not finish within 400 s (ContextTaskGraph
    construction, 45142 nodes, slows to under 100 nodes/s).
-2. **Duplicates per recursion level** (health: 594 task entries on about 12 distinct line ranges; knapsack: 17 identical
+2. **Duplicates per recursion level** (fixed on `improvement/explorer/task_dedup`; was: health: 594 task entries on about 12 distinct line ranges; knapsack: 17 identical
    regions). Cause: `identify_simple_tasking` emits one group per context instance, and the recursive inlining makes
    copies.
 3. **Cost per recursive call site** (sort, strassen): `ContextTaskGraph` construction grows about 9× per call site;
@@ -62,9 +62,7 @@ explorer gets that far; adjust them to the omp-tasks code, not to the explorer o
 ## 3. Next steps, in order
 
 1. ~~Floorplan check~~, 2. ~~xfail reasons and finishing tests~~, 3. ~~commit the crash fix~~: done (see the update above).
-4. **Deduplicate groups** in `identify_simple_tasking` (`pattern_detectors/new_task_detector.py`): emit a group once per
-   (parent PET node, task line ranges, task instruction ids). Check fft (44 entries) and fib stay the same; knapsack
-   should drop to one region; add a unit test.
+4. ~~Deduplicate groups~~: done on `improvement/explorer/task_dedup` (health 594 -> 18, knapsack one region; fft not rechecked).
 5. Then, by value: the cost per recursive call site (3.; floorplan too), the do-all result for loops with recursion (4.), the span
    including the loop header (5.).
 

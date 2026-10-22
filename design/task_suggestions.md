@@ -175,13 +175,15 @@ Implausible groups are flagged, not hidden (see 3.3).
         same loop counts like a nested end). Since then the explorer finishes on health (about 11 s) and uts (about 4 s);
         floorplan does not finish (120 s guard in the test: `ContextTaskGraph` construction of 45142 nodes slows down to
         under 100 nodes per second).
-      - **health: groups not found, duplicated.** 594 entries on 18 distinct line ranges (33 identical copies each, one
-        per recursion level); none on the expected lines of the recursive call in the loop.
+      - **health: groups not found.** None on the expected lines of the recursive call in the loop (the duplicates, 594
+        entries on 18 line ranges, are gone, see below).
       - **uts: no task pattern at all** (the do-all detection rejects the loop, RAW on `parent` between the iterations).
       - **Cost per recursive call site** (sort: 90 s guard in the test, strassen: memory limit of 4 GiB in the test):
         `ContextTaskGraph` construction grows about 9x per call site; seven self-calls of a function run out of memory in
         `__insert_data_dependencies_from_files`.
-      - **Duplicates** (knapsack): the same region and tasks are reported once per recursion level (17 regions).
+      - **Duplicates** (health, knapsack): fixed; `identify_simple_tasking` reports a group once per (parent PET node,
+        line ranges and instruction ids of its tasks). Health: 594 -> 18 entries, knapsack: 17 regions -> 1 (its xfail is
+        gone). Not checked on the fft profile (44 entries before; no BOTS profile on the second machine).
       - **Spans and joins** (nqueens, sparselu): the region and task spans include the header of the loop; the join and the
         sharing of recursive calls are empty (see recursion join above); spurious WAR on loop variables (`jj`, `ii`);
         tiny regions in initialisation loops (`genmat`).

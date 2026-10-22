@@ -102,6 +102,20 @@ def _detect(
     return tasks, regions
 
 
+def _detect_groups(pet: Any, groups: List[Tuple[Node, List[List[str]], List[List[int]]]]) -> Tuple[Any, Any]:
+    """The tasks and parallel regions reported for several groups at once (one simplification result each)."""
+    tpcs = [
+        SimpleNamespace(
+            parent_context=_context(["3:29", "3:35"], parent),
+            registered_tasks=[_context(scope, None, ids) for scope, ids in zip(scopes, instructions)],
+        )
+        for parent, scopes, instructions in groups
+    ]
+    patterns = identify_simple_tasking(SimpleNamespace(pet=pet), tpcs)  # type: ignore[arg-type]
+    tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
+    return tasks, [p for p in patterns if isinstance(p, ParallelRegionInfo)]
+
+
 def _span(task: TaskParallelismInfo) -> Tuple[int, int]:
     return int(str(task.region_start_line)), int(str(task.region_end_line))
 
@@ -348,3 +362,38 @@ def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_wha
         monkeypatch.setitem(instructionToCUIdMap, instruction, header.id)
     found = after_dependences_of_instructions(pet, [5, 6, 7], 3, 2952, function)  # type: ignore[arg-type]
     assert [(a.variable, a.kind, a.line) for a in found] == [("sum", "RAW", "3:2958")]
+
+
+@pytest.fixture  # type: ignore[misc]
+def lines_pet() -> Any:
+    lines = {1: "3:31", 2: "3:32", 3: "3:33"}
+    lines_of = lambda ids: [lines[i] for i in ids if i in lines]  # noqa: E731
+    return SimpleNamespace(get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of)
+
+
+def test_copies_of_a_group_from_the_levels_of_a_recursion_are_reported_once(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, lines_pet: Any
+) -> None:
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    group = (parent, [["3:31"], ["3:32"]], [[1], [2]])
+    tasks, regions = _detect_groups(lines_pet, [group, group, group])
+    assert len(tasks) == 2
+    assert len(regions) == 1
+    assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
+
+
+def test_groups_that_differ_in_parent_lines_or_instructions_are_kept(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, lines_pet: Any
+) -> None:
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    other_parent = make_node("3:234", NodeType.CU, start_line=29, end_line=29)
+    groups = [
+        (parent, [["3:31"], ["3:32"]], [[1], [2]]),
+        (other_parent, [["3:31"], ["3:32"]], [[1], [2]]),
+        (parent, [["3:31"], ["3:33"]], [[1], [3]]),
+        (parent, [["3:31"], ["3:32"]], [[1], [2, 3]]),
+    ]
+    tasks, regions = _detect_groups(lines_pet, groups)
+    assert len(regions) == 4
+    assert len(tasks) == 8
+    assert sorted(g for r in regions for g in r.task_group) == [0, 1, 2, 3]
