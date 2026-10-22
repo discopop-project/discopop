@@ -123,7 +123,9 @@ are derived from the pattern's instructions (lines of called functions in the bo
 The task detector takes the spans of the tasks and of the parent from the lines of their instructions (the line range of
 the nodes only for a context that holds no instruction); fft: same 84 task entries and spans as before. The other
 `start_position()` uses in the detectors are node identities that key line-based data (loop data, reduction variables)
-and stay. The MCP server does not show instruction ids:
+and stay. `Data.xml` lists the jumps of a CU (`jumpInstructionIDs`: br, switch, ret, unreachable; optional for the explorer);
+the lines whose instructions are all jumps (`PEGraphX.jump_only_lines`) are left out of task spans (the closing brace
+of a loop body carries the back-edge). The MCP server does not show instruction ids:
 they are too detailed for it and stay behind a more abstract layer (maintainer).
 
 Each stage gets its own tests and commit.

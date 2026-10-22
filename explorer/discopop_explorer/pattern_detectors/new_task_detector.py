@@ -192,7 +192,8 @@ def identify_simple_tasking(
         tpc_parent_pet_node = tpc.parent_context.get_first_pet_node(ctg.pet)
         if tpc_parent_pet_node is None:
             continue
-        # the lines of the instructions of the contexts; a context that holds none keeps the range of its nodes
+        # the lines of the instructions of the contexts; a context that holds none keeps the range of its nodes.
+        # The parent only bounds the tasks: its jumps (the closing brace) belong to it, unlike to the tasks.
         parent_scopes = ctg.pet.get_line_ids_of_instructions(
             tpc.parent_context.get_instruction_scope(ctg.pet, inclusive=False)
         ) or tpc.parent_context.get_code_scope(ctg.pet, inclusive=False)
@@ -224,7 +225,7 @@ def identify_simple_tasking(
 
         for task in valid_tasks:
             task_scopes: List[LineID] = []
-            task_scopes += ctg.pet.get_line_ids_of_instructions(
+            task_scopes += ctg.pet.get_statement_line_ids_of_instructions(
                 task.get_instruction_scope(ctg.pet, inclusive=True)
             ) or task.get_code_scope(ctg.pet, inclusive=True)
             task_scopes = list(dict.fromkeys(task_scopes))
@@ -350,7 +351,7 @@ def identify_loop_tasking(
         loop_line = str(loop_node.start_position())
         lines = [
             int(line.split(":")[1])
-            for line in pet.get_line_ids_of_instructions(do_all.instruction_ids)
+            for line in pet.get_statement_line_ids_of_instructions(do_all.instruction_ids)
             if int(line.split(":")[0]) == loop_node.file_id
         ]
         # the body: the lines of the loop without its header

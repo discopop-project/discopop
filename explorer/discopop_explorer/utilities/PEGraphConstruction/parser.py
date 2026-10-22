@@ -11,7 +11,7 @@ import os
 import re
 from collections import defaultdict
 from os.path import abspath, dirname
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from lxml import objectify  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
@@ -25,6 +25,8 @@ readlineToCUIdMap = defaultdict(set)  # type: ignore
 instructionToCUIdMap: Dict[int, str] = dict()
 # Map from the id of an instruction to its line (file id:line). Instructions without position are not listed.
 instructionToLineMap: Dict[int, str] = dict()
+# the instructions that only jump (br, switch, ret, unreachable), as listed in the CUs of Data.xml
+jumpInstructionIds: Set[int] = set()
 # Map to record which line belongs to write set of nodes. LID -> NodeIds
 writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
@@ -48,6 +50,9 @@ def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
             for instruction_id in str(node.instructionIDs).split(","):
                 if instruction_id.strip():
                     instructionToCUIdMap[int(instruction_id)] = node.get("id")
+            for jump_id in str(getattr(node, "jumpInstructionIDs", "")).split(","):
+                if jump_id.strip():
+                    jumpInstructionIds.add(int(jump_id))
             for instruction_id in str(node.writePhaseLines).split(","):
                 writelineToCUIdMap[instruction_id].add(node.get("id"))
             for instruction_id in str(node.readPhaseLines).split(","):

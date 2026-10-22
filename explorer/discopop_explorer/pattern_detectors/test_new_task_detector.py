@@ -68,7 +68,8 @@ def _detect(
         ],
     )
     lines = instruction_lines or {}
-    pet = pet or SimpleNamespace(get_line_ids_of_instructions=lambda ids: [lines[i] for i in ids if i in lines])
+    lines_of = lambda ids: [lines[i] for i in ids if i in lines]  # noqa: E731
+    pet = pet or SimpleNamespace(get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of)
     patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc])  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
@@ -231,6 +232,7 @@ def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: 
     function = make_node("3:99", NodeType.FUNC, name="fft_aux")
     pet = build_pet_graph([header, function])
     pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "8": "3:2953"}
+    pet.jump_only_lines = {"3:2953"}  # the jump back at the closing brace (8)
     do_all = SimpleNamespace(node_id="3:10", instruction_ids=[5, 6, 7, 8])
     return pet, do_all
 
@@ -247,8 +249,8 @@ def test_a_call_to_a_hotspot_function_in_a_do_all_loop_is_a_task_per_iteration(
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
     assert len(tasks) == 1 and len(regions) == 1
-    assert _span(tasks[0]) == (2952, 2953)  # the body, without the line of the loop header
-    assert (regions[0].region_start_line, regions[0].region_end_line) == ("2951", "2953")
+    assert _span(tasks[0]) == (2952, 2952)  # the body, without the line of the loop header and the closing brace
+    assert (regions[0].region_start_line, regions[0].region_end_line) == ("2951", "2952")
     assert tasks[0].loop_start_line == regions[0].loop_start_line == "3:2951"
     assert tasks[0].task_group == regions[0].task_group == [4]
     assert tasks[0].instruction_ids == [5, 6, 7, 8]

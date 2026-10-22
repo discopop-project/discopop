@@ -48,6 +48,15 @@ def test_the_lines_of_instructions_are_listed_once_and_those_without_position_ar
     assert pet.get_line_ids_of_instructions([]) == []
 
 
+def test_lines_that_only_jump_are_no_statement_lines(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    pet = build_pet_graph([make_node("1:1", NodeType.CU)])
+    pet.instruction_lines = {"10": "3:31", "11": "3:32", "12": "3:33"}
+    pet.jump_only_lines = {"3:32"}
+    assert pet.get_statement_line_ids_of_instructions([10, 11, 12]) == ["3:31", "3:33"]
+    # without another line, the lines of the jumps are kept
+    assert pet.get_statement_line_ids_of_instructions([11]) == ["3:32"]
+
+
 # --- get_node_parent_id -------------------------------------------------------
 
 

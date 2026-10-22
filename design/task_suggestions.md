@@ -126,7 +126,10 @@ Implausible groups are flagged, not hidden (see 3.3).
       two tasks left. fft: 27 groups -> 14 (13 real pairs, one `sprintf` group). Possible later: do the check in
       `split_taskable_control_sequence` (note in `_is_valid_task_body`).
 - [x] **Task bodies.** `return` statements and closing braces are no tasks any more (no-work rule, see above);
-      open: snap spans to whole statements.
+      spans of tasks leave out the lines that hold jumps only (the closing brace of a loop body), see
+      `jumpInstructionIDs` in `Data.xml` and `PEGraphX.jump_only_lines`; fft: the loop task is 2952-2952. Not done:
+      extending a span to the end of a statement that continues on lines without instructions (a lone `);`),
+      which needs the AST (`ast_dump.json`); no span of fft ends mid-statement.
 - [x] **Overlapping spans** (fixed by the CU split, `design/instruction_focus.md`). Task 2 of the fib group starts at the line of task 1
       (31-32 against 31-31); derive the spans per task without the shared scope lines.
 - [ ] **Unknown end line.** Replace the sentinel 262143 by a real end line, or omit it.

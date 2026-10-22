@@ -52,6 +52,7 @@ except (ImportError, ModuleNotFoundError):
 from discopop_explorer.utilities.PEGraphConstruction.parser import (
     instructionToCUIdMap,
     instructionToLineMap,
+    jumpInstructionIds,
     readlineToCUIdMap,
     writelineToCUIdMap,
 )
@@ -110,6 +111,9 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
     # line (file id:line) of the instructions that have one, keyed by the instruction id as str (json keys).
     # The lines are a view derived from the instructions, see design/instruction_focus.md.
     instruction_lines: Dict[str, str]
+    # lines (file id:line) whose instructions all jump (the closing brace of a loop, the jump over an else): they hold
+    # no statement. Empty if the profiler listed no jumps.
+    jump_only_lines: Set[str]
 
     def __init__(
         self,
@@ -126,12 +130,19 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 self.main = node
         self.pos = pos
         self.instruction_lines = dict()
+        self.jump_only_lines = set()
 
     def get_line_ids_of_instructions(self, instruction_ids: Iterable[int]) -> List[LineID]:
         """The lines of the instructions, each once, in the order of the instructions. Instructions without a
         position contribute no line."""
         lines = (self.instruction_lines.get(str(i)) for i in instruction_ids)
         return [LineID(line) for line in dict.fromkeys(line for line in lines if line is not None)]
+
+    def get_statement_line_ids_of_instructions(self, instruction_ids: Iterable[int]) -> List[LineID]:
+        """The lines of the instructions like get_line_ids_of_instructions, without the lines that hold jumps only
+        (a closing brace is no part of a statement). The lines of all instructions if there is no other."""
+        lines = self.get_line_ids_of_instructions(instruction_ids)
+        return [line for line in lines if line not in self.jump_only_lines] or lines
 
     @classmethod
     def from_parsed_input(
@@ -230,6 +241,12 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         pet = cls(g, reduction_vars, pos, visualizer)
         pet.instruction_lines = {str(i): line for i, line in instructionToLineMap.items()}
+        lines_with_other_instructions = {
+            line for instruction_id, line in instructionToLineMap.items() if instruction_id not in jumpInstructionIds
+        }
+        pet.jump_only_lines = {
+            line for instruction_id, line in instructionToLineMap.items() if instruction_id in jumpInstructionIds
+        } - lines_with_other_instructions
         return pet
 
     def validate(self) -> None:
