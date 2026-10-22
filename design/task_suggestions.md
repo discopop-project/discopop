@@ -10,7 +10,8 @@ directory for details.
 
 # Task suggestions in get_parallelization_suggestions — Plan & Todos
 
-Status: planning (2026-10-22). Nothing is implemented yet. Branch:
+Status: MCP tool part implemented (task groups in `mcp_server/tools/task_groups.py`); the
+rest of 3.1 and 3.2 is open. Branch:
 `improvement/mcp_server/task_suggestions`, based on `improvement/mcp_server/interface`.
 
 `get_parallelization_suggestions` lists task parallelism as type `pattern` with a bare
@@ -69,17 +70,17 @@ Implausible groups are flagged, not hidden (see 3.3).
 
 ### 3.1 MCP tool (this branch)
 
-- [ ] Map the `task` key; list one entry per `PARALLELREGION` with its tasks via
+- [x] Map the `task` key; list one entry per `PARALLELREGION` with its tasks via
       `contains_patterns`; take the file id from `start_line`.
-- [ ] Print `in_dep` / `out_dep` / `in_out_dep` as dependences between tasks; RAW as the
+- [x] Print `in_dep` / `out_dep` / `in_out_dep` as dependences between tasks; RAW as the
       main information, WAR/WAW marked `(anti)` / `(output)`.
-- [ ] Hotspot of the enclosing function: find the function from the side-effect export, then
+- [x] Hotspot of the enclosing function: find the function from the side-effect export, then
       match the hotspot by file id and name (not by line). Say "no hotspot data" if there is
       no match or no export. State that the runtime is the scope's, not the region's, and
       that recursive functions are counted inclusively.
-- [ ] Flags: identical spans of two tasks, overlapping spans, unknown end line (262143),
+- [x] Flags (done except the single-statement flag, left out: it would flag the real fib tasks): identical spans of two tasks, overlapping spans, unknown end line (262143),
       task body that ends in a `return` or is a closing brace, single-statement tasks.
-- [ ] Do not use the first `@@` line or the default kind `Loop` for tasks.
+- [x] Do not use the first `@@` line or the default kind `Loop` for tasks.
 - [ ] Relations (`nested_in` / alternative) for task regions and doall loops, e.g. a region
       inside the loop of a doall suggestion.
 - [ ] `explain_parallelization` for task regions; tool description and
@@ -90,6 +91,10 @@ Implausible groups are flagged, not hidden (see 3.3).
       decide whether it belongs in the default.
 
 ### 3.2 Explorer follow-ups (separate work)
+
+- [ ] **Tests from `bots/omp-tasks`.** The hand-written OpenMP task versions in
+      `/home/lukas/git/bots/omp-tasks` are the ground truth (maintainer, 2026-10-22): derive the
+      unit tests of the task detection from them (what the serial version must yield).
 
 - [ ] **Loop and recursive tasking.** The detector does not find the recursive calls in the
       `for` loop of `fft_aux` (TODO comments in `new_task_detector.run_detection`).

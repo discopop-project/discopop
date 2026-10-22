@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import gzip
 import json
 import tempfile
 import unittest
@@ -195,6 +196,123 @@ class TestGetParallelizationSuggestions(unittest.TestCase):
         arguments, _ = coerce_arguments({"project_path": "/p", "limit": "5"}, schema)
         self.assertEqual(arguments["limit"], 5)
         self.assertIsNone(validation_error("get_parallelization_suggestions", arguments, schema))
+
+
+FIB = """\
+#include <stdio.h>
+
+long long fib(int n)
+{
+    long long x, y;
+    if (n < 2)
+        return n;
+    x = fib(n - 1);
+    y = fib(n - 2);
+    return x + y;
+}
+"""
+
+
+def _task(pid: int, start: int, end: int, **dependences: list[str]) -> dict[str, Any]:
+    return {
+        "pattern_id": pid,
+        "type": "TASK",
+        "region_start_line": str(start),
+        "region_end_line": str(end),
+        **dependences,
+    }
+
+
+class TestTaskGroups(unittest.TestCase):
+    """Task groups as the explorer writes them for BOTS fib: one region and two tasks, patch for the region only."""
+
+    def setUp(self) -> None:
+        self._tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp_dir.cleanup)
+        self.project_path = self._tmp_dir.name
+        self.source = Path(self.project_path) / "fib.c"
+        self.source.write_text(FIB)
+        self.dot_discopop = Path(self.project_path) / ".discopop"
+        (self.dot_discopop / "explorer").mkdir(parents=True)
+        (self.dot_discopop / "hotspot_detection").mkdir(parents=True)
+        (self.dot_discopop / "FileMapping.txt").write_text(f"3\t{self.source}\n")
+        self.ctx = ToolContext(debug=False)
+        self.__group([_task(3, 8, 8), _task(4, 9, 9)], 8, 9)
+        # the function starts one line later in the hotspot detection than in the side-effect export
+        self.__export([{"file_id": 3, "name": "fib", "start_line": 3, "end_line": 11}])
+        function = {**_loop(1, 4, "MAYBE", 2.0), "fid": 3, "typ": "FUNCTION", "name": "fib"}
+        main = {**_loop(2, 1, "YES", 10.0), "fid": 3, "typ": "FUNCTION", "name": "main"}
+        (self.dot_discopop / "hotspot_detection" / "Hotspots.json").write_text(
+            json.dumps({"code_regions": [main, function]})
+        )
+
+    def __group(self, tasks: list[dict[str, Any]], start: int, end: int) -> None:
+        region = {
+            "pattern_id": 5,
+            "type": "PARALLELREGION",
+            "start_line": "3:4",
+            "region_start_line": str(start),
+            "region_end_line": str(end),
+            "contains_patterns": [t["pattern_id"] for t in tasks],
+        }
+        (self.dot_discopop / "explorer" / "patterns.json").write_text(
+            json.dumps({"patterns": {"task": tasks + [region]}})
+        )
+        patch_dir = self.dot_discopop / "patch_generator" / "5"
+        patch_dir.mkdir(parents=True, exist_ok=True)
+        (patch_dir / "3.patch").write_text(_patch(start - 3, "#pragma omp parallel"))
+
+    def __export(self, functions: list[dict[str, Any]]) -> None:
+        with gzip.open(self.dot_discopop / "explorer" / "side_effects.json.gz", "wt") as f:
+            json.dump({"functions": functions}, f)
+
+    def __handle(self) -> str:
+        return get_parallelization_suggestions.handle({"project_path": self.project_path}, self.ctx)[0].text
+
+    def test_a_group_names_its_function_region_tasks_and_dependences_but_no_pragma(self) -> None:
+        text = self.__handle()
+        self.assertIn(
+            "Suggestion 5: Task group in Potential Hotspot Function fib (fib.c:3-11; 2.00 s, 20% of runtime", text
+        )
+        self.assertIn("  parallel region: fib.c:8-9\n", text)
+        self.assertIn("  task 3: fib.c:8-8   x = fib(n - 1);\n", text)
+        self.assertIn("  task 4: fib.c:9-9   y = fib(n - 2);\n", text)
+        self.assertIn("  dependences between the tasks: none recorded", text)
+        self.assertNotIn("flag:", text)
+        self.assertNotIn("#pragma omp parallel", text)
+        self.assertNotIn("Loop", text)
+
+    def test_dependences_are_printed_as_the_explorer_recorded_them(self) -> None:
+        self.__group([_task(3, 8, 8, out_dep=["x"]), _task(4, 9, 9, in_dep=["x"], in_out_dep=["y"])], 8, 9)
+        self.assertIn("dependences between the tasks: task 3: out x; task 4: in x; in/out y", self.__handle())
+
+    def test_without_function_table_or_hotspots_the_group_is_still_listed(self) -> None:
+        (self.dot_discopop / "explorer" / "side_effects.json.gz").unlink()
+        self.assertIn("Suggestion 5: Task group in fib.c\n  parallel region: fib.c:8-9", self.__handle())
+        self.__export([{"file_id": 3, "name": "fib", "start_line": 3, "end_line": 11}])
+        (self.dot_discopop / "hotspot_detection" / "Hotspots.json").unlink()
+        self.assertIn("Task group in Function fib (fib.c:3-11; no hotspot data)", self.__handle())
+
+    def test_overlapping_and_identical_tasks_are_flagged_not_dropped(self) -> None:
+        self.__group([_task(3, 8, 8), _task(4, 8, 9)], 8, 9)
+        self.assertIn("flag: the lines of tasks 3 and 4 overlap", self.__handle())
+        self.__group([_task(3, 8, 8), _task(4, 8, 8)], 8, 8)
+        self.assertIn("flag: tasks 3 and 4 have the same lines", self.__handle())
+
+    def test_tasks_that_are_a_brace_or_end_in_a_return_are_flagged(self) -> None:
+        self.__group([_task(3, 6, 7), _task(4, 11, 11)], 6, 11)
+        text = self.__handle()
+        self.assertIn("flag: task 3 ends in a return", text)
+        self.assertIn("flag: task 4 is only a brace", text)
+
+    def test_an_unknown_end_line_is_flagged(self) -> None:
+        self.__group([_task(3, 8, 8), _task(4, 9, 262143)], 8, 262143)
+        text = self.__handle()
+        self.assertIn("flag: an end line is unknown", text)
+        self.assertNotIn("+262", text)
+
+    def test_the_closing_hint_says_that_the_agent_places_the_pragmas(self) -> None:
+        self.assertIn("not where to put the pragmas", self.__handle().splitlines()[-1])
 
 
 if __name__ == "__main__":
