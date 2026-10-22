@@ -10,7 +10,9 @@ data sharing of the variables of the tasks.
 
 The information comes from the dependences registered on the contexts of the TaskGraph (the ContextTaskGraph drops
 them while it is simplified): ``Context.outgoing_dependencies`` holds ``(source context, dependence)`` for a context
-that is the sink, the later access, of the dependence. Only RAW and WAR are registered on contexts.
+that is the sink, the later access, of the dependence. Only RAW and WAR are registered on contexts: a WAW would make
+the contexts depend on each other, which changes which sequences are split into tasks and which loops are do-all.
+The output dependences between the tasks (WAW) are therefore read from the PET by the instructions of the tasks.
 
 The variable types are not used: with opaque pointers they carry no information. A variable is classified by how the
 tasks and the code after them access it (``classify_variable``).
@@ -35,8 +37,9 @@ from discopop_explorer.utilities.PEGraphConstruction.parser import instructionTo
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.enums.DepType import DepType
 
-# the kinds of dependences registered on contexts, and what an access in the earlier task is
-_KINDS = {DepType.RAW: "RAW", DepType.WAR: "WAR"}
+# the kinds of dependences of the code after a group; contexts only carry RAW and WAR (see the module docstring)
+OUTPUT = "WAW"
+_KINDS = {DepType.RAW: "RAW", DepType.WAR: "WAR", DepType.WAW: OUTPUT}
 
 
 @dataclass(frozen=True)
@@ -52,7 +55,8 @@ class TaskDependence:
 
 @dataclass(frozen=True)
 class AfterDependence:
-    """The code after the group depends on a task: it reads what the task wrote (RAW) or writes what it read (WAR).
+    """The code after the group depends on a task: it reads what the task wrote (RAW), writes what it read (WAR) or
+    writes what it wrote (WAW).
     ``line`` is the first line (file id:line) of the code after the group that does so."""
 
     task: int
@@ -66,6 +70,9 @@ class Sharing:
     shared: List[str] = field(default_factory=list)
     private: List[str] = field(default_factory=list)
     first_private: List[str] = field(default_factory=list)
+    # "<operation>:<name>", the operation is "?" if the explorer does not know it: variables that several tasks
+    # accumulate into (they are not listed as shared)
+    reduction: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -110,6 +117,28 @@ def _dependences_between(task_contexts: List[Set[Context]]) -> List[TaskDependen
     return sorted(found.values(), key=lambda d: (d.from_task, d.to_task, d.variable, d.kind))
 
 
+def _output_dependences(pet: PEGraphX, task_instructions: List[Set[int]]) -> List[TaskDependence]:
+    """The WAW dependences between the tasks, by the instructions at their two ends (not registered on contexts)."""
+    owner: Dict[int, int] = {}
+    for task, instructions in enumerate(task_instructions):
+        for instruction in instructions:
+            owner.setdefault(instruction, task)
+    cu_ids = sorted({NodeID(instructionToCUIdMap[i]) for i in owner if i in instructionToCUIdMap})
+    found: Dict[Tuple[int, int, str], TaskDependence] = {}
+    for cu_id in cu_ids:
+        if cu_id not in pet.g:
+            continue
+        for _, _, dependence in in_edges(pet, cu_id, EdgeType.DATA):
+            if dependence.dtype != DepType.WAW or dependence.var_name is None:
+                continue
+            earlier = owner.get(dependence.source_instruction_id) if dependence.source_instruction_id else None
+            later = owner.get(dependence.sink_instruction_id) if dependence.sink_instruction_id else None
+            if earlier is None or later is None or earlier == later:
+                continue
+            found[(earlier, later, dependence.var_name)] = TaskDependence(earlier, later, dependence.var_name, OUTPUT)
+    return list(found.values())
+
+
 def _dependences_after(
     pet: PEGraphX, task_contexts: List[Set[Context]], after_contexts: Set[Context]
 ) -> List[AfterDependence]:
@@ -152,12 +181,15 @@ def classify_variable(
     global_variable: bool,
     written_by_sibling: bool,
     needed_after: bool,
+    accumulated_by_siblings: bool = False,
 ) -> Optional[str]:
-    """The data sharing of a variable of a task: ``shared``, ``private``, ``first_private``, or None if the task does
-    not access it.
+    """The data sharing of a variable of a task: ``shared``, ``private``, ``first_private``, ``reduction``, or None if
+    the task does not access it.
 
     - declared in the task: private, unless the code after the group needs its value (shared; the declaration has to
       move out of the task),
+    - read and written by the task and by a sibling (``accumulated_by_siblings``, e.g. ``sum += ...`` in each): a
+      reduction; plain shared would be a race,
     - a global variable or one that is written by the task or by a sibling task: shared,
     - otherwise it is only read: first_private (the task works on the value at its creation).
     """
@@ -165,9 +197,38 @@ def classify_variable(
         return None
     if declared_in_task:
         return "shared" if needed_after else "private"
+    if read and written and accumulated_by_siblings:
+        return "reduction"
     if global_variable or written or written_by_sibling:
         return "shared"
     return "first_private"
+
+
+def _reduction_operation(pet: PEGraphX, name: str, file_id: int, first: int, last: int) -> str:
+    """The operation of the reduction of ``name`` on a line of the task, as the profiler recorded it (reduction.txt,
+    which covers the loops only); ``?`` if there is none."""
+    for entry in getattr(pet, "reduction_vars", None) or []:
+        file, _, line = entry["reduction_line"].partition(":")
+        if entry["name"] == name and file.isdigit() and int(file) == file_id and line.isdigit():
+            if first <= int(line) <= last:
+                return str(entry["operation"])
+    return "?"
+
+
+def _mark_written(
+    accessed: List[Dict[str, Tuple[bool, bool, str]]],
+    dependences: List[TaskDependence],
+    after: List[AfterDependence],
+) -> None:
+    """A task is known to write the variable of a RAW or WAW that starts at it. The CU of a compound assignment
+    (``sum += f(x)``) can list the variable as read only, but the dependences show the write."""
+    writes = [(a.task, a.variable) for a in after if a.kind in ("RAW", OUTPUT)]
+    writes += [(d.from_task, d.variable) for d in dependences if d.kind in ("RAW", OUTPUT)]
+    writes += [(d.to_task, d.variable) for d in dependences if d.kind in ("WAR", OUTPUT)]
+    for task, name in writes:
+        if name in accessed[task]:
+            read, _, def_line = accessed[task][name]
+            accessed[task][name] = (read, True, def_line)
 
 
 def _sharing(
@@ -178,6 +239,7 @@ def _sharing(
     after: List[AfterDependence],
 ) -> List[Sharing]:
     accessed = [_accessed_variables(pet, task) for task in tasks]
+    _mark_written(accessed, dependences, after)
     result: List[Sharing] = []
     for index, variables in enumerate(accessed):
         sharing = Sharing()
@@ -192,14 +254,21 @@ def _sharing(
                 for other, variables_of_other in enumerate(accessed)
                 if name in variables_of_other
             )
+            accumulated = any(
+                other != index and variables_of_other[name][0] and variables_of_other[name][1]
+                for other, variables_of_other in enumerate(accessed)
+                if name in variables_of_other
+            )
             needed_after = any(a.task == index and a.variable == name for a in after)
-            kind = classify_variable(read, written, declared, global_variable, by_sibling, needed_after)
+            kind = classify_variable(read, written, declared, global_variable, by_sibling, needed_after, accumulated)
             if kind == "shared":
                 sharing.shared.append(name)
             elif kind == "private":
                 sharing.private.append(name)
             elif kind == "first_private":
                 sharing.first_private.append(name)
+            elif kind == "reduction":
+                sharing.reduction.append(f"{_reduction_operation(pet, name, file_id, first, last)}:{name}")
         result.append(sharing)
     return result
 
@@ -238,7 +307,10 @@ def analyze_task_group(pet: PEGraphX, tasks: List[Context], task_lines: List[Tup
     for task in tasks:
         after_contexts |= task.get_successive_contexts()
     after_contexts -= inside
-    dependences = _dependences_between(task_contexts)
+    dependences = _dependences_between(task_contexts) + _output_dependences(
+        pet, [set(task.get_instruction_scope(pet, inclusive=True)) for task in tasks]
+    )
+    dependences.sort(key=lambda d: (d.from_task, d.to_task, d.variable, d.kind))
     after = _dependences_after(pet, task_contexts, after_contexts)
     after = _with_pointer_writes(pet, tasks, task_lines, after)
     return GroupDataflow(dependences, after, _sharing(pet, tasks, task_lines, dependences, after))
@@ -335,15 +407,17 @@ def after_dependences_of_instructions(
 
 def clauses_of_dependences(dependences: List[TaskDependence], task: int) -> Tuple[List[str], List[str], List[str]]:
     """The ``in``, ``out`` and ``in/out`` variables of a task, as the OpenMP depend clauses would list them: the
-    earlier access of a RAW is an out, the later an in; of a WAR, the earlier is an in and the later an out."""
+    earlier access of a RAW is an out, the later an in; of a WAR, the earlier is an in and the later an out; both
+    accesses of a WAW are outs."""
     ins: Set[str] = set()
     outs: Set[str] = set()
     for dependence in dependences:
-        earlier_writes = dependence.kind == "RAW"
+        earlier_writes = dependence.kind in ("RAW", OUTPUT)
+        later_writes = dependence.kind in ("WAR", OUTPUT)
         if dependence.from_task == task:
             (outs if earlier_writes else ins).add(dependence.variable)
         if dependence.to_task == task:
-            (ins if earlier_writes else outs).add(dependence.variable)
+            (outs if later_writes else ins).add(dependence.variable)
     both = ins & outs
     return sorted(ins - both), sorted(outs - both), sorted(both)
 
