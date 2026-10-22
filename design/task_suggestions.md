@@ -224,6 +224,13 @@ iterations of one loop execution, and the loop is rejected (uts: RAW on `parent`
         the copy by frame index.
       Open ideas: decide carried-ness in the runtime (an access timestamp per shadow entry, compared with the iteration
       start stamps of the loop stack: exact at any depth, costs memory); saturation plus the explorer rule.
+- [x] **Warning for loops with recursive calls** (explorer). `identify_simple_doall_and_reduction` logs a warning once per
+      loop whose body calls its own function (direct recursion, from `recursive_function_calls` of the CUs of the loop:
+      the profiler lists a call to a recursive function as "<callee> <file>:<line>,"; the callee must be the function of
+      the loop) and records a `recursion_in_loop` note in `pattern_decisions.json` (`notes` of the candidate: unlike
+      reasons they do not decide the outcome and survive for accepted loops; the key is left out when there are none).
+      `explain_parallelization` prints the notes. Open: mutual recursion (the loop calls a function that reaches the
+      loop's function again) needs the call graph.
 - [ ] **uts** stays rejected until one of these is done (see above); the xfail of `task_omp_uts` and
       `recursion_states::test_a_loop_is_not_rejected_for_the_reads_of_its_recursive_callee` document it.
 

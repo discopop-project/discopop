@@ -72,3 +72,21 @@ class TestRecursionStates(PipelineTestCase):
             for reason in decision["reasons"]
         ]
         self.assertNotIn("loop_carried_dependency", reasons)
+
+    def notes_of(self, loop_name):
+        """the kinds of the notes of the explorer on the loop"""
+        line = loop_lines()[loop_name]
+        with open(os.path.join(self.dot_discopop, "explorer", "pattern_decisions.json")) as f:
+            decisions = json.load(f)["decisions"]
+        return [n["kind"] for d in decisions if d["region"]["start_line"] == line for n in d.get("notes", [])]
+
+    def test_a_loop_which_calls_its_own_function_is_noted(self):
+        # whatever the outcome: the fill loop is rejected today, the loops of walk_uniform are accepted or not
+        self.assertEqual(self.notes_of("fill"), ["recursion_in_loop"])
+        self.assertEqual(self.notes_of("walk_uniform"), ["recursion_in_loop"])
+        self.assertEqual(self.notes_of("walk_zero"), ["recursion_in_loop"])
+
+    def test_a_loop_without_a_recursive_call_is_not_noted(self):
+        # a loop in a function that is called from a recursive one is no loop with recursive calls
+        self.assertEqual(self.notes_of("plain_uniform"), [])
+        self.assertEqual(self.notes_of("plain_zero"), [])
