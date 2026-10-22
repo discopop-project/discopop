@@ -20,11 +20,15 @@ from typing import Any, Callable, Dict, List, Set, Tuple
 
 import pytest
 
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.patterns.TaskParallelismInfo import ParallelRegionInfo, TaskParallelismInfo
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.pattern_detectors.new_task_detector import identify_loop_tasking, identify_simple_tasking
+from discopop_explorer.pattern_detectors.task_dataflow import loop_after_dependences
+from discopop_explorer.utilities.PEGraphConstruction.parser import instructionToCUIdMap
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 
@@ -255,7 +259,14 @@ def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: 
     pet = build_pet_graph([header, function])
     pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "8": "3:2953"}
     pet.jump_only_lines = {"3:2953"}  # the jump back at the closing brace (8)
-    do_all = SimpleNamespace(node_id="3:10", instruction_ids=[5, 6, 7, 8])
+    do_all = SimpleNamespace(
+        node_id="3:10",
+        instruction_ids=[5, 6, 7, 8],
+        affected_cu_ids=["3:10"],
+        shared=[SimpleNamespace(name="data")],
+        private=[SimpleNamespace(name="k")],
+        first_private=[SimpleNamespace(name="n"), SimpleNamespace(name="n")],
+    )
     return pet, do_all
 
 
@@ -299,3 +310,32 @@ def test_a_do_all_loop_without_a_call_is_no_task_loop(
 ) -> None:
     pet, do_all = _loop_with_call(make_node, build_pet_graph, calls=False)
     assert identify_loop_tasking(pet, [do_all], None, first_task_group=0) == []
+
+
+def test_a_loop_task_takes_the_data_sharing_of_the_do_all_loop(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
+    assert (task.shared, task.private, task.first_private) == (["data"], ["k"], ["n"])
+
+
+def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_what_it_wrote(
+    monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    header = make_node("3:10", NodeType.CU, start_line=2951, end_line=2951)
+    after = make_node("3:11", NodeType.CU, start_line=2960, end_line=2960)
+    function = make_node("3:99", NodeType.FUNC, name="fft_aux")
+    deps = []
+    for sink in (9, 10):  # reads on the lines 2960 and 2958: the earlier one is the join
+        dep = Dependency(EdgeType.DATA)
+        dep.dtype, dep.var_name, dep.source_instruction_id, dep.sink_instruction_id = DepType.RAW, "sum", 6, sink
+        deps.append((after.id, header.id, dep))
+    inside = Dependency(EdgeType.DATA)  # both ends in the loop: not a join
+    inside.dtype, inside.var_name, inside.source_instruction_id, inside.sink_instruction_id = DepType.RAW, "k", 5, 7
+    pet = build_pet_graph([header, after, function], deps + [(header.id, header.id, inside)])
+    pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "9": "3:2960", "10": "3:2958"}
+    for instruction in (5, 6, 7):
+        monkeypatch.setitem(instructionToCUIdMap, instruction, header.id)
+    found = loop_after_dependences(pet, [5, 6, 7], 3, 2952)
+    assert [(a.variable, a.kind, a.line) for a in found] == [("sum", "RAW", "3:2958")]

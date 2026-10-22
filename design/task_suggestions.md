@@ -138,11 +138,13 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [ ] **Unknown end line.** Replace the sentinel 262143 by a real end line, or omit it.
 - [x] **Join points.** `ParallelRegionInfo.after_dependences` (task, variable, RAW/WAR, first line after the region),
       from the dependences registered on the TaskGraph contexts (`pattern_detectors/task_dataflow.py`); the tool prints
-      the join line. Open: loop tasks (the tool still says "after the loop"), writes through pointer parameters of
+      the join line. Loop tasks: `loop_after_dependences` queries the PET (RAW/WAR from the instructions of the loop to a later line of
+      the file); the tool names the line, else it keeps the generic "after the loop". Open: writes through pointer
+      parameters of
       callees (the task contexts do not inline the callees: fft shows no join), reads in the caller after the
       function returns.
 - [x] **Data sharing.** Filled from the accesses, not the types (`classify_variable`): declared in the task and not
-      needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Open: reductions,
+      needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Loop tasks take the sharing of the do-all loop, plus what the code after the loop reads as shared. Open: reductions,
       last private, what pointers point to (side-effect export).
 - [ ] **Enclosing loop.** Export the innermost enclosing loop (start line) of a region so
       that its hotspot can be matched; loops are not in the side-effect export.
@@ -151,5 +153,9 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [ ] **Side-effect export:** `static_callees` of `fib` is empty although it calls itself;
       check whether self recursion is excluded on purpose. A recursion flag per group
       (callee is the enclosing function) would let the output suggest a cut-off.
+- [ ] **Patch generation for task patterns.** Fix it: the patches of `PARALLELREGION` and `TASK` entries are not
+      verified (what the patch generator makes of `PARALLELREGION` in the `task` list; `UnpackedSuggestion` handles
+      `task` and `parallel_region` separately; the line the tool prints for a task patch is unexplained). Check the
+      generated patches for fib, fft and the loop tasks, and fix what is wrong.
 - [ ] **Trivial groups.** Groups of unprofitable code (a few `sprintf` calls in the shared
       BOTS sources) are reported with the same weight as real ones.

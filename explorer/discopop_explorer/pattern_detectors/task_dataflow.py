@@ -22,7 +22,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.utilities.PEGraphConstruction.parser import instructionToCUIdMap
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.enums.DepType import DepType
 
@@ -210,6 +214,35 @@ def analyze_task_group(pet: PEGraphX, tasks: List[Context], task_lines: List[Tup
     return GroupDataflow(dependences, after, _sharing(pet, tasks, task_lines, dependences, after))
 
 
+def loop_after_dependences(
+    pet: PEGraphX, instruction_ids: List[int], file_id: int, last_line: int
+) -> List[AfterDependence]:
+    """What the code after a loop depends on: the loop is the one task (index 0), ``instruction_ids`` are its
+    instructions (they lie in the CUs of the body, not only in the node of the loop) and ``last_line`` is the last
+    line of its body. Without contexts, the PET is queried:
+    a RAW or WAR whose earlier end is in the loop and whose later end is a later line of the same file.
+    Writes through pointers in the callees of the loop are not seen (their instructions are not the loop's)."""
+    inside = set(instruction_ids)
+    first_line: Dict[Tuple[str, str], str] = {}
+    cu_ids = sorted({NodeID(instructionToCUIdMap[i]) for i in instruction_ids if i in instructionToCUIdMap})
+    for cu_id in cu_ids:
+        if cu_id not in pet.g:
+            continue
+        for _, _, dependence in in_edges(pet, cu_id, EdgeType.DATA):
+            kind = _kind(dependence)
+            if kind is None or dependence.var_name is None:
+                continue
+            if dependence.source_instruction_id not in inside or dependence.sink_instruction_id in inside:
+                continue
+            line = _line_of_sink(pet, dependence)
+            if line is None or int(line.split(":")[0]) != file_id or _line_number(line) <= last_line:
+                continue
+            key = (dependence.var_name, kind)
+            if key not in first_line or _line_number(line) < _line_number(first_line[key]):
+                first_line[key] = line
+    return [AfterDependence(0, variable, kind, line) for (variable, kind), line in sorted(first_line.items())]
+
+
 def clauses_of_dependences(dependences: List[TaskDependence], task: int) -> Tuple[List[str], List[str], List[str]]:
     """The ``in``, ``out`` and ``in/out`` variables of a task, as the OpenMP depend clauses would list them: the
     earlier access of a RAW is an out, the later an in; of a WAR, the earlier is an in and the later an out."""
@@ -233,4 +266,5 @@ __all__: Tuple[str, ...] = (
     "analyze_task_group",
     "classify_variable",
     "clauses_of_dependences",
+    "loop_after_dependences",
 )

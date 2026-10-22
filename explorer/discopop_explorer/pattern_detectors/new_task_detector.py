@@ -28,7 +28,11 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
-from discopop_explorer.pattern_detectors.task_dataflow import analyze_task_group, clauses_of_dependences
+from discopop_explorer.pattern_detectors.task_dataflow import (
+    analyze_task_group,
+    clauses_of_dependences,
+    loop_after_dependences,
+)
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.StatusReporting.console import stage
@@ -392,6 +396,17 @@ def identify_loop_tasking(
         task.loop_start_line = loop_line
         task.standalone_pattern = False
         task.applicable_pattern = False
+        # per iteration, the loop's own data sharing (do-all); the loop is one task for what the code after it needs
+        task.shared = sorted({v.name for v in do_all.shared})
+        task.private = sorted({v.name for v in do_all.private})
+        task.first_private = sorted({v.name for v in do_all.first_private})
+        after = loop_after_dependences(pet, do_all.instruction_ids, loop_node.file_id, max(body_lines))
+        # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it
+        for needed in sorted({a.variable for a in after if a.kind == "RAW"}):
+            task.private = [v for v in task.private if v != needed]
+            task.first_private = [v for v in task.first_private if v != needed]
+            if needed not in task.shared:
+                task.shared = sorted(task.shared + [needed])
         region = ParallelRegionInfo(
             loop_node,
             TPIType.PARALLELREGION,
@@ -401,6 +416,9 @@ def identify_loop_tasking(
             contained_tasks=[task],
         )
         region.loop_start_line = loop_line
+        region.after_dependences = [
+            {"task": task.pattern_id, "variable": a.variable, "kind": a.kind, "line": a.line} for a in after
+        ]
         patterns += [task, region]
         task_group_num += 1
     return patterns
