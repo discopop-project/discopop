@@ -281,6 +281,8 @@ def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: 
         shared=[SimpleNamespace(name="data")],
         private=[SimpleNamespace(name="k")],
         first_private=[SimpleNamespace(name="n"), SimpleNamespace(name="n")],
+        last_private=[],
+        reduction=[],
     )
     return pet, do_all
 
@@ -333,6 +335,36 @@ def test_a_loop_task_takes_the_data_sharing_of_the_do_all_loop(
     pet, do_all = _loop_with_call(make_node, build_pet_graph)
     task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
     assert (task.shared, task.private, task.first_private) == (["data"], ["k"], ["n"])
+
+
+def test_a_reduced_variable_of_a_loop_task_is_a_reduction_and_not_shared(
+    monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    do_all.shared = [SimpleNamespace(name="data"), SimpleNamespace(name="sum")]
+    do_all.reduction = [SimpleNamespace(name="sum", operation="+")]
+    # the code after the loop reads the sum: it stays a reduction instead of becoming shared
+    after = [SimpleNamespace(task=0, variable="sum", kind="RAW", line="3:2960")]
+    monkeypatch.setattr(
+        "discopop_explorer.pattern_detectors.new_task_detector.after_dependences_of_instructions", lambda *a: after
+    )
+    task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
+    assert task.reduction == ["+:sum"]
+    assert task.shared == ["data"]
+
+
+def test_the_last_private_variables_of_a_do_all_loop_are_kept_next_to_shared(
+    monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    do_all.last_private = [SimpleNamespace(name="last")]
+    after = [SimpleNamespace(task=0, variable="last", kind="RAW", line="3:2960")]
+    monkeypatch.setattr(
+        "discopop_explorer.pattern_detectors.new_task_detector.after_dependences_of_instructions", lambda *a: after
+    )
+    task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
+    assert task.last_private == ["last"]
+    assert task.shared == ["data", "last"]
 
 
 def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_what_it_wrote(

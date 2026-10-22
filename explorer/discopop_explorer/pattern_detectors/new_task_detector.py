@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
@@ -28,6 +28,7 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_explorer.pattern_detectors.task_dataflow import (
     analyze_task_group,
     clauses_of_dependences,
@@ -185,6 +186,7 @@ def _record_data_flow(
     ]
     for index, (task, sharing) in enumerate(zip(task_patterns, flow.sharing)):
         task.shared, task.private, task.first_private = sharing.shared, sharing.private, sharing.first_private
+        task.reduction = sharing.reduction
         task.in_dep, task.out_dep, task.in_out_dep = clauses_of_dependences(flow.dependences, index)
 
 
@@ -346,7 +348,7 @@ def _hotspot_functions(
 
 def identify_loop_tasking(
     pet: PEGraphX,
-    do_all_patterns: List[DoAllInfo],
+    do_all_patterns: Sequence[Union[DoAllInfo, ReductionInfo]],
     hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     first_task_group: int,
 ) -> List[PatternInfo]:
@@ -397,18 +399,26 @@ def identify_loop_tasking(
         task.shared = sorted({v.name for v in do_all.shared})
         task.private = sorted({v.name for v in do_all.private})
         task.first_private = sorted({v.name for v in do_all.first_private})
+        task.reduction = sorted({f"{v.operation or '?'}:{v.name}" for v in do_all.reduction})
+        task.last_private = sorted({v.name for v in do_all.last_private})
         function = function_of(pet, loop_node)
         after = (
             after_dependences_of_instructions(pet, do_all.instruction_ids, loop_node.file_id, max(body_lines), function)
             if function is not None
             else []
         )
-        # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it
-        for needed in sorted({a.variable for a in after if a.kind == "RAW"}):
+        # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it.
+        # A reduced variable keeps its clause, which is how it is shared. A last private one is shared as well, and
+        # listed in last_private as a hint: the value of the last iteration has to be the one that remains.
+        special = {v.name for v in do_all.reduction}
+        for needed in sorted({a.variable for a in after if a.kind == "RAW"} - special):
             task.private = [v for v in task.private if v != needed]
             task.first_private = [v for v in task.first_private if v != needed]
             if needed not in task.shared:
                 task.shared = sorted(task.shared + [needed])
+        task.shared = [v for v in task.shared if v not in special]
+        task.private = [v for v in task.private if v not in special]
+        task.first_private = [v for v in task.first_private if v not in special]
         region = ParallelRegionInfo(
             loop_node,
             TPIType.PARALLELREGION,

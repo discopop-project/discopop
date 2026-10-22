@@ -181,7 +181,10 @@ class PatternDetectorX(object):
                     (g for t in res.patterns.task for g in getattr(t, "task_group", [])), default=-1
                 )
                 res.patterns.task += identify_loop_tasking(
-                    self.pet, [p for p in tmp_result if isinstance(p, DoAllInfo)], hotspots, first_task_group
+                    self.pet,
+                    [p for p in tmp_result if isinstance(p, (DoAllInfo, ReductionInfo))],
+                    hotspots,
+                    first_task_group,
                 )
             # only if their results are reported: the loops were analyzed for the tasks in any case
             detected_types = [t for t in ("doall", "reduction") if "*" in enable_patterns or t in enable_patterns]
