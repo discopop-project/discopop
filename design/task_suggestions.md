@@ -268,3 +268,20 @@ Branch `improvement/task/data_sharing` (not merged yet), answers to its open que
   that "a dependence only shows for non-adjacent tasks of a group of three" is wrong. WAW is the only dependence that
   occurs inside a pair, since it registers no edge. Reductions across the tasks of a group are not reachable with real
   data (`sum += ...` in adjacent statements has an edge); the code path is covered by unit tests only.
+
+### 3.6 Nested do-all loops with tasks: outermost loop, collapse (2026-10-23, to be applied)
+
+Branch `improvement/task/spans_and_war` (not merged yet) reports one loop task suggestion for nested do-all loops with
+the same statement, for the INNERMOST loop; it matches omp-tasks (sparselu: the task sits in the inner loop with
+`firstprivate(kk, jj, ii)`) and the expectations of `task_omp_sparselu`.
+
+Maintainer's guidance: the OUTERMOST loop is typically the best choice for parallelization of nested do-all loops,
+collapsing the nest is typically even better. This contradicts the omp-tasks expectation (ground truth of the tests),
+so the code was left as it is until the maintainer confirms how to resolve it (likely: report the outermost loop, offer
+the collapse as the better variant, and adjust the sparselu expectation with a comment naming the deviation from
+omp-tasks).
+
+- [ ] **Outermost loop for nested do-all loop tasks** (instead of the innermost); decide the sparselu expectation.
+- [ ] **Collapse for loop tasks:** the explorer already finds collapsible do-all nests
+      (`pattern_detectors/loop_collapse_analysis.py`); use it to suggest the collapsed nest as the loop task where the
+      loops are perfectly nested and independent.
