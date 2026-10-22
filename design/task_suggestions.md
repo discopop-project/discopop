@@ -92,6 +92,13 @@ Implausible groups are flagged, not hidden (see 3.3).
 
 ### 3.2 Explorer follow-ups (separate work)
 
+- [ ] **Fill `in_dep` / `out_dep` / `in_out_dep`** (maintainer, by hand; always empty today).
+      Then the tool (`task_groups.dependences`) must be adapted: it prints the fields as
+      `in x; out y; in/out z` without telling the kind of dependence. Per the agreed
+      presentation, RAW is the main information and WAR/WAW are marked `(anti)` / `(output)`,
+      which needs the kind per variable in the explorer's output (a new field or a tagged
+      entry); add a test with real dependences (fib: none; take a case from `bots/omp-tasks`).
+
 - [ ] **Tests from `bots/omp-tasks`.** The hand-written OpenMP task versions in
       `/home/lukas/git/bots/omp-tasks` are the ground truth (maintainer, 2026-10-22): derive the
       unit tests of the task detection from them (what the serial version must yield).
