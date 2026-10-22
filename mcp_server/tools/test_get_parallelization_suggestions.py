@@ -247,8 +247,9 @@ class TestTaskGroups(unittest.TestCase):
             json.dumps({"code_regions": [main, function]})
         )
 
-    def __group(self, tasks: list[dict[str, Any]], start: int, end: int) -> None:
+    def __group(self, tasks: list[dict[str, Any]], start: int, end: int, loop_start_line: str = "") -> None:
         region = {
+            **({"loop_start_line": loop_start_line} if loop_start_line else {}),
             "pattern_id": 5,
             "type": "PARALLELREGION",
             "start_line": "3:4",
@@ -282,6 +283,15 @@ class TestTaskGroups(unittest.TestCase):
         self.assertNotIn("flag:", text)
         self.assertNotIn("#pragma omp parallel", text)
         self.assertNotIn("Loop", text)
+
+    def test_a_task_per_iteration_names_the_loop_and_the_join_after_it(self) -> None:
+        self.__group([_task(3, 8, 8)], 7, 9, loop_start_line="3:7")
+        text = self.__handle()
+        self.assertIn("  one task per iteration of the loop at fib.c:7", text)
+        self.assertIn("  task body 3: fib.c:8-8   x = fib(n - 1);\n", text)
+        self.assertIn("  join: wait for the tasks after the loop", text)
+        self.assertNotIn("parallel region:", text)
+        self.assertNotIn("fewer than two tasks", text)
 
     def test_a_group_inside_a_suggested_loop_is_nested_in_it_and_the_loop_contains_it(self) -> None:
         log = PatternDecisionLog()

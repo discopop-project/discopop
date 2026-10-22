@@ -44,6 +44,8 @@ class TaskGroup:
     start_line: int
     end_line: int
     tasks: list[Task]
+    # set if the tasks are created per iteration of a loop: the line of the loop
+    loop_line: Optional[int] = None
 
 
 @dataclass
@@ -97,7 +99,11 @@ def task_groups(patterns: dict[str, Any]) -> dict[str, TaskGroup]:
         contained = [tasks[t] for t in (entry.get("contains_patterns") or []) if t in tasks]
         # the id of the file is only part of the span of the enclosing code, "file id:line"
         groups[str(entry.get("pattern_id"))] = TaskGroup(
-            _int(str(entry.get("start_line", "")).split(":")[0]), start, end, contained
+            _int(str(entry.get("start_line", "")).split(":")[0]),
+            start,
+            end,
+            contained,
+            _int(str(entry.get("loop_start_line") or "").split(":")[-1]),
         )
     return groups
 
@@ -152,7 +158,7 @@ def flags(group: TaskGroup, source: list[str]) -> list[str]:
                 found.append(f"tasks {a.pattern_id} and {b.pattern_id} have the same lines")
             elif a.start_line <= b.end_line and b.start_line <= a.end_line:
                 found.append(f"the lines of tasks {a.pattern_id} and {b.pattern_id} overlap")
-    if len(spans) < 2:
+    if len(spans) < 2 and group.loop_line is None:
         found.append("fewer than two tasks")
     for task in group.tasks:
         if task.end_line == UNKNOWN_LINE:
@@ -182,11 +188,28 @@ def dependences(group: TaskGroup) -> str:
 
 def describe(group: TaskGroup, display_file: str, source: list[str]) -> list[str]:
     """The lines under a task group's headline."""
+    if group.loop_line is not None:
+        return _describe_loop(group, display_file, source)
     lines = [f"  parallel region: {display_file}:{group.start_line}-{group.end_line}"]
     for task in group.tasks:
         place = f"{display_file}:{task.start_line}-{task.end_line}"
         lines.append(f"  task {task.pattern_id}: {place}   {_body(task, source)}".rstrip())
     lines.append(f"  dependences between the tasks: {dependences(group)}")
+    for flag in flags(group, source):
+        lines.append(f"  flag: {flag}")
+    return lines
+
+
+def _describe_loop(group: TaskGroup, display_file: str, source: list[str]) -> list[str]:
+    """A task group that creates one task per iteration of a loop (the iterations are independent)."""
+    lines = [
+        f"  one task per iteration of the loop at {display_file}:{group.loop_line}"
+        f" (loop lines {group.start_line}-{group.end_line})"
+    ]
+    for task in group.tasks:
+        place = f"{display_file}:{task.start_line}-{task.end_line}"
+        lines.append(f"  task body {task.pattern_id}: {place}   {_body(task, source)}".rstrip())
+    lines.append("  join: wait for the tasks after the loop, before the results are used")
     for flag in flags(group, source):
         lines.append(f"  flag: {flag}")
     return lines

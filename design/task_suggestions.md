@@ -115,8 +115,11 @@ Implausible groups are flagged, not hidden (see 3.3).
       the scopes are stubbed. Findings so far: the overlap of fib's tasks comes from the CU
       generation, not from the detector: CU 3:237 starts at line 31 (`startsAtLine`) though its
       call is on line 32, and the scope of a task is the line range of its CUs.
-- [ ] **Loop and recursive tasking.** The detector does not find the recursive calls in the
-      `for` loop of `fft_aux` (TODO comments in `new_task_detector.run_detection`).
+- [x] **Loop and recursive tasking.** `identify_loop_tasking` (`new_task_detector.py`): a do-all loop whose body
+      calls a hotspot function (any call without hotspot data) is one task per iteration (`loop_start_line` on
+      task and region; fft: the loop of `fft_aux`, 2951). The do-all detection runs for it even if only `task` is
+      requested. Open: loops with some dependences between the iterations (`depend`), the join analysis (the
+      tool always names a join after the loop).
 - [x] **Mutually exclusive branches / conditional tasks.** `identify_simple_tasking` drops tasks that do no work
       (CUs without variables and calls: `return`, the jump over an `else`) and tasks that lead to more than one CU
       outside of them (end in a conditional branch: `||` operands, `bots_message`), and groups with fewer than
