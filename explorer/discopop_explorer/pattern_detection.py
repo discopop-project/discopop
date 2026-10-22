@@ -160,7 +160,7 @@ class PatternDetectorX(object):
 
         # detect parallel tasks
         if "*" in enable_patterns or "task" in enable_patterns:
-            res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
+            res.patterns.task = detect_tasking(self.pet, task_graph, visualizer, self.ast_helper)
 
         # the tasks of loops with independent iterations are derived from the do-all loops
         if (
@@ -181,7 +181,11 @@ class PatternDetectorX(object):
                     (g for t in res.patterns.task for g in getattr(t, "task_group", [])), default=-1
                 )
                 res.patterns.task += identify_loop_tasking(
-                    self.pet, [p for p in tmp_result if isinstance(p, DoAllInfo)], hotspots, first_task_group
+                    self.pet,
+                    [p for p in tmp_result if isinstance(p, DoAllInfo)],
+                    hotspots,
+                    first_task_group,
+                    self.ast_helper,
                 )
             # only if their results are reported: the loops were analyzed for the tasks in any case
             detected_types = [t for t in ("doall", "reduction") if "*" in enable_patterns or t in enable_patterns]
