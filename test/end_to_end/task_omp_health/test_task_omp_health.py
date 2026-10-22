@@ -22,8 +22,8 @@ SRC = Path(__file__).parent / "src"
 # (name of the omp-tasks variant, line of the task statement in src/health.c)
 GROUPS = [("if_cutoff", 40), ("manual_cutoff", 57), ("plain", 74)]
 EXPLORER_REASON = (
-    "the explorer fails with 'Invalid iteration structure' on loops that contain a recursive call and run zero "
-    "times in the leaf calls, so it gives no task patterns at all"
+    "the explorer finishes but reports no region or task on the recursive call in the loop: it reports groups on "
+    "other lines, once per level of the recursion (33 identical copies each)"
 )
 
 
@@ -47,6 +47,10 @@ def _tasks(result: Any, line: int) -> List[TaskParallelismInfo]:
         for p in result.patterns.task
         if type(p) is TaskParallelismInfo and p.region_start_line == str(line) and p.region_end_line == str(line)
     ]
+
+
+def test_the_explorer_finishes_and_reports_task_patterns(result: Any) -> None:
+    assert len(result.patterns.task) > 0
 
 
 @pytest.mark.xfail(strict=True, reason=EXPLORER_REASON)  # type: ignore[misc]
