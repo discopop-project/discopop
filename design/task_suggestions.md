@@ -168,6 +168,19 @@ Implausible groups are flagged, not hidden (see 3.3).
       program order, so of overlapping candidates (`put(&a); put(&b); if (a + b)`: the pairs (a, b) and (b, if)) the
       earlier is split first. The explorer gives the same result on one profile, with any `PYTHONHASHSEED`; fft: the same
       44 entries. Test: `test/end_to_end/task_pointer_flow`.
+- [~] **omp-tasks cases as end-to-end tests** (`test/end_to_end/task_omp_<app>`: nqueens, knapsack, health, floorplan, uts,
+      sort, strassen, sparselu; reduced reproductions, omp-tasks as the expectation; 4 pass, 42 `xfail(strict)`). Found by
+      them, to fix (the xfail then turns into a failure that says so):
+      - **Crash on loops with recursive calls** (health, floorplan, uts): `ValueError: Invalid iteration structure found at
+        node: Start IT` in `TaskGraph.__assign_loop_contexts`, if an instance of such a loop runs zero times or loops are nested.
+      - **Cost per recursive call site** (sort: 90 s guard in the test, strassen: memory limit of 4 GiB in the test):
+        `ContextTaskGraph` construction grows about 9x per call site; seven self-calls of a function run out of memory in
+        `__insert_data_dependencies_from_files`.
+      - **Duplicates** (knapsack): the same region and tasks are reported once per recursion level (17 regions).
+      - **Spans and joins** (nqueens, sparselu): the region and task spans include the header of the loop; the join and the
+        sharing of recursive calls are empty (see recursion join above); spurious WAR on loop variables (`jj`, `ii`);
+        tiny regions in initialisation loops (`genmat`).
+      - Strassen, health, floorplan and the join/sharing expectations are guesses until the explorer gets that far.
 - [ ] **Docs.** Update the documentation where necessary (`docs/tools/MCP_server.md`, the explorer docs and the
       description of the new `patterns.json` fields `task_dependences`, `after_dependences`, `shared`, `private`,
       `first_private`, `jumpInstructionIDs` in `Data.xml`) once the data flow work is finished.
