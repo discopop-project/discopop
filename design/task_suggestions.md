@@ -171,8 +171,13 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [~] **omp-tasks cases as end-to-end tests** (`test/end_to_end/task_omp_<app>`: nqueens, knapsack, health, floorplan, uts,
       sort, strassen, sparselu; reduced reproductions, omp-tasks as the expectation; 4 pass, 42 `xfail(strict)`). Found by
       them, to fix (the xfail then turns into a failure that says so):
-      - **Crash on loops with recursive calls** (health, floorplan, uts): `ValueError: Invalid iteration structure found at
-        node: Start IT` in `TaskGraph.__assign_loop_contexts`, if an instance of such a loop runs zero times or loops are nested.
+      - **Crash on loops with recursive calls** (health, floorplan, uts): fixed (`39af76fc`: a nested `Start IT` of the
+        same loop counts like a nested end). Since then the explorer finishes on health (about 11 s) and uts (about 4 s);
+        floorplan does not finish (120 s guard in the test: `ContextTaskGraph` construction of 45142 nodes slows down to
+        under 100 nodes per second).
+      - **health: groups not found, duplicated.** 594 entries on 18 distinct line ranges (33 identical copies each, one
+        per recursion level); none on the expected lines of the recursive call in the loop.
+      - **uts: no task pattern at all** (the do-all detection rejects the loop, RAW on `parent` between the iterations).
       - **Cost per recursive call site** (sort: 90 s guard in the test, strassen: memory limit of 4 GiB in the test):
         `ContextTaskGraph` construction grows about 9x per call site; seven self-calls of a function run out of memory in
         `__insert_data_dependencies_from_files`.

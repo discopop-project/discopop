@@ -21,16 +21,17 @@ Repository `/home/lukas/git/discopop`. Nothing is pushed.
 | Branch | Content |
 |---|---|
 | `improvement/mcp_server/interface` → `improvement/mcp_server/task_suggestions` → `improvement/profiler/instruction_ids` | PR chain (interface → task suggestions → instruction ids); not opened yet |
-| `test/task_detection/omp_tasks_cases` (current, based on `improvement/profiler/instruction_ids`) | the omp-tasks end-to-end tests and one uncommitted explorer fix |
+| `test/task_detection/omp_tasks_cases` (current, based on `improvement/profiler/instruction_ids`) | the omp-tasks end-to-end tests and the explorer crash fix |
 
 Last commits on `improvement/profiler/instruction_ids`, newest first: `bfcf8758` deterministic task detection,
 `596bb922` pointer writes of callees, `f82361dd` / `d5b84890` join and sharing of loop tasks.
 On the test branch: `a4900c13` the eight `test/end_to_end/task_omp_<app>` directories, `667e1606` design note.
 
-**Uncommitted:** `explorer/discopop_explorer/classes/TaskGraph/TaskGraph.py`, in `__assign_loop_contexts`: a nested
-`Start IT` of the same loop (an inlined recursive instance in the body) is counted like a nested end instead of
-raising `ValueError: Invalid iteration structure found at node: Start IT ...`. Explorer and MCP tests pass (1049); the
-end-to-end/profiler/instrumentation run exited 0 but its summary line was not read, so rerun it before committing.
+**Update (2026-10-22, later):** the crash fix is committed (`39af76fc`). The venv needed `requirements-dev.txt` and a
+reinstall of `./profiler` (non-editable; the installed one predated the instruction IDs and the explorer failed with
+`no such child: instructionIDs`). Steps 1-3 of section 3 are done; the xfail reasons of health, uts and floorplan are
+current, health and uts have a passing "explorer finishes" test, floorplan a 120 s explorer guard (it does not finish).
+The full suites were not rerun after the fix; the counts below are from before it.
 
 ## 2. What the omp-tasks tests show
 
@@ -39,8 +40,9 @@ and sparselu; the omp-tasks version is the expectation; failures are `xfail(stri
 fix: 4 passed, 42 xfailed (6 min 28 s with `-n 8`; sort needs about 90 s, strassen about 2 min). Findings, in order of
 how much they block:
 
-1. **Crash on loops with recursive calls** (health, floorplan, uts): fixed by the uncommitted change above. After it the
-   explorer finishes on health (10 s) and uts; floorplan was not checked (its explorer run was killed).
+1. **Crash on loops with recursive calls** (health, floorplan, uts): fixed by `39af76fc`. After it the
+   explorer finishes on health (11 s) and uts (4 s); floorplan does not finish within 400 s (ContextTaskGraph
+   construction, 45142 nodes, slows to under 100 nodes/s).
 2. **Duplicates per recursion level** (health: 594 task entries on about 12 distinct line ranges; knapsack: 17 identical
    regions). Cause: `identify_simple_tasking` emits one group per context instance, and the recursive inlining makes
    copies.
@@ -59,18 +61,11 @@ explorer gets that far; adjust them to the omp-tasks code, not to the explorer o
 
 ## 3. Next steps, in order
 
-1. **Floorplan check.** Build the profile (`test/end_to_end/pipeline.build_and_profile`) and run
-   `discopop_explorer --enable-patterns task` in it with a time limit; floorplan was slow before (about 11 s) and may be
-   much slower now.
-2. **Update the three `xfail` reasons** (`task_omp_health`, `task_omp_floorplan`, `task_omp_uts`; they still say the
-   explorer aborts) and add a non-xfail test per directory that the explorer finishes on the program. Check with
-   `pytest --runxfail` what each test fails on now.
-3. **Commit the crash fix** on the test branch (conventional commit, `Co-Authored-By: Claude Sonnet 5.5
-   <noreply@anthropic.com>`), after the full suites pass.
+1. ~~Floorplan check~~, 2. ~~xfail reasons and finishing tests~~, 3. ~~commit the crash fix~~: done (see the update above).
 4. **Deduplicate groups** in `identify_simple_tasking` (`pattern_detectors/new_task_detector.py`): emit a group once per
    (parent PET node, task line ranges, task instruction ids). Check fft (44 entries) and fib stay the same; knapsack
    should drop to one region; add a unit test.
-5. Then, by value: the cost per recursive call site (3.), the do-all result for loops with recursion (4.), the span
+5. Then, by value: the cost per recursive call site (3.; floorplan too), the do-all result for loops with recursion (4.), the span
    including the loop header (5.).
 
 ## 4. Todo list from `design/task_suggestions.md` (not started)
