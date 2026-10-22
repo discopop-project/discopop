@@ -144,7 +144,10 @@ def identify_simple_tasking(
         tpc_parent_pet_node = tpc.parent_context.get_first_pet_node(ctg.pet)
         if tpc_parent_pet_node is None:
             continue
-        parent_scopes = tpc.parent_context.get_code_scope(ctg.pet, inclusive=False)
+        # the lines of the instructions of the contexts; a context that holds none keeps the range of its nodes
+        parent_scopes = ctg.pet.get_line_ids_of_instructions(
+            tpc.parent_context.get_instruction_scope(ctg.pet, inclusive=False)
+        ) or tpc.parent_context.get_code_scope(ctg.pet, inclusive=False)
         parent_scope_file_id = tpc_parent_pet_node.file_id
         parent_scope_lines = [get_line_num(s) for s in parent_scopes]
         parent_scopes_min_line = min(parent_scope_lines)
@@ -168,7 +171,9 @@ def identify_simple_tasking(
 
         for task in tpc.registered_tasks:
             task_scopes: List[LineID] = []
-            task_scopes += task.get_code_scope(ctg.pet, inclusive=True)
+            task_scopes += ctg.pet.get_line_ids_of_instructions(
+                task.get_instruction_scope(ctg.pet, inclusive=True)
+            ) or task.get_code_scope(ctg.pet, inclusive=True)
             task_scopes = list(dict.fromkeys(task_scopes))
             #            task_scope_file_id = task_pet_node.file_id
             task_scope_line_nums = [get_line_num(ts) for ts in task_scopes if get_file_id(ts) == parent_scope_file_id]

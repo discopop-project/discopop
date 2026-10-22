@@ -16,7 +16,7 @@ of the explorer from it (see design/task_suggestions.md).
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import pytest
 
@@ -45,6 +45,7 @@ def _detect(
     parent_scope: List[str],
     task_scopes: List[List[str]],
     task_instructions: List[List[int]] | None = None,
+    instruction_lines: Dict[int, str] | None = None,
 ) -> Tuple[Any, Any]:
     """The tasks and the parallel region the detector reports for one group of tasks."""
     instructions = task_instructions or [[] for _ in task_scopes]
@@ -52,7 +53,9 @@ def _detect(
         parent_context=_context(parent_scope, parent_node),
         registered_tasks=[_context(scope, None, ids) for scope, ids in zip(task_scopes, instructions)],
     )
-    patterns = identify_simple_tasking(SimpleNamespace(pet=None), [tpc])  # type: ignore[arg-type, list-item]
+    lines = instruction_lines or {}
+    pet = SimpleNamespace(get_line_ids_of_instructions=lambda ids: [lines[i] for i in ids if i in lines])
+    patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc])  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
     return tasks, regions
@@ -95,6 +98,22 @@ def test_tasks_and_region_carry_the_instructions_of_the_tasks(
     tasks, regions = _detect(parent, ["3:29", "3:35"], [["3:31"], ["3:32"]], [[849, 850], [853, 854]])
     assert [t.instruction_ids for t in tasks] == [[849, 850], [853, 854]]
     assert regions[0].instruction_ids == [849, 850, 853, 854]
+
+
+def test_the_spans_follow_the_lines_of_the_instructions_of_the_tasks(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode
+) -> None:
+    """The code scope is the range of the nodes: here it is wider than the statements the tasks consist of."""
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    tasks, regions = _detect(
+        parent,
+        ["3:29", "3:35"],
+        [_lines(3, 30, 33), _lines(3, 31, 34)],
+        [[849, 850], [853, 854]],
+        {849: "3:31", 850: "3:31", 853: "3:32", 854: "3:32"},
+    )
+    assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
+    assert (int(regions[0].region_start_line), int(regions[0].region_end_line)) == (31, 32)
 
 
 def test_a_group_without_scope_inside_its_parent_is_skipped(isolated_pattern_id_cwd: Any, make_node: MakeNode) -> None:
