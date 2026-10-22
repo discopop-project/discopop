@@ -251,3 +251,20 @@ iterations of one loop execution, and the loop is rejected (uts: RAW on `parent`
 - [ ] `callpath_state_return_targets.txt` is written (31 MB for strassen) but never used by the runtime.
 - [ ] `--enable-patterns doall` alone crashes the explorer (`'PatternStorage' object has no attribute 'reduction'`,
       `pattern_detection.py`); `doall,reduction` works.
+
+### 3.5 Decisions of the maintainer on the data sharing work (2026-10-23)
+
+Branch `improvement/task/data_sharing` (not merged yet), answers to its open questions:
+
+- Loops with a reduction that call a hotspot function also yield loop tasks (one task per iteration, `reduction` filled
+  in): desired, the implementation of the pragmas can use the information.
+- WAW between adjacent tasks: they stay offered as parallel, reported as an output dependence. WAW does not prevent
+  parallelization if the variable is privatized correctly, so the suggestion has to make the privatization visible
+  (the data sharing of the group, `out` dependences in `task_dependences`).
+- `last_private` as a hint on top of `shared` (OpenMP tasks have no lastprivate): acceptable, it conveys the
+  information in an easily understandable way.
+- Found by that work: groups are always pairs of tasks without a data edge between them, so RAW and WAR can never
+  appear inside a group (they appear as the join before the dependent statement, `after_dependences`); the earlier note
+  that "a dependence only shows for non-adjacent tasks of a group of three" is wrong. WAW is the only dependence that
+  occurs inside a pair, since it registers no edge. Reductions across the tasks of a group are not reachable with real
+  data (`sum += ...` in adjacent statements has an edge); the code path is covered by unit tests only.
