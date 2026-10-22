@@ -385,10 +385,10 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
           }
 
           std::vector<CU*> bb_cus_vector = bb_id_to_cu_ids_map[bb->getName().str()];
-          // locate the CU where this function call belongs
+          // locate the CU where this function call belongs: the one that holds the call instruction
           for (auto i : bb_cus_vector) {
-            LID lid = dputil::GetLid(&*instruction, file_id);
-            if (lid >= i->start_line && lid <= i->end_line) {
+            if (std::find(i->instructions.begin(), i->instructions.end(), &*instruction) != i->instructions.end()) {
+              LID lid = dputil::GetLid(&*instruction, file_id);
               i->instructions_line_numbers.insert(lid);
               i->children_nodes.push_back(n);
               i->call_line_to_function_map[lid].push_back(n);

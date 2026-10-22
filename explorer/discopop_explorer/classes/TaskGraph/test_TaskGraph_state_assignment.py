@@ -87,7 +87,12 @@ def _task_graph_from_profile(name: str, tmp_path: Path) -> TaskGraph:
     shutil.copytree(PROFILES / name, profile)
     # the parser collects the line -> CU maps in module globals and never resets them, so a second
     # PET built in the same process would see the CUs of the first one (pre-existing, see PLAN.md)
-    for line_map in (parser.readlineToCUIdMap, parser.writelineToCUIdMap, parser.lineToCUIdMap):
+    for line_map in (
+        parser.readlineToCUIdMap,
+        parser.writelineToCUIdMap,
+        parser.lineToCUIdMap,
+        parser.instructionToCUIdMap,
+    ):
         line_map.clear()
     pet = PEGraphX.from_parsed_input(
         *parse_inputs(  # type: ignore[arg-type]

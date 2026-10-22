@@ -452,7 +452,7 @@
 	</Node>
 
 	<Node id="1:21" type="0" name="" startsAtLine = "1:20" endsAtLine = "1:21">
-		<childrenNodes>1:24</childrenNodes>
+		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
 		<readDataSize>96</readDataSize>
 		<writeDataSize>64</writeDataSize>
@@ -475,22 +475,11 @@
 			<global type="ptr" defLine="1:20" accessMode="W">v</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:21" callInstId="88">1:24</nodeCalled>
-				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:24" type="3" name="_Z6to_intPKcPi" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="ptr" defLine="5" accessMode="RW">token</arg>
-			<arg type="ptr" defLine="5" accessMode="RW">ret</arg>
-		</funcArguments>
-		<funcReturnLines></funcReturnLines>
-	</Node>
-
 	<Node id="1:22" type="0" name="" startsAtLine = "1:21" endsAtLine = "1:22">
-		<childrenNodes>1:25</childrenNodes>
+		<childrenNodes>1:24</childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>64</writeDataSize>
@@ -510,27 +499,28 @@
 			<global type="ptr" defLine="1:20" accessMode="R">v</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:22" callInstId="93">1:25</nodeCalled>
+			<nodeCalled atLine="1:21" callInstId="88">1:24</nodeCalled>
 				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:25" type="3" name="_Z4notei" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+	<Node id="1:24" type="3" name="_Z6to_intPKcPi" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
 		<childrenNodes></childrenNodes>
 		<funcArguments>
-			<arg type="i32" defLine="15" accessMode="RW">v</arg>
+			<arg type="ptr" defLine="5" accessMode="RW">token</arg>
+			<arg type="ptr" defLine="5" accessMode="RW">ret</arg>
 		</funcArguments>
 		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:23" type="0" name="" startsAtLine = "1:23" endsAtLine = "1:24">
-		<childrenNodes></childrenNodes>
+		<childrenNodes>1:25</childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>5</instructionsCount>
-		<instructionLines count="2">1:23,1:24</instructionLines>
+		<instructionLines count="3">1:22,1:23,1:24</instructionLines>
 		<instructionIDs count="6">93,94,95,96,97,98</instructionIDs>
 		<readPhaseLines count="1">1:23</readPhaseLines>
 		<writePhaseLines count="1">1:23</writePhaseLines>
@@ -545,7 +535,17 @@
 			<global type="ptr" defLine="1:20" accessMode="R">v</global>
 		</globalVariables>
 		<callsNode>
+			<nodeCalled atLine="1:22" callInstId="93">1:25</nodeCalled>
+				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:25" type="3" name="_Z4notei" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="15" accessMode="RW">v</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:26" type="0" name="" startsAtLine = "1:19" endsAtLine = "1:19">

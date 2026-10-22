@@ -257,3 +257,19 @@ def test_enforce_single_function_exit_node_adds_exit_node_after_last_successor(
 
     predecessors = {s for s, t, d in in_edges(pet, exit_node.id, EdgeType.SUCCESSOR)}
     assert predecessors == {cu2.id}
+
+
+def test_a_dependence_end_belongs_to_the_cu_that_holds_its_instruction() -> None:
+    from discopop_explorer.classes.PEGraph.PEGraphX import _cu_ids
+    from discopop_explorer.utilities.PEGraphConstruction import parser
+
+    parser.instructionToCUIdMap.clear()
+    parser.instructionToCUIdMap.update({849: "3:237", 853: "3:238"})
+    try:
+        # both CUs have line 32 in their lines; the instruction decides
+        assert _cu_ids(853, {"3:237", "3:238"}) == {"3:238"}
+        # an end without an instruction id, or of an instruction no CU holds, falls back to the line
+        assert _cu_ids(None, {"3:237", "3:238"}) == {"3:237", "3:238"}
+        assert _cu_ids(1, {"3:237"}) == {"3:237"}
+    finally:
+        parser.instructionToCUIdMap.clear()

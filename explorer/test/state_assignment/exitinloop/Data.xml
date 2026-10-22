@@ -296,7 +296,7 @@
 	</Node>
 
 	<Node id="1:15" type="0" name="" startsAtLine = "1:16" endsAtLine = "1:16">
-		<childrenNodes>1:17</childrenNodes>
+		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body5</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>0</writeDataSize>
@@ -316,27 +316,17 @@
 			<global type="ptr" defLine="LineNotFound" accessMode="R">i</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:16" callInstId="56">1:17</nodeCalled>
-				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:17" type="3" name="_Z4evali" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32" defLine="8" accessMode="RW">i</arg>
-		</funcArguments>
-		<funcReturnLines></funcReturnLines>
-	</Node>
-
 	<Node id="1:16" type="0" name="" startsAtLine = "1:17" endsAtLine = "1:17">
-		<childrenNodes></childrenNodes>
+		<childrenNodes>1:17</childrenNodes>
 		<BasicBlockID>for.body5</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
-		<instructionLines count="1">1:17</instructionLines>
+		<instructionLines count="2">1:16,1:17</instructionLines>
 		<instructionIDs count="2">56,57</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
@@ -349,7 +339,17 @@
 		<globalVariables>
 		</globalVariables>
 		<callsNode>
+			<nodeCalled atLine="1:16" callInstId="56">1:17</nodeCalled>
+				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:17" type="3" name="_Z4evali" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="8" accessMode="RW">i</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:18" type="0" name="" startsAtLine = "1:15" endsAtLine = "1:15">

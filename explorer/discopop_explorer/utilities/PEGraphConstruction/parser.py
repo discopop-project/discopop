@@ -21,6 +21,8 @@ from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import Loo
 
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
 readlineToCUIdMap = defaultdict(set)  # type: ignore
+# Map from the id of an instruction to the id of the CU that holds it. Exact, in contrast to the line maps.
+instructionToCUIdMap: Dict[int, str] = dict()
 # Map to record which line belongs to write set of nodes. LID -> NodeIds
 writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
@@ -41,6 +43,9 @@ def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
     for node in parsed_cu.Node:
         node.childrenNodes = str(node.childrenNodes).split(",") if node.childrenNodes else []
         if node.get("type") == "0":
+            for instruction_id in str(node.instructionIDs).split(","):
+                if instruction_id.strip():
+                    instructionToCUIdMap[int(instruction_id)] = node.get("id")
             for instruction_id in str(node.writePhaseLines).split(","):
                 writelineToCUIdMap[instruction_id].add(node.get("id"))
             for instruction_id in str(node.readPhaseLines).split(","):

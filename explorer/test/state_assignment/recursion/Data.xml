@@ -106,7 +106,7 @@
 	</Node>
 
 	<Node id="1:5" type="0" name="" startsAtLine = "1:5" endsAtLine = "1:5">
-		<childrenNodes>1:7</childrenNodes>
+		<childrenNodes></childrenNodes>
 		<BasicBlockID>if.end</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>0</writeDataSize>
@@ -127,21 +127,11 @@
 			<global type="ptr" defLine="GlobalVar" accessMode="W">retval</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:5" callInstId="20">1:7</nodeCalled>
-				<recursiveFunctionCall>_Z3reci 1:5,</recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:7" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32" defLine="3" accessMode="RW">n</arg>
-		</funcArguments>
-		<funcReturnLines></funcReturnLines>
-	</Node>
-
 	<Node id="1:6" type="0" name="" startsAtLine = "1:5" endsAtLine = "1:5">
-		<childrenNodes></childrenNodes>
+		<childrenNodes>1:7</childrenNodes>
 		<BasicBlockID>if.end</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>64</writeDataSize>
@@ -160,7 +150,17 @@
 		<globalVariables>
 		</globalVariables>
 		<callsNode>
+			<nodeCalled atLine="1:5" callInstId="20">1:7</nodeCalled>
+				<recursiveFunctionCall>_Z3reci 1:5,</recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:7" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="3" accessMode="RW">n</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 </Nodes>

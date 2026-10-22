@@ -162,7 +162,7 @@
 	</Node>
 
 	<Node id="1:8" type="0" name="" startsAtLine = "1:12" endsAtLine = "1:12">
-		<childrenNodes>1:10</childrenNodes>
+		<childrenNodes></childrenNodes>
 		<BasicBlockID>if.then</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>0</writeDataSize>
@@ -182,27 +182,17 @@
 			<global type="ptr" defLine="1:6" accessMode="R">n</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:12" callInstId="38">1:10</nodeCalled>
-				<recursiveFunctionCall>_Z3reci 1:12,</recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:10" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32" defLine="6" accessMode="RW">n</arg>
-		</funcArguments>
-		<funcReturnLines></funcReturnLines>
-	</Node>
-
 	<Node id="1:9" type="0" name="" startsAtLine = "1:13" endsAtLine = "1:13">
-		<childrenNodes></childrenNodes>
+		<childrenNodes>1:10</childrenNodes>
 		<BasicBlockID>if.then</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
-		<instructionLines count="1">1:13</instructionLines>
+		<instructionLines count="2">1:12,1:13</instructionLines>
 		<instructionIDs count="2">38,39</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
@@ -215,7 +205,17 @@
 		<globalVariables>
 		</globalVariables>
 		<callsNode>
+			<nodeCalled atLine="1:12" callInstId="38">1:10</nodeCalled>
+				<recursiveFunctionCall>_Z3reci 1:12,</recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:10" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="6" accessMode="RW">n</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:11" type="0" name="" startsAtLine = "1:14" endsAtLine = "1:14">

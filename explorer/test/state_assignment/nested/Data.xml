@@ -245,7 +245,7 @@
 	</Node>
 
 	<Node id="1:13" type="0" name="" startsAtLine = "1:8" endsAtLine = "1:8">
-		<childrenNodes>1:15</childrenNodes>
+		<childrenNodes></childrenNodes>
 		<BasicBlockID>for.body3</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
@@ -267,21 +267,11 @@
 			<global type="ptr" defLine="1:5" accessMode="R">s</global>
 		</globalVariables>
 		<callsNode>
-			<nodeCalled atLine="1:8" callInstId="43">1:15</nodeCalled>
-				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
 	</Node>
 
-	<Node id="1:15" type="3" name="_Z4leafi" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
-		<childrenNodes></childrenNodes>
-		<funcArguments>
-			<arg type="i32" defLine="3" accessMode="RW">v</arg>
-		</funcArguments>
-		<funcReturnLines></funcReturnLines>
-	</Node>
-
 	<Node id="1:14" type="0" name="" startsAtLine = "1:8" endsAtLine = "1:9">
-		<childrenNodes></childrenNodes>
+		<childrenNodes>1:15</childrenNodes>
 		<BasicBlockID>for.body3</BasicBlockID>
 		<readDataSize>32</readDataSize>
 		<writeDataSize>64</writeDataSize>
@@ -300,7 +290,17 @@
 		<globalVariables>
 		</globalVariables>
 		<callsNode>
+			<nodeCalled atLine="1:8" callInstId="43">1:15</nodeCalled>
+				<recursiveFunctionCall></recursiveFunctionCall>
 		</callsNode>
+	</Node>
+
+	<Node id="1:15" type="3" name="_Z4leafi" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
+		<childrenNodes></childrenNodes>
+		<funcArguments>
+			<arg type="i32" defLine="3" accessMode="RW">v</arg>
+		</funcArguments>
+		<funcReturnLines></funcReturnLines>
 	</Node>
 
 	<Node id="1:16" type="0" name="" startsAtLine = "1:7" endsAtLine = "1:7">

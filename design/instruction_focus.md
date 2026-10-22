@@ -10,7 +10,7 @@ directory for details.
 
 # Instruction focus: CUs made of instruction IDs — Plan
 
-Status: stage 1 done (2026-10-22). Branch `improvement/profiler/instruction_ids` (based on
+Status: stages 1 and 2 done (2026-10-22). Branch `improvement/profiler/instruction_ids` (based on
 `improvement/mcp_server/task_suggestions`).
 
 Goal (maintainer): instruction IDs become the identity of what the analysis works with — CUs,
@@ -90,9 +90,11 @@ Other findings:
    `Dependency` has `source/sink_instruction_id` and `source/sink_state_id`, set by the PET parser
    and by the TaskGraph. No change in behaviour (end-to-end, profiler, instrumentation, explorer
    and pass unit tests pass). The derived lines do *not* equal `instructionLines`, see 2a.
-2. **Exact mapping.** Dependence → CU and call → CU by instruction ID (calls: record the CU while
-   processing the call instruction, drop the line-range search). Lines remain only for data
-   without IDs (to check: static dependences of the hybrid analysis).
+2. **Exact mapping — done.** Call → CU: the call goes to the CU that holds its instruction
+   (`createCUs.cpp`, no line-range search). Dependence → CU: `parser.instructionToCUIdMap`
+   (instruction id → CU) is used by `PEGraphX`; lines remain only as fallback for an end without
+   an id or an id no CU holds. On fib the calls 849/853 now sit in 3:237/3:238 (one CU off before).
+   The line maps have no other consumer (GUI, optimizer: checked).
 3. **Split position.** Split before the first instruction of the call's statement (move the
    statement head into the new CU); compute phases, sizes and counts from the instruction list
    when a CU closes instead of incrementally. Makes the fib xfail pass.
@@ -118,6 +120,6 @@ Each stage gets its own tests and commit.
 
 - [x] Every relevant instruction gets an ID (all of an instrumented function, see 2a).
 - [x] Format of the static dependences of the hybrid analysis: instruction IDs.
-- [ ] Other consumers of the line → CU mapping (GUI, optimizer) before stage 2.
+- [x] Other consumers of the line → CU mapping: only `parser.py`, `PEGraphX` and one test.
 - [x] Profiler rebuild and reinstall (`pip install ./profiler`, ~1 min), pass unit tests
       (`DiscoPoP_Pass_UT`), profiler/instrumentation tests.

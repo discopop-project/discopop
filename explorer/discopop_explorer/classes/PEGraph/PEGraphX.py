@@ -49,7 +49,11 @@ except (ImportError, ModuleNotFoundError):
 
     Visualizer = object  # type: ignore[assignment, misc]
 
-from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
+from discopop_explorer.utilities.PEGraphConstruction.parser import (
+    instructionToCUIdMap,
+    readlineToCUIdMap,
+    writelineToCUIdMap,
+)
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_dependency, parse_cu
@@ -86,6 +90,14 @@ global_pet = None
 #            int(id_string)
 #        except ValueError:
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
+
+
+def _cu_ids(instruction_id: Optional[int], by_line: Set[str]) -> Set[str]:
+    """The CU of a dependence end: the one that holds its instruction. Only an end recorded without an
+    instruction id (or one no CU holds, e.g. in an uninstrumented function) falls back to its line."""
+    if instruction_id is not None and instruction_id in instructionToCUIdMap:
+        return {instructionToCUIdMap[instruction_id]}
+    return by_line
 
 
 class PEGraphX(Plottable, object):  # type: ignore[misc]
@@ -167,22 +179,22 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 pos = nx.random_layout(g)
         for idx, dep in progress(list(enumerate(dependencies_list)), desc="Adding dependencies"):
             if dep.type == "INIT":
-                sink = readlineToCUIdMap[dep.sink]
+                sink = _cu_ids(dep.sink_instruction_id, readlineToCUIdMap[dep.sink])
                 if len(sink) > 0:
                     for s in sink:
                         g.add_edge(s, s, data=parse_dependency(dep))
                 else:
                     # check for write lines
-                    sink = writelineToCUIdMap[dep.sink]
+                    sink = _cu_ids(dep.sink_instruction_id, writelineToCUIdMap[dep.sink])
                     for s in sink:
                         g.add_edge(s, s, data=parse_dependency(dep))
                 continue
             elif dep.type == "RAW" or dep.type == "WAR":
-                sink_cu_ids = readlineToCUIdMap[dep.sink]
-                source_cu_ids = writelineToCUIdMap[dep.source]
+                sink_cu_ids = _cu_ids(dep.sink_instruction_id, readlineToCUIdMap[dep.sink])
+                source_cu_ids = _cu_ids(dep.source_instruction_id, writelineToCUIdMap[dep.source])
             elif dep.type == "WAW":
-                sink_cu_ids = writelineToCUIdMap[dep.sink]
-                source_cu_ids = writelineToCUIdMap[dep.source]
+                sink_cu_ids = _cu_ids(dep.sink_instruction_id, writelineToCUIdMap[dep.sink])
+                source_cu_ids = _cu_ids(dep.source_instruction_id, writelineToCUIdMap[dep.source])
             else:
                 raise ValueError("Unknown dep.type: " + dep.type + " for dependency: " + str(dep))
 
