@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
@@ -25,17 +25,19 @@ from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     TaskParallelismInfo,
     TPIType,
 )
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.task_cursor_loops import LoopTaskSource
 from discopop_explorer.pattern_detectors.task_dataflow import (
     analyze_task_group,
     clauses_of_dependences,
     after_dependences_of_instructions,
     function_of,
+    instructions_with_callees,
 )
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -58,7 +60,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
         simplification_result = context_task_graph.simplify_graph()
 
     # result += identify_simple_taskloop(pet, task_graph)
-    result += identify_simple_tasking(context_task_graph, simplification_result)
+    result += identify_simple_tasking(context_task_graph, simplification_result, observed_dependences(task_graph))
     if visualizer:
         show_all_plots(context_task_graph)
 
@@ -191,10 +193,48 @@ def _record_data_flow(
         task.in_dep, task.out_dep, task.in_out_dep = clauses_of_dependences(flow.dependences, index)
 
 
+def observed_dependences(task_graph: TaskGraph) -> Set[Tuple[int, int]]:
+    """``(earlier instruction, later instruction)`` of every RAW and WAR registered on a context of the task graph that
+    is not carried by a loop, in any copy of the code the graph holds.
+
+    The task graph holds a copy of a function per call and per level of a recursion, and the profile's dependences
+    reach only some of them (the call paths of a recursive function stand for all of its levels). The instructions are
+    those of the program, the same in every copy: a dependence found in one copy is one of the code of all of them."""
+    found: Set[Tuple[int, int]] = set()
+    for context in task_graph.contexts:
+        for _, dependence in context.outgoing_dependencies:
+            if dependence is None or dependence.dtype not in (DepType.RAW, DepType.WAR):
+                continue
+            if dependence.carried_by_loop is not None or dependence.carried_by_pet_loops is not None:
+                continue
+            if dependence.source_instruction_id is None or dependence.sink_instruction_id is None:
+                continue
+            found.add((dependence.source_instruction_id, dependence.sink_instruction_id))
+    return found
+
+
+def _neighbours_depend(pet: PEGraphX, tasks: List[TaskParallelismInfo], observed: Set[Tuple[int, int]]) -> bool:
+    """Whether a task reads or overwrites what the task before it accessed, in itself or in the functions it calls.
+    Such tasks are no parallelism. The instructions both reach (the same function called by both, e.g. a recursion)
+    tell nothing."""
+    executed = [instructions_with_callees(pet, task.instruction_ids) for task in tasks]
+    for earlier, later in zip(executed, executed[1:]):
+        common = earlier & later
+        if any((a, b) in observed for a in earlier - common for b in later - common):
+            return True
+    return False
+
+
 def identify_simple_tasking(
-    ctg: ContextTaskGraph, simplification_results: List[TaskParentContext]
+    ctg: ContextTaskGraph,
+    simplification_results: List[TaskParentContext],
+    observed: Optional[Set[Tuple[int, int]]] = None,
 ) -> List[PatternInfo]:
-    """Analyzes the results of the graph simplification and create simple tasking patterns."""
+    """Analyzes the results of the graph simplification and create simple tasking patterns.
+
+    ``observed`` are the instruction pairs of the dependences of the program (``observed_dependences``): a group
+    whose neighbouring tasks depend on each other in any copy of the code is dropped. The simplification found it
+    in the copy it looked at, which may be one the profile's dependences did not reach."""
     patterns: List[PatternInfo] = []
     logger.info("Extracting task suggestions from graph simplification results")
 
@@ -301,6 +341,8 @@ def identify_simple_tasking(
 
         if invalid:
             continue
+        if observed is not None and _neighbours_depend(ctg.pet, pattern_objects, observed):
+            continue
         group_key = (
             tpc_parent_pet_node.id,
             tuple((lines[1], lines[2], tuple(tpi.instruction_ids)) for lines, tpi in zip(task_lines, pattern_objects)),
@@ -385,7 +427,7 @@ def _loop_index_names(pet: PEGraphX, header_lines: Set[str], cus: List[CUNode]) 
 
 def identify_loop_tasking(
     pet: PEGraphX,
-    do_all_patterns: List[DoAllInfo],
+    do_all_patterns: Sequence[LoopTaskSource],
     hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     first_task_group: int,
 ) -> List[PatternInfo]:

@@ -48,6 +48,7 @@ from discopop_explorer.pattern_detectors.new_task_detector import (
     identify_loop_tasking,
 )
 from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_and_reduction_new
+from discopop_explorer.pattern_detectors.task_cursor_loops import LoopTaskSource, find_cursor_loops
 from discopop_explorer.pattern_detectors.new_do_all_detector import DECISION_DETECTOR as DO_ALL_AND_REDUCTION_DETECTOR
 from discopop_explorer.classes.patterns.PatternDecisions import PatternDecisionLog
 
@@ -180,9 +181,10 @@ class PatternDetectorX(object):
                 first_task_group = 1 + max(
                     (g for t in res.patterns.task for g in getattr(t, "task_group", [])), default=-1
                 )
-                res.patterns.task += identify_loop_tasking(
-                    self.pet, [p for p in tmp_result if isinstance(p, DoAllInfo)], hotspots, first_task_group
-                )
+                # the loops with a cursor (while (v) { f(v); v = v->next; }) are tasks per iteration as well
+                loop_sources: List[LoopTaskSource] = [p for p in tmp_result if isinstance(p, DoAllInfo)]
+                loop_sources += find_cursor_loops(task_graph, {p.node_id for p in tmp_result})
+                res.patterns.task += identify_loop_tasking(self.pet, loop_sources, hotspots, first_task_group)
             # only if their results are reported: the loops were analyzed for the tasks in any case
             detected_types = [t for t in ("doall", "reduction") if "*" in enable_patterns or t in enable_patterns]
             if len(detected_types) > 0:
