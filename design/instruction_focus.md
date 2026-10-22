@@ -10,7 +10,8 @@ directory for details.
 
 # Instruction focus: CUs made of instruction IDs — Plan
 
-Status: planning (2026-10-22). Branch `improvement/mcp_server/task_suggestions`.
+Status: stage 1 done (2026-10-22). Branch `improvement/profiler/instruction_ids` (based on
+`improvement/mcp_server/task_suggestions`).
 
 Goal (maintainer): instruction IDs become the identity of what the analysis works with — CUs,
 dependences, contexts, patterns — and are carried through the whole pipeline. Lines and columns
@@ -36,7 +37,7 @@ Calls are attached afterwards by searching the first CU of the block whose line 
 the call's line, so call 31 lands on 3:236 and call 32 on 3:237 (matches `Data.xml`: one CU off).
 The task detector's scopes (`[31]`, `[31, 32]`) follow from that; see
 `design/task_suggestions.md` and the strict xfail in `test_new_task_detector.py`.
-The table is derived from reading the code; stage 1 verifies it (dump per CU).
+Verified with the instruction lists of stage 1 (fib, `Data.xml`): exactly as in the table.
 
 ## 2. What exists
 
@@ -52,13 +53,43 @@ The table is derived from reading the code; stage 1 verifies it (dump per CU).
   analysis erases only inserted callbacks (stage 4). So `Instruction*` kept per CU in stage 1 can
   be written as IDs in stage 3.
 
+## 2a. Findings of stage 1 (fib, 220 CUs)
+
+The lines derived from the instruction lists differ from `instructionLines` for 96 CUs, for two
+reasons, both in the line bookkeeping of `createCUs.cpp`:
+
+- **The line of a call is counted in the CU before the call** (95 CUs, e.g. `1:2`): the line is
+  inserted into the current CU before the split, the call itself starts the new CU. The old CU
+  claims a line it has no instruction of; the new one lacks the line of its own call. This is
+  also why calls are attributed one CU off.
+- **The cautious-property split erases a whole line** (`3:238`): it removes the line of the
+  moved load from the old CU, although another instruction of that line (`load x`, line 34)
+  stays there.
+
+The instruction lists are therefore the reference, not `instructionLines`. Stage 1 places a call
+in the CU the split starts (where it belongs by the split), and the moved load in the new CU.
+
+Other findings:
+- Static dependences are instruction-ID based too (`113 NOM WAR 111|i`).
+- Every instruction of an instrumented function gets an ID (`RunOnBasicBlock`), those without
+  position map to `*`.
+- The TaskGraph warns "TODO: update available data to use instructionIDs instead of lineIDs as the
+  default." (`__insert_data_dependencies_from_files`): the same direction, planned before.
+- `262143` / `16383` is a decoded unset line ID (2^18-1, 2^14-1); dummy nodes of called
+  functions carry it as `startsAtLine` (`16383:262143`).
+- The fixtures in `explorer/test/state_assignment` were stale (profiler output changed since):
+  regenerated; `trycatch` now also records the WAR of `g_caught += 1` (load 98 -> store 100), so
+  7 record ends at cut lines instead of 6. Checked that the profiler without the stage-1 change
+  gives the same dependences (up to memory region ids).
+
 ## 3. Stages
 
-1. **Additive.** `CU` holds its `llvm::Instruction*` in order (moved along in the
-   cautious-property split); `Data.xml` gets `<instructionIDs>` per CU node. The explorer parses
-   them as required data and stores them on `CUNode` (ordered); dependences keep source/sink
-   instruction IDs and the callpath state. No change in behaviour; check over the end-to-end suite
-   that lines derived from the IDs equal the current lines.
+1. **Additive — done.** `CU` holds its `llvm::Instruction*` in program order; `Data.xml` gets
+   `<instructionIDs count="n">id,...</instructionIDs>` per CU node. The explorer requires them
+   (`parse_cu` rejects a `Data.xml` without them) and stores them on `CUNode.instruction_ids`;
+   `Dependency` has `source/sink_instruction_id` and `source/sink_state_id`, set by the PET parser
+   and by the TaskGraph. No change in behaviour (end-to-end, profiler, instrumentation, explorer
+   and pass unit tests pass). The derived lines do *not* equal `instructionLines`, see 2a.
 2. **Exact mapping.** Dependence → CU and call → CU by instruction ID (calls: record the CU while
    processing the call instruction, drop the line-range search). Lines remain only for data
    without IDs (to check: static dependences of the hybrid analysis).
@@ -85,8 +116,8 @@ Each stage gets its own tests and commit.
 
 ## 5. Open checks
 
-- [ ] Every relevant instruction gets an ID (fib: load, sub, call, store do).
-- [ ] Format of the static dependences of the hybrid analysis (IDs or lines).
+- [x] Every relevant instruction gets an ID (all of an instrumented function, see 2a).
+- [x] Format of the static dependences of the hybrid analysis: instruction IDs.
 - [ ] Other consumers of the line → CU mapping (GUI, optimizer) before stage 2.
-- [ ] Profiler rebuild and reinstall (`pip install ./profiler`), pass unit tests
+- [x] Profiler rebuild and reinstall (`pip install ./profiler`, ~1 min), pass unit tests
       (`DiscoPoP_Pass_UT`), profiler/instrumentation tests.

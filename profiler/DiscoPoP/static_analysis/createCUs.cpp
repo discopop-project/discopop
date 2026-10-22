@@ -287,6 +287,9 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
           }
         }
       }
+      // after the splits above, cu is the CU the instruction belongs to: a call or a load that
+      // violates the cautious property starts a new one
+      cu->instructions.push_back(&*instruction);
     }
     if (cu->instructions_line_numbers.empty()) {
       // cu->removeCU();

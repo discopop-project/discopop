@@ -81,7 +81,8 @@ Verified by reading data and code:
   fallback in `get_parallelization_suggestions.py`.
 
 Not verified:
-- Where the 262143 sentinel originates in the explorer (a search of the code found nothing).
+- Where the 262143 sentinel originates: found later, a decoded unset line ID of the profiler
+  (2^18-1); see `design/instruction_focus.md`.
 - What the patch generator makes of `PARALLELREGION` entries in the `task` list
   (`UnpackedSuggestion` has separate handling for `task` and `parallel_region`); only the
   pragma shown by the tool (`#pragma omp parallel`) was seen, not a patch.

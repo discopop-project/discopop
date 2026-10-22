@@ -16,6 +16,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:6</instructionLines>
+		<instructionIDs count="3">3,6,9</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="1">1:6</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -39,6 +40,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>2</instructionsCount>
 		<instructionLines count="1">1:7</instructionLines>
+		<instructionIDs count="2">10,11</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="1">1:7</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -66,6 +68,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:7</instructionLines>
+		<instructionIDs count="3">13,14,15</instructionIDs>
 		<readPhaseLines count="1">1:7</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -90,6 +93,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>12</instructionsCount>
 		<instructionLines count="3">1:8,1:9,1:10</instructionLines>
+		<instructionIDs count="12">16,17,18,19,20,21,22,23,24,25,26,27</instructionIDs>
 		<readPhaseLines count="2">1:8,1:9</readPhaseLines>
 		<writePhaseLines count="2">1:8,1:9</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -116,6 +120,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:7</instructionLines>
+		<instructionIDs count="4">28,29,30,31</instructionIDs>
 		<readPhaseLines count="1">1:7</readPhaseLines>
 		<writePhaseLines count="1">1:7</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -139,6 +144,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:11</instructionLines>
+		<instructionIDs count="3">33,34,35</instructionIDs>
 		<readPhaseLines count="1">1:11</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -163,6 +169,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:12</instructionLines>
+		<instructionIDs count="2">36,37</instructionIDs>
 		<readPhaseLines count="1">1:12</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -180,7 +187,7 @@
 		</callsNode>
 	</Node>
 
-	<Node id="1:10" type="3" name="_Z3reci" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+	<Node id="1:10" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
 		<childrenNodes></childrenNodes>
 		<funcArguments>
 			<arg type="i32" defLine="6" accessMode="RW">n</arg>
@@ -196,6 +203,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:13</instructionLines>
+		<instructionIDs count="2">38,39</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="1">1:13</returnInstructions>
@@ -218,6 +226,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:14</instructionLines>
+		<instructionIDs count="1">40</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="1">1:14</returnInstructions>
@@ -251,6 +260,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:15</instructionLines>
+		<instructionIDs count="3">42,45,48</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="1">1:15</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -274,6 +284,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>2</instructionsCount>
 		<instructionLines count="1">1:16</instructionLines>
+		<instructionIDs count="2">49,50</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="1">1:16</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -301,6 +312,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:16</instructionLines>
+		<instructionIDs count="3">52,53,54</instructionIDs>
 		<readPhaseLines count="1">1:16</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -325,6 +337,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>2</instructionsCount>
 		<instructionLines count="2">1:17,1:18</instructionLines>
+		<instructionIDs count="2">55,56</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -341,7 +354,7 @@
 		</callsNode>
 	</Node>
 
-	<Node id="1:18" type="3" name="_Z3reci" startsAtLine = "262143:16383" endsAtLine = "262143:16383">
+	<Node id="1:18" type="3" name="_Z3reci" startsAtLine = "16383:262143" endsAtLine = "16383:262143">
 		<childrenNodes></childrenNodes>
 		<funcArguments>
 			<arg type="i32" defLine="6" accessMode="RW">n</arg>
@@ -357,6 +370,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>4</instructionsCount>
 		<instructionLines count="1">1:16</instructionLines>
+		<instructionIDs count="4">57,58,59,60</instructionIDs>
 		<readPhaseLines count="1">1:16</readPhaseLines>
 		<writePhaseLines count="1">1:16</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -380,6 +394,7 @@
 		<performsFileIO>0</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:19</instructionLines>
+		<instructionIDs count="2">62,63</instructionIDs>
 		<readPhaseLines count="1">1:19</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -404,6 +419,7 @@
 		<performsFileIO>1</performsFileIO>
 		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:20</instructionLines>
+		<instructionIDs count="2">64,65</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="1">1:20</returnInstructions>

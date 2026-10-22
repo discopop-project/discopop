@@ -104,6 +104,18 @@ def __map_dummy_nodes(cu_dict: Dict[str, ObjectifiedElement]) -> Dict[str, Objec
     return cu_dict
 
 
+def _split_location(
+    location: str, instruction_to_line_id_mapping: Dict[str, str]
+) -> Tuple[Optional[int], Optional[str], str]:
+    """(instruction id, callpath state, line id) of an end of a dependency record: an instruction id with an
+    optional "@state", or a line id (file id:line) of a record without instruction id"""
+    if ":" in location:
+        return None, None, location
+    instruction, _, state = location.partition("@")
+    line = instruction_to_line_id_mapping.get(instruction, instruction)
+    return (int(instruction) if instruction.isdigit() else None), (state if state else None), line
+
+
 def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
     dependencies_list: List[DependenceItem] = []
     loop_data_list: List[LoopData] = []
@@ -179,22 +191,27 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 var_name = var_name.replace("GEPRESULT_", "")
                 is_gep_result_dependency = True
 
-            # convert instruction ids to lineIds for backwards compatibility
-            source = source_fields[0]
-            if ":" not in sink:
-                if "@" in sink:
-                    sink = sink[: sink.index("@")]  # remove state information
-                if sink in instruction_to_line_id_mapping:
-                    sink = instruction_to_line_id_mapping[sink]
-            if ":" not in source:
-                if "@" in source:
-                    source = source[: source.index("@")]  # remove state information
-                if source in instruction_to_line_id_mapping:
-                    source = instruction_to_line_id_mapping[source]
+            # keep the instruction ids and callpath states of the ends, and convert the ids to line ids,
+            # which the PEG is built on
+            sink_instruction_id, sink_state_id, sink_line = _split_location(sink, instruction_to_line_id_mapping)
+            source_instruction_id, source_state_id, source_line = _split_location(
+                source_fields[0], instruction_to_line_id_mapping
+            )
 
             # register dependencies
             dependencies_list.append(
-                DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency)
+                DependenceItem(
+                    sink_line,
+                    source_line,
+                    type,
+                    var_name,
+                    aa_var_name,
+                    is_gep_result_dependency,
+                    source_instruction_id,
+                    sink_instruction_id,
+                    source_state_id,
+                    sink_state_id,
+                )
             )
 
     return dependencies_list, loop_data_list

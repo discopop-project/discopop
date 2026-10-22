@@ -219,6 +219,11 @@ class _ContextFallback:
         return set(result)
 
 
+def _instruction_id(location: str) -> Optional[int]:
+    """the instruction id of a location of a dependency file, None for a line id or '*'"""
+    return int(location) if location.isdigit() else None
+
+
 class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
@@ -4599,6 +4604,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 dependency.approximate_context = approximate_context
                                 dependency.carried_by_loop = carried_by_loop
                                 dependency.carried_by_pet_loops = carried_by_pet_loops
+                                # swapped like the lines, see above
+                                dependency.source_instruction_id = _instruction_id(sink_location)
+                                dependency.sink_instruction_id = _instruction_id(source_location)
+                                dependency.source_state_id = None if sink_state_id == "NO_STATE" else sink_state_id
+                                dependency.sink_state_id = None if source_state_id == "NO_STATE" else source_state_id
                                 if record_dependencies is not None:
                                     record_dependencies[key] = dependency
                                 return dependency
