@@ -193,3 +193,54 @@ Implausible groups are flagged, not hidden (see 3.3).
       `first_private`, `jumpInstructionIDs` in `Data.xml`) once the data flow work is finished.
 - [ ] **Trivial groups.** Groups of unprofitable code (a few `sprintf` calls in the shared
       BOTS sources) are reported with the same weight as real ones.
+
+### 3.3 Recursion in the call path states (profiler)
+
+The call paths of the profiler are cut at a recursive call (`path_enumeration.cpp`: a call to a function already on the
+path continues in the state of its first occurrence), so all recursion levels share the states of the first one. The
+explorer decides from the two call paths of a dependence whether a loop carries it (`__carried_frame_and_position`): a
+write in an iteration of the caller and a read in an iteration of the callee therefore look like a dependence between
+iterations of one loop execution, and the loop is rejected (uts: RAW on `parent`; test
+`test/end_to_end/recursion_states`, `task_omp_uts`).
+
+- [x] **Loop accounting of recursive instances** (runtime). `LoopManager::IsNewLoop` compared only the loop id, so the
+      entry of a recursive instance of the loop on top counted as one more iteration of the caller's loop (maximum
+      iterations per execution wrong, explorer: "fewer than two iterations"). It takes the function level now: an entry
+      from a deeper level is a new loop. The landing pad of a function that catches an exception closes the loops and
+      levels of the functions the exception left (otherwise the level stays too high and every later iteration starts a
+      new loop; test `test/end_to_end/loop_accounting_exceptions`).
+- [-] **States for the recursion levels: tried and dropped (2026-10-23).** A function may occur three times on a path
+      (cyclic, the third level continues in the first). Reviewed critically; result:
+      - the number of states grows by the product of (1 + s + s²) over the recursive functions of a chain (s = self
+        calls): BOTS strassen 660 -> 2,086,892 (2.2 s and 1.1 GB to compile, 200 MB of state files, 700 MB to load the
+        graph at start-up), sort 253 -> 64,641, floorplan 688 -> 57,472, uts 685 -> 24,891; state ids are int32 and
+        packed into the upper half of the LID;
+      - a bounded number of levels cannot be exact: carried-ness depends on the buckets of the frame where the two call
+        paths diverge, which can lie arbitrarily far above both ends. With the wrap, a dependence between levels 3 and
+        4 is compared as if both lay in the first frame; uts (5 levels) stays rejected. Saturation (the last level
+        continues in itself) keeps the shallow levels exact but still rejects uts, and an explorer rule that ignores
+        the evidence of the saturated frame would be needed;
+      - `TaskGraph.__loop_context_at` assumes "a function occurs at most once on a callpath" and would have to select
+        the copy by frame index.
+      Open ideas: decide carried-ness in the runtime (an access timestamp per shadow entry, compared with the iteration
+      start stamps of the loop stack: exact at any depth, costs memory); saturation plus the explorer rule.
+- [ ] **uts** stays rejected until one of these is done (see above); the xfail of `task_omp_uts` and
+      `recursion_states::test_a_loop_is_not_rejected_for_the_reads_of_its_recursive_callee` document it.
+
+### 3.4 Future work (profiler, found while reviewing 3.3)
+
+- [ ] **Memory intrinsics are not instrumented.** `llvm.memset` / `memcpy` / `memmove` record no access (the pass has no
+      handling for them), and `__dp_alloca` receives the address range of a stack object but does nothing
+      (`memory/Scope.hpp` is dead code). Consequences: reads of elements a callee zeroed with `memset` look like reads of
+      stale data of an earlier instance of the callee (stack reuse), i.e. spurious RAW; `memcpy` drops real RAWs (false
+      negatives). Seen in nqueens (`memset(csols, ...)`, `memcpy(b, a, ...)`): with instrumented call paths per
+      recursion level the loops at lines 26/48 were rejected for a RAW on `csols`; replacing the `memset` by a zeroing
+      loop removed the rejection. Fix: instrument the intrinsics as range writes/reads; optionally let the alloca of a
+      frame clear its shadow memory. Decided to leave this alone for now (2026-10-23).
+- [ ] `LoopManager::CleanFunctionExit` does not update `max_iteration_count`, so loops left by `return` report a maximum
+      of 0 (feeds the "fewer than two iterations" rejection).
+- [ ] `LoopManager::IsSingleExit` ignores the function level (latent, no failing case found).
+- [ ] Running with `DP_DEBUG=1` in `dp.conf` segfaults.
+- [ ] `callpath_state_return_targets.txt` is written (31 MB for strassen) but never used by the runtime.
+- [ ] `--enable-patterns doall` alone crashes the explorer (`'PatternStorage' object has no attribute 'reduction'`,
+      `pattern_detection.py`); `doall,reduction` works.

@@ -49,7 +49,7 @@ how much they block:
 3. **Cost per recursive call site** (sort, strassen): `ContextTaskGraph` construction grows about 9× per call site;
    seven self-calls run out of memory (13 GB) in `TaskGraph.__insert_data_dependencies_from_files`. The sort test has a
    90 s guard, the strassen test a 4 GiB `RLIMIT_AS`.
-4. **uts: no task at all.** The do-all detection rejects the loop (RAW on `parent` between iterations at line 28 in
+4. **uts: no task at all** (analysed 2026-10-23, see `design/task_suggestions.md` 3.3: the cut call paths, not fixable with a bounded number of levels; open). The do-all detection rejects the loop (RAW on `parent` between iterations at line 28 in
    `pattern_decisions.json`). Suspected: the loop-iteration bookkeeping of the profiler mixes the iterations of the
    recursive instance with those of the caller (see `test/end_to_end/loopstate_positions`); not confirmed.
 5. **Spans and sharing** (nqueens, sparselu): region and task spans include the loop header (26-32 where 29-32 is
