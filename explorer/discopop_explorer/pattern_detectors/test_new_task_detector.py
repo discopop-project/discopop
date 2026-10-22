@@ -27,7 +27,7 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.pattern_detectors.new_task_detector import identify_loop_tasking, identify_simple_tasking
-from discopop_explorer.pattern_detectors.task_dataflow import loop_after_dependences
+from discopop_explorer.pattern_detectors.task_dataflow import after_dependences_of_instructions
 from discopop_explorer.utilities.PEGraphConstruction.parser import instructionToCUIdMap
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -255,7 +255,8 @@ def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: 
         end_line=2951,
         node_calls=[{"cuid": "3:99", "atLine": "3:2952", "callInstId": "7"}] if calls else [],
     )
-    function = make_node("3:99", NodeType.FUNC, name="fft_aux")
+    function = make_node("3:99", NodeType.FUNC, name="fft_aux", end_line=2960)
+    header.parent_function_id = function.id
     pet = build_pet_graph([header, function])
     pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "8": "3:2953"}
     pet.jump_only_lines = {"3:2953"}  # the jump back at the closing brace (8)
@@ -323,9 +324,9 @@ def test_a_loop_task_takes_the_data_sharing_of_the_do_all_loop(
 def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_what_it_wrote(
     monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
 ) -> None:
-    header = make_node("3:10", NodeType.CU, start_line=2951, end_line=2951)
-    after = make_node("3:11", NodeType.CU, start_line=2960, end_line=2960)
-    function = make_node("3:99", NodeType.FUNC, name="fft_aux")
+    header = make_node("3:10", NodeType.CU, start_line=2951, end_line=2951, instruction_ids=[5, 6, 7])
+    after = make_node("3:11", NodeType.CU, start_line=2960, end_line=2960, instruction_ids=[9, 10])
+    function = make_node("3:99", NodeType.FUNC, name="fft_aux", end_line=3000)
     deps = []
     for sink in (9, 10):  # reads on the lines 2960 and 2958: the earlier one is the join
         dep = Dependency(EdgeType.DATA)
@@ -333,9 +334,17 @@ def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_wha
         deps.append((after.id, header.id, dep))
     inside = Dependency(EdgeType.DATA)  # both ends in the loop: not a join
     inside.dtype, inside.var_name, inside.source_instruction_id, inside.sink_instruction_id = DepType.RAW, "k", 5, 7
-    pet = build_pet_graph([header, after, function], deps + [(header.id, header.id, inside)])
+    pet = build_pet_graph(
+        [header, after, function],
+        deps
+        + [
+            (header.id, header.id, inside),
+            (function.id, header.id, EdgeType.CHILD),
+            (function.id, after.id, EdgeType.CHILD),
+        ],
+    )
     pet.instruction_lines = {"5": "3:2951", "6": "3:2952", "7": "3:2952", "9": "3:2960", "10": "3:2958"}
     for instruction in (5, 6, 7):
         monkeypatch.setitem(instructionToCUIdMap, instruction, header.id)
-    found = loop_after_dependences(pet, [5, 6, 7], 3, 2952)
+    found = after_dependences_of_instructions(pet, [5, 6, 7], 3, 2952, function)  # type: ignore[arg-type]
     assert [(a.variable, a.kind, a.line) for a in found] == [("sum", "RAW", "3:2958")]

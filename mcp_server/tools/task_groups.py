@@ -227,7 +227,7 @@ def join_points(group: TaskGroup, display_file: str) -> list[str]:
         verb = "overwrites" if d.get("kind") == "WAR" else "reads"
         by_line.setdefault(line, []).append(f"{verb} {d.get('variable')} (task {d.get('task')})")
     if not by_line:
-        return ["  join: no later code depends on the tasks (values written through pointers are not tracked)"]
+        return ["  join: no later code depends on the tasks (not tracked: what recursive calls write)"]
     return [
         f"  join: the tasks have to be complete before {display_file}:{line}, which " + ", ".join(entries)
         for line, entries in by_line.items()

@@ -6,13 +6,17 @@ int f(int n) {
   return s;
 }
 
+void store(int *dst, int value) {
+  *dst = value;
+}
+
 int g(int n) {
   int res[16];
   int total;
   for (int k = 0; k < 16; k++) {
-    res[k] = f(n + k);  // line 13
+    store(&res[k], f(n + k));  // line 17
   }
-  total = res[3] + res[5];  // line 15
+  total = res[3] + res[5];  // line 19
   return total;
 }
 

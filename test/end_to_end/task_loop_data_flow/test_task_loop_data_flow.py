@@ -32,7 +32,7 @@ def loop_task(tmp_path_factory: pytest.TempPathFactory) -> Any:
 
 def test_the_join_of_the_loop_task_is_the_line_that_reads_the_results(loop_task: Any) -> None:
     _, region = loop_task
-    assert {(a["variable"], a["kind"], a["line"]) for a in region.after_dependences} == {("res", "RAW", "1:15")}
+    assert {(a["variable"], a["kind"], a["line"]) for a in region.after_dependences} == {("res", "RAW", "1:19")}
 
 
 def test_the_loop_task_has_the_data_sharing_of_the_loop(loop_task: Any) -> None:

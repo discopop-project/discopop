@@ -31,7 +31,8 @@ from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.task_dataflow import (
     analyze_task_group,
     clauses_of_dependences,
-    loop_after_dependences,
+    after_dependences_of_instructions,
+    function_of,
 )
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -400,7 +401,12 @@ def identify_loop_tasking(
         task.shared = sorted({v.name for v in do_all.shared})
         task.private = sorted({v.name for v in do_all.private})
         task.first_private = sorted({v.name for v in do_all.first_private})
-        after = loop_after_dependences(pet, do_all.instruction_ids, loop_node.file_id, max(body_lines))
+        function = function_of(pet, loop_node)
+        after = (
+            after_dependences_of_instructions(pet, do_all.instruction_ids, loop_node.file_id, max(body_lines), function)
+            if function is not None
+            else []
+        )
         # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it
         for needed in sorted({a.variable for a in after if a.kind == "RAW"}):
             task.private = [v for v in task.private if v != needed]

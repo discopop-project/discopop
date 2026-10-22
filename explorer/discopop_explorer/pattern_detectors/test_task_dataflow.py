@@ -9,6 +9,8 @@
 lines 31 and 32 and ``return x + y;`` on line 34."""
 
 from types import SimpleNamespace
+
+import pytest
 from typing import Any, List, Set, Tuple
 
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
@@ -16,12 +18,16 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_explorer.classes.variable import Variable
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.utilities.PEGraphConstruction.parser import instructionToCUIdMap
 from discopop_explorer.pattern_detectors.task_dataflow import (
     AfterDependence,
     TaskDependence,
+    after_dependences_of_instructions,
     analyze_task_group,
     classify_variable,
     clauses_of_dependences,
+    instructions_with_callees,
 )
 
 
@@ -35,6 +41,9 @@ class _Ctx:
     def get_contained_nodes(self, inclusive: bool = False) -> List[Any]:
         node = SimpleNamespace(local_vars=self.variables, global_vars=[])
         return [SimpleNamespace(get_pet_node=lambda pet: node)]
+
+    def get_first_pet_node(self, pet: Any) -> None:
+        return None  # no PET node: the writes of callees are tested on their own
 
     def get_contained_contexts(self, inclusive: bool = False) -> Set[Any]:
         return set()
@@ -150,3 +159,51 @@ def test_classify_variable() -> None:
     assert classify_variable(True, True, False, False, False, False) == "shared"
     assert classify_variable(True, False, True, False, False, False) == "private"
     assert classify_variable(False, False, False, False, False, False) is None
+
+
+def test_what_a_callee_writes_through_a_pointer_is_read_after_the_task(
+    monkeypatch: pytest.MonkeyPatch, make_node: Any, build_pet_graph: Any
+) -> None:
+    """``put(&a, k);`` on line 15 (instruction 5), ``*out = f(n)`` in the callee (store 20), ``return a`` on line 17."""
+    caller = make_node("3:10", node_calls=[{"cuid": "3:99", "atLine": "3:15", "callInstId": "5"}], instruction_ids=[5])
+    # the code after the task reads a itself (line 17) and calls a function that reads b (line 20)
+    reader = make_node(
+        "3:11", node_calls=[{"cuid": "3:98", "atLine": "3:20", "callInstId": "11"}], instruction_ids=[9, 11]
+    )
+    function = make_node("3:1", NodeType.FUNC, end_line=30)
+    put = make_node("3:99", NodeType.FUNC)
+    put_body = make_node("3:50", instruction_ids=[20, 21])
+    show = make_node("3:98", NodeType.FUNC)
+    show_body = make_node("3:60", instruction_ids=[30])
+    reads = []
+    for variable, sink in (("a", 9), ("b", 30)):
+        dependence = Dependency(EdgeType.DATA)
+        dependence.dtype, dependence.var_name = DepType.RAW, variable
+        dependence.source_instruction_id, dependence.sink_instruction_id = 20, sink
+        reads.append((reader.id if sink == 9 else show_body.id, put_body.id, dependence))
+    pet = build_pet_graph(
+        [caller, reader, function, put, put_body, show, show_body],
+        [
+            (function.id, caller.id, EdgeType.CHILD),
+            (function.id, reader.id, EdgeType.CHILD),
+            (put.id, put_body.id, EdgeType.CHILD),
+            (show.id, show_body.id, EdgeType.CHILD),
+        ]
+        + reads,
+    )
+    pet.instruction_lines = {"5": "3:15", "20": "3:10", "9": "3:17", "11": "3:20", "30": "3:40"}
+    for instruction, cu in ((5, caller), (20, put_body), (9, reader), (11, reader), (30, show_body)):
+        monkeypatch.setitem(instructionToCUIdMap, instruction, cu.id)
+    assert instructions_with_callees(pet, [5]) == {5, 20, 21}
+    found = after_dependences_of_instructions(pet, [5], 3, 15, function)
+    assert [(a.variable, a.kind, a.line) for a in found] == [("a", "RAW", "3:17"), ("b", "RAW", "3:20")]
+    assert after_dependences_of_instructions(pet, [5], 3, 17, function)[0].line == "3:20"  # only what follows
+
+    # a task that calls its own function reaches the code around it: no result
+    recursive = make_node(
+        "3:12", node_calls=[{"cuid": "3:1", "atLine": "3:16", "callInstId": "6"}], instruction_ids=[6]
+    )
+    pet.g.add_node(recursive.id, data=recursive)
+    pet.g.add_edge(function.id, recursive.id, data=Dependency(EdgeType.CHILD))
+    monkeypatch.setitem(instructionToCUIdMap, 6, recursive.id)
+    assert after_dependences_of_instructions(pet, [6], 3, 16, function) == []

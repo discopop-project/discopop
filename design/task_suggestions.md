@@ -139,10 +139,13 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [x] **Join points.** `ParallelRegionInfo.after_dependences` (task, variable, RAW/WAR, first line after the region),
       from the dependences registered on the TaskGraph contexts (`pattern_detectors/task_dataflow.py`); the tool prints
       the join line. Loop tasks: `loop_after_dependences` queries the PET (RAW/WAR from the instructions of the loop to a later line of
-      the file); the tool names the line, else it keeps the generic "after the loop". Open: writes through pointer
-      parameters of
-      callees (the task contexts do not inline the callees: fft shows no join), reads in the caller after the
-      function returns.
+      the file); the tool names the line, else it keeps the generic "after the loop". Writes through pointer parameters of callees
+      (not in the task contexts) come from the PET (`after_dependences_of_instructions`: sources in the instructions of
+      the task and of its callees, sinks in the function after the task, or in the callees of calls there, reported at
+      the line of the call). Open: tasks that reach their own function (recursion, e.g. the loop of fft: no join is
+      reported, since the code around the recursive call cannot be told from it; needs the callpath state of the
+      dependences), reads in the caller after the function returns, the variable names are those at the later access,
+      and the group choice flakiness below.
 - [x] **Data sharing.** Filled from the accesses, not the types (`classify_variable`): declared in the task and not
       needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Loop tasks take the sharing of the do-all loop, plus what the code after the loop reads as shared. Open: reductions,
       last private, what pointers point to (side-effect export).
@@ -157,5 +160,13 @@ Implausible groups are flagged, not hidden (see 3.3).
       verified (what the patch generator makes of `PARALLELREGION` in the `task` list; `UnpackedSuggestion` handles
       `task` and `parallel_region` separately; the line the tool prints for a task patch is unexplained). Check the
       generated patches for fib, fft and the loop tasks, and fix what is wrong.
+- [ ] **Nondeterministic task detection.** The same profile gives different results from run to run: for `put(&a,k);
+      put(&b,n+1); if (a+b>0) ...` (callees writing through pointers) the explorer sometimes returns the group and
+      sometimes none; the number of simplification steps of the ContextTaskGraph differs. Not driven by
+      `PYTHONHASHSEED` (probably sets of objects hashed by address). Find the source and make it deterministic; it
+      blocks end-to-end tests of groups of this kind.
+- [ ] **Docs.** Update the documentation where necessary (`docs/tools/MCP_server.md`, the explorer docs and the
+      description of the new `patterns.json` fields `task_dependences`, `after_dependences`, `shared`, `private`,
+      `first_private`, `jumpInstructionIDs` in `Data.xml`) once the data flow work is finished.
 - [ ] **Trivial groups.** Groups of unprofitable code (a few `sprintf` calls in the shared
       BOTS sources) are reported with the same weight as real ones.
