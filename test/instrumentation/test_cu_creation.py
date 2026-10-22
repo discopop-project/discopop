@@ -27,6 +27,15 @@ class CuCreationCase(InstrumentationTestCase):
             )
         return found
 
+    def jump_lines(self) -> List[int]:
+        """The lines of the instructions that ``Data.xml`` lists as jumps of a CU."""
+        with open(os.path.join(self.program.directory, ".discopop", "profiler", "Data.xml")) as f:
+            text = f.read()
+        jumps = [
+            int(i) for found in re.findall(r"<jumpInstructionIDs[^>]*>([^<]*)<", text) for i in found.split(",") if i
+        ]
+        return self.lines_of(jumps)
+
     def lines_of(self, instructions: List[int]) -> List[int]:
         return [self.program.instruction_locations[i].line for i in instructions]
 
@@ -84,3 +93,21 @@ class TestCuCreationContinuedArguments(CuCreationCase):
         # the subtraction on the continuation line is evaluated before the call, but is not the store of ``m``
         self.assertIn(first + 1, self.lines_of(before_call))
         self.assertNotIn(first - 1, self.lines_of(before_call))
+
+
+class TestCuCreationJumps(CuCreationCase):
+    SOURCE = """
+        void work(int *a, int k);
+        void loop(int *a, int n) {
+          for (int k = 0; k < n; k++) {      // @header
+            work(a, k);                      // @call
+          }                                  // @brace
+        }
+        int main() { int a[4]; loop(a, 4); return 0; }
+        void work(int *a, int k) { a[k] = k; }
+        """
+
+    def test_the_jump_back_at_the_closing_brace_is_listed_as_jump_and_the_call_is_not(self) -> None:
+        jumps = self.jump_lines()
+        self.assertIn(self.program.line_of_marker("brace"), jumps)
+        self.assertNotIn(self.program.line_of_marker("call"), jumps)
