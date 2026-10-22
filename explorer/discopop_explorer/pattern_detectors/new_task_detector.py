@@ -59,16 +59,6 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
     if visualizer:
         show_all_plots(context_task_graph)
 
-    # identify immediate successive contexts with no dependencies between them
-    logger.info("--> Identify tasking with data sharing clauses ... TODO")
-    logger.info("--> Identifying simple asynchronous tasking ... TODO")
-    # identify non-immediate successive contexts with no dependencies between them, such that asynchronous execution is
-    # possible
-    logger.info("--> Identifying dependent tasking... TODO")
-    logger.info("--> Identifying multi-dependent tasking... TODO")
-    logger.info("--> Identifying loop tasking... TODO")
-    logger.info("--> Identifying recursive tasking... TODO?")
-
     return result
 
 
@@ -240,10 +230,6 @@ def identify_simple_tasking(
         # print("parent scopes min line: ", parent_scopes_min_line)
         # print("parent scopes max line: ", parent_scopes_max_line)
 
-        # TODO: filter scopes by relevant file id.
-        # TODO determine task scopes properly
-        # TODO create PatternInfo representing the identified tasks
-        # TODO: check if data sharing clauses are required
         invalid = False
         pattern_objects: List[TaskParallelismInfo] = []
         task_lines: List[Tuple[int, int, int]] = []
