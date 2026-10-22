@@ -28,7 +28,7 @@ explorer's positions are not always applicable one to one.
 - The explorer emits two kinds of objects under the key `task` of `patterns.json`:
   `TASK` (not standalone) and `PARALLELREGION` (standalone, `contains_patterns` lists its
   tasks). Only the regions have patches, so only they are listed today.
-- `gather_data` runs the explorer with its default `--enable-patterns reduction,doall`;
+- (until 2026-10-22) `gather_data` ran the explorer with its default `--enable-patterns reduction,doall`;
   task detection has to be enabled by hand.
 - Task entries have no decision-log entry, so the tool shows kind `Loop` and no hotspot.
   The printed line is the first line of the patch's `@@` header (context start), e.g.
@@ -106,10 +106,15 @@ Implausible groups are flagged, not hidden (see 3.3).
       which needs the kind per variable in the explorer's output (a new field or a tagged
       entry); add a test with real dependences (fib: none; take a case from `bots/omp-tasks`).
 
-- [ ] **Tests from `bots/omp-tasks`.** The hand-written OpenMP task versions in
-      `/home/lukas/git/bots/omp-tasks` are the ground truth (maintainer, 2026-10-22): derive the
-      unit tests of the task detection from them (what the serial version must yield).
-
+- [~] **Tests from `bots/omp-tasks`** (started): `pattern_detectors/test_new_task_detector.py`
+      feeds `identify_simple_tasking` with the code scopes captured in a run on serial fib and
+      bots_main/bots_common and states what omp-tasks does as the expectation; known deviations
+      are `xfail(strict)`. Open: more applications (nqueens, knapsack, health, floorplan, uts,
+      sort, strassen, fft: take the scopes of a run on `serial/<app>`, expectation from
+      `omp-tasks/<app>`), and a test one level down (ContextTaskGraph simplification) because
+      the scopes are stubbed. Findings so far: the overlap of fib's tasks comes from the CU
+      generation, not from the detector: CU 3:237 starts at line 31 (`startsAtLine`) though its
+      call is on line 32, and the scope of a task is the line range of its CUs.
 - [ ] **Loop and recursive tasking.** The detector does not find the recursive calls in the
       `for` loop of `fft_aux` (TODO comments in `new_task_detector.run_detection`).
 - [ ] **Mutually exclusive branches.** Do not report statements of different branches of an

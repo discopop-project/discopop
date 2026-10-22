@@ -58,8 +58,9 @@ with fib. Neither the `bots` repository nor the setup files are committed; untra
 - **Configurations:** fib `small` = `./fib -n 15`, `medium` = `./fib -n 20`; fft `small` =
   `./fft -n 65536 -c`, `medium` = `./fft -n 262144 -c`. Base flags `-O0 -g`. The `-c` flag of fft
   prints `Verification = n/a` in the serial build.
-- **Task detection is not part of `gather_data`** (default `--enable-patterns reduction,doall`).
-  After `gather_data` run by hand, inside `<project>/.discopop`, with the venv on `PATH`
+- **Task detection is part of `gather_data` and of the explorer's default now** (`reduction,doall,task`,
+  recorded as `enabled_patterns` in `patterns.json`); older notes below about running it by hand
+  apply to results made before that. After `gather_data` run by hand, inside `<project>/.discopop`, with the venv on `PATH`
   (`/home/lukas/git/discopop/venv/bin`):
 
       discopop_explorer --enable-patterns task,doall,reduction
