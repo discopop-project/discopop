@@ -283,3 +283,29 @@ Two contexts, two answers (maintainer):
 
 - [ ] Check that the do-all detection reports the outermost loop of a nest of independent loops, and the collapse where
       the loops are perfectly nested (not verified in this session).
+
+### 3.7 Integration of the agent branches (2026-10-23)
+
+Branch `integration/task_detection` merges `recursion_warning`, `spans_and_war`, `patch_generation`, `health_groups`,
+`recursion_join`, `join_and_names` and `data_sharing` (all on top of `fix/profiler/recursion_states`). Full suites
+(explorer, mcp_server, library, end-to-end, profiler, instrumentation): 1909 passed, 31 xfailed.
+
+Where the branches met (commit "reconcile the merged task branches"):
+- **Recursive tasks:** the join of the recursion branch (the function's own code counts as the task's work) and the
+  names / `at_return` / callpath attribution of the join branch. For a task that reaches its own function the callpath
+  attribution (`_belongs_to_task`) and `at_return` are not used: the states are cut at the recursive call, and stack
+  memory left by the recursion looked like a read by unrelated code (nqueens: the second function's `csols`). The
+  recursion item under "Join points" is done as an over-approximation (a join may be reported that is not needed).
+- **Loop tasks:** the region covers the task statement, `loop_start_line` / `loop_end_line` hold the loop (the patch
+  starts at the header). Cursor loops (`while (v) { f(v); v = v->next; }`, health) and reduction loops are loop tasks
+  as well; the cursor stays firstprivate.
+- New fields in `patterns.json`: `after_dependences[].at_return`, `reduction`, `last_private`, `loop_end_line`,
+  dependence kind `WAW`; `pet.callpath_tree` (not stored).
+
+Open questions of the agents, still undecided: the region of a group (wrap the first call in the caller, as omp-tasks,
+instead of a parallel region per recursive function); `taskwait` or `depend` for dependences between tasks; whether
+a group that cannot be placed keeps a comment-only patch; `variable = ""` for join entries without a name; the
+name mapping of the join is a heuristic (no call arguments); a declaration as task line (fib: `int a = fib(n-1);`)
+cannot be patched; sparselu: fwd and bdiv are one region in omp-tasks; the data sharing of `csols` / `b` in nqueens
+(`&csols[i]` is only an address computation in the CU, the AST helper of the join branch could close it); the
+sibling race on a parent's field in health (cut call paths).
