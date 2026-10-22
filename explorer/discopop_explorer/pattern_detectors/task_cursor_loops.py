@@ -64,6 +64,12 @@ class LoopTaskSource(Protocol):
     @property
     def first_private(self) -> List[Variable]: ...
 
+    @property
+    def reduction(self) -> List[Variable]: ...
+
+    @property
+    def last_private(self) -> List[Variable]: ...
+
 
 @dataclass
 class CursorLoop:
@@ -75,6 +81,8 @@ class CursorLoop:
     shared: List[Variable] = field(default_factory=list)
     private: List[Variable] = field(default_factory=list)
     first_private: List[Variable] = field(default_factory=list)
+    reduction: List[Variable] = field(default_factory=list)
+    last_private: List[Variable] = field(default_factory=list)
     cursors: List[str] = field(default_factory=list)
     update_lines: List[str] = field(default_factory=list)
 

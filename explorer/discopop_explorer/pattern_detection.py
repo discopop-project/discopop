@@ -182,7 +182,9 @@ class PatternDetectorX(object):
                     (g for t in res.patterns.task for g in getattr(t, "task_group", [])), default=-1
                 )
                 # the loops with a cursor (while (v) { f(v); v = v->next; }) are tasks per iteration as well
-                loop_sources: List[LoopTaskSource] = [p for p in tmp_result if isinstance(p, DoAllInfo)]
+                loop_sources: List[LoopTaskSource] = [
+                    p for p in tmp_result if isinstance(p, (DoAllInfo, ReductionInfo))
+                ]
                 loop_sources += find_cursor_loops(task_graph, {p.node_id for p in tmp_result})
                 res.patterns.task += identify_loop_tasking(
                     self.pet, loop_sources, hotspots, first_task_group, self.ast_helper

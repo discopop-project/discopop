@@ -23,6 +23,7 @@ from discopop_explorer.utilities.PEGraphConstruction.parser import instructionTo
 from discopop_explorer.pattern_detectors.task_dataflow import (
     AfterDependence,
     TaskDependence,
+    _output_dependences,
     after_dependences_of_instructions,
     analyze_task_group,
     classify_variable,
@@ -47,6 +48,9 @@ class _Ctx:
 
     def get_contained_contexts(self, inclusive: bool = False) -> Set[Any]:
         return set()
+
+    def get_instruction_scope(self, pet: Any, inclusive: bool = False) -> List[int]:
+        return []
 
     def get_successive_contexts(self) -> Set[Any]:
         return self.successive
@@ -153,12 +157,77 @@ def test_global_variables_and_variables_written_by_a_sibling_are_shared() -> Non
     assert flow.sharing[0].shared == ["a", "g"]
 
 
+def test_a_variable_that_several_tasks_accumulate_into_is_a_reduction_not_shared() -> None:
+    first = _Ctx([_var("sum", "3:20", "RW")])
+    second = _Ctx([_var("sum", "3:20", "RW")])
+    flow = _analyze(_pet({}), [first, second])
+    assert [(s.shared, s.reduction) for s in flow.sharing] == [([], ["?:sum"]), ([], ["?:sum"])]
+
+
+def test_the_operation_of_a_reduction_comes_from_the_reduction_entry_on_a_line_of_the_task() -> None:
+    first = _Ctx([_var("sum", "3:20", "RW")])
+    second = _Ctx([_var("sum", "3:20", "RW")])
+    pet = _pet({})
+    pet.reduction_vars = [{"name": "sum", "reduction_line": "3:32", "loop_line": "3:30", "operation": "+"}]
+    flow = _analyze(pet, [first, second])
+    # the entry lies on the line of the second task (32) only: the first one does not know the operation
+    assert flow.sharing[0].reduction == ["?:sum"]
+    assert flow.sharing[1].reduction == ["+:sum"]
+
+
+def test_a_variable_that_one_task_writes_and_another_only_reads_is_no_reduction() -> None:
+    first = _Ctx([_var("a", "3:20", "RW")])
+    second = _Ctx([_var("a", "3:20", "R")])
+    flow = _analyze(_pet({}), [first, second])
+    assert flow.sharing[0].reduction == [] and flow.sharing[0].shared == ["a"]
+    assert flow.sharing[1].reduction == [] and flow.sharing[1].first_private == []
+    assert flow.sharing[1].shared == ["a"]
+
+
+def test_a_variable_whose_write_is_known_from_a_dependence_only_is_written() -> None:
+    """The CU of ``sum += f(k)`` can list ``sum`` as read only; the RAW from the task to the code after it shows the
+    write."""
+    first, second, after = _fib_tasks()
+    first.variables = [_var("sum", "3:20", "R")]
+    _depends(after, first, "sum", DepType.RAW, 40)
+    flow = _analyze(_pet({40: "3:34"}), [first, second])
+    assert flow.sharing[0].shared == ["sum"] and flow.sharing[0].first_private == []
+
+
+def test_a_waw_dependence_makes_both_tasks_outs() -> None:
+    dependences = [TaskDependence(0, 1, "d", "WAW")]
+    assert clauses_of_dependences(dependences, 0) == ([], ["d"], [])
+    assert clauses_of_dependences(dependences, 1) == ([], ["d"], [])
+
+
+def test_output_dependences_between_tasks_are_read_from_the_instructions_of_the_tasks(
+    make_node: Any, build_pet_graph: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``d = f(k);`` (store 5) in the first task, ``d = f(n);`` (store 6) in the second: a WAW from 5 to 6, which is
+    not registered on contexts. A WAW inside a task and one to the code after the tasks are no dependences between
+    the tasks."""
+    first_cu = make_node("3:10", instruction_ids=[5, 7])
+    second_cu = make_node("3:11", instruction_ids=[6])
+    edges = []
+    for source, sink, variable in ((5, 6, "d"), (5, 7, "e")):
+        dependence = Dependency(EdgeType.DATA)
+        dependence.dtype, dependence.var_name = DepType.WAW, variable
+        dependence.source_instruction_id, dependence.sink_instruction_id = source, sink
+        edges.append((second_cu.id if sink == 6 else first_cu.id, first_cu.id, dependence))
+    pet = build_pet_graph([first_cu, second_cu], edges)
+    for instruction, cu in ((5, first_cu), (7, first_cu), (6, second_cu)):
+        monkeypatch.setitem(instructionToCUIdMap, instruction, cu.id)
+    assert _output_dependences(pet, [{5, 7}, {6}]) == [TaskDependence(0, 1, "d", "WAW")]
+
+
 def test_classify_variable() -> None:
     assert classify_variable(True, False, False, False, False, False) == "first_private"
     assert classify_variable(True, False, False, True, False, False) == "shared"
     assert classify_variable(True, True, False, False, False, False) == "shared"
     assert classify_variable(True, False, True, False, False, False) == "private"
     assert classify_variable(False, False, False, False, False, False) is None
+    assert classify_variable(True, True, False, False, True, False, True) == "reduction"
+    assert classify_variable(True, True, True, False, True, False, True) == "private"
 
 
 def _recursive_function(

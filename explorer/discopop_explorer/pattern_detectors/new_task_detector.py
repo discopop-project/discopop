@@ -209,6 +209,7 @@ def _record_data_flow(
     region.after_dependences = [_after_record(ids[a.task], a) for a in flow.after]
     for index, (task, sharing) in enumerate(zip(task_patterns, flow.sharing)):
         task.shared, task.private, task.first_private = sharing.shared, sharing.private, sharing.first_private
+        task.reduction = sharing.reduction
         task.in_dep, task.out_dep, task.in_out_dep = clauses_of_dependences(flow.dependences, index)
 
 
@@ -530,6 +531,8 @@ def identify_loop_tasking(
         task.shared = sorted({v.name for v in do_all.shared})
         task.private = sorted({v.name for v in do_all.private})
         task.first_private = sorted({v.name for v in do_all.first_private})
+        task.reduction = sorted({f"{v.operation or '?'}:{v.name}" for v in do_all.reduction})
+        task.last_private = sorted({v.name for v in do_all.last_private})
         function = function_of(pet, loop_node)
         after = (
             after_dependences_of_instructions(
@@ -547,11 +550,19 @@ def identify_loop_tasking(
         # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it.
         # Not what the caller of the function reads (``at_return``): that is the memory a pointer parameter points to,
         # the parameter itself stays what the do-all loop made of it (a read-only pointer is firstprivate).
-        for needed in sorted({a.variable for a in after if a.kind == "RAW" and not a.at_return and a.variable}):
+        # A reduced variable keeps its clause, which is how it is shared. A last private one is shared as well, and
+        # listed in last_private as a hint: the value of the last iteration has to be the one that remains.
+        special = {v.name for v in do_all.reduction}
+        for needed in sorted(
+            {a.variable for a in after if a.kind == "RAW" and not a.at_return and a.variable} - special
+        ):
             task.private = [v for v in task.private if v != needed]
             task.first_private = [v for v in task.first_private if v != needed]
             if needed not in task.shared:
                 task.shared = sorted(task.shared + [needed])
+        task.shared = [v for v in task.shared if v not in special]
+        task.private = [v for v in task.private if v not in special]
+        task.first_private = [v for v in task.first_private if v not in special]
         # what the task gets by value (firstprivate, the index of the loop) can be written by the code after the loop
         # while the task runs: that write does not have to wait for the task
         task_cus = [cu_of[i] for i in do_all.instruction_ids if i in cu_of]

@@ -329,6 +329,8 @@ def _loop_with_call(make_node: MakeNode, build_pet_graph: BuildPetGraph, calls: 
         shared=[SimpleNamespace(name="data")],
         private=[SimpleNamespace(name="k")],
         first_private=[SimpleNamespace(name="n"), SimpleNamespace(name="n")],
+        last_private=[],
+        reduction=[],
     )
     return pet, do_all
 
@@ -383,6 +385,38 @@ def test_a_loop_task_takes_the_data_sharing_of_the_do_all_loop(
     assert (task.shared, task.private, task.first_private) == (["data"], ["k"], ["n"])
 
 
+def test_a_reduced_variable_of_a_loop_task_is_a_reduction_and_not_shared(
+    monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    do_all.shared = [SimpleNamespace(name="data"), SimpleNamespace(name="sum")]
+    do_all.reduction = [SimpleNamespace(name="sum", operation="+")]
+    # the code after the loop reads the sum: it stays a reduction instead of becoming shared
+    after = [AfterDependence(0, "sum", "RAW", "3:2960")]
+    monkeypatch.setattr(
+        "discopop_explorer.pattern_detectors.new_task_detector.after_dependences_of_instructions",
+        lambda *a, **kw: after,
+    )
+    task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
+    assert task.reduction == ["+:sum"]
+    assert task.shared == ["data"]
+
+
+def test_the_last_private_variables_of_a_do_all_loop_are_kept_next_to_shared(
+    monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, do_all = _loop_with_call(make_node, build_pet_graph)
+    do_all.last_private = [SimpleNamespace(name="last")]
+    after = [AfterDependence(0, "last", "RAW", "3:2960")]
+    monkeypatch.setattr(
+        "discopop_explorer.pattern_detectors.new_task_detector.after_dependences_of_instructions",
+        lambda *a, **kw: after,
+    )
+    task: Any = identify_loop_tasking(pet, [do_all], None, first_task_group=0)[0]
+    assert task.last_private == ["last"]
+    assert task.shared == ["data", "last"]
+
+
 def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_what_it_wrote(
     monkeypatch: pytest.MonkeyPatch, isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
 ) -> None:
@@ -416,7 +450,10 @@ def test_the_join_of_a_loop_task_is_the_first_line_after_the_loop_that_reads_wha
 def lines_pet() -> Any:
     lines = {1: "3:31", 2: "3:32", 3: "3:33"}
     lines_of = lambda ids: [lines[i] for i in ids if i in lines]  # noqa: E731
-    return SimpleNamespace(get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of)
+    # g: no node, so instruction ids that other tests left in the global instructionToCUIdMap lead nowhere
+    return SimpleNamespace(
+        get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of, g=set()
+    )
 
 
 def test_copies_of_a_group_from_the_levels_of_a_recursion_are_reported_once(
@@ -480,6 +517,8 @@ def _guarded_call_loop(
         shared=[],
         private=[],
         first_private=[],
+        reduction=[],
+        last_private=[],
     )
     return pet, do_all
 
@@ -528,10 +567,24 @@ def test_the_loops_of_a_nest_with_the_same_statement_are_one_suggestion_for_the_
     pet = build_pet_graph([outer, inner, call, inner_loop, function])
     pet.instruction_lines = {"1": "3:50", "2": "3:51", "3": "3:52", "4": "3:52"}
     outer_do_all = SimpleNamespace(
-        node_id="3:10", instruction_ids=[1, 2, 3, 4], affected_cu_ids=[], shared=[], private=[], first_private=[]
+        node_id="3:10",
+        instruction_ids=[1, 2, 3, 4],
+        affected_cu_ids=[],
+        shared=[],
+        private=[],
+        first_private=[],
+        reduction=[],
+        last_private=[],
     )
     inner_do_all = SimpleNamespace(
-        node_id="3:11", instruction_ids=[2, 3, 4], affected_cu_ids=[], shared=[], private=[], first_private=[]
+        node_id="3:11",
+        instruction_ids=[2, 3, 4],
+        affected_cu_ids=[],
+        shared=[],
+        private=[],
+        first_private=[],
+        reduction=[],
+        last_private=[],
     )
     for order in ([outer_do_all, inner_do_all], [inner_do_all, outer_do_all]):
         found = identify_loop_tasking(pet, order, None, first_task_group=0)  # type: ignore[arg-type]
