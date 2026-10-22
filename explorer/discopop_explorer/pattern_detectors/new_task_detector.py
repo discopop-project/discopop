@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
@@ -27,7 +27,7 @@ from discopop_explorer.classes.patterns.TaskParallelismInfo import (
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.task_cursor_loops import LoopTaskSource
 from discopop_explorer.pattern_detectors.task_dataflow import (
     analyze_task_group,
     clauses_of_dependences,
@@ -346,7 +346,7 @@ def _hotspot_functions(
 
 def identify_loop_tasking(
     pet: PEGraphX,
-    do_all_patterns: List[DoAllInfo],
+    do_all_patterns: Sequence[LoopTaskSource],
     hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     first_task_group: int,
 ) -> List[PatternInfo]:
