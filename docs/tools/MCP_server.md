@@ -62,7 +62,7 @@ The server offers 12 tools. In workflow order:
 | `delete_execution_configuration` | Delete a configuration; its recorded results are kept. |
 | `get_configurations` | Show the build scripts and configurations of a project. |
 | `get_project_status` | Show which steps have run, whether they are stale and which call comes next. |
-| `gather_data` | Run the pipeline: hotspot detection (`hotspot_config_names`), instrumentation, profiling and pattern detection. Rebuilds the project plainly afterwards. A failing hotspot step fails the call. `enable_task_detection` adds task parallelism to the pattern detection (repeated even if its results are current). |
+| `gather_data` | Run the pipeline: hotspot detection (`hotspot_config_names`), instrumentation, profiling and pattern detection. Rebuilds the project plainly afterwards. A failing hotspot step fails the call. The pattern detection covers doall, reduction and task parallelism; results which do not list all three in `enabled_patterns` of `patterns.json` are detected again. |
 | `get_hotspots` | List the hotspots, longest running first, with their runtime and share of the program's. |
 | `get_parallelization_suggestions` | List the suggestions, hottest first, with the pragma to add. Task parallelism is a task group instead: the enclosing function with its runtime, the parallel region, the code of each task, the dependences between the tasks and flags where the group looks implausible; it names no pragmas, the agent places them. |
 | `explain_parallelization` | Explain in a text why code at given lines was or was not suggested for parallelization, e.g. which dependency prevents it. For lines in a task group it names the group. |

@@ -92,9 +92,10 @@ Implausible groups are flagged, not hidden (see 3.3).
       `docs/tools/MCP_server.md`.
 - [x] Tests with fixtures from the fib and fft runs (`fft_task_groups_fixture.py`) (including the stale or missing
       hotspot and side-effect data).
-- [x] `gather_data`: option `enable_task_detection` (the explorer writes the patches itself).
-      Not in the default; to be decided by the maintainer. It repeats the detection even if
-      its results are current, since patterns.json does not say whether tasks were enabled.
+- [x] `gather_data` detects `task,doall,reduction` by default (maintainer's decision). The
+      explorer writes the list of detected pattern types as `enabled_patterns` into
+      `patterns.json` (top level, beside `patterns`); the staleness check repeats the detection
+      if one of the three is missing. The explorer writes the patches itself.
 
 ### 3.2 Explorer follow-ups (separate work)
 

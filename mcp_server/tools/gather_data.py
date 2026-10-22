@@ -52,7 +52,8 @@ TOOL = Tool(
         "  4. Compile with DiscoPoP instrumentation (dp_settings.json).\n"
         "  5. Run the instrumented binary to collect runtime dependency traces.\n"
         "     NOTE: significant runtime overhead expected — use small inputs.\n"
-        "  6. Analyse with discopop_explorer to detect parallelization opportunities.\n"
+        "  6. Analyse with discopop_explorer to detect parallelization opportunities (doall, reduction and\n"
+        "     task parallelism).\n"
         "\n"
         "Each step is automatically skipped when its outputs are already current "
         "relative to the source files. Use force=true to re-run all steps unconditionally. "
@@ -98,15 +99,6 @@ TOOL = Tool(
             "force": {
                 "type": "boolean",
                 "description": ("Set to true to re-run all steps even if outputs are already current. Default: false."),
-            },
-            "enable_task_detection": {
-                "type": "boolean",
-                "description": (
-                    "Set to true to also detect task parallelism (parallel regions with tasks, listed by "
-                    "get_parallelization_suggestions as task groups). Pattern detection is then repeated even if its "
-                    "results are current, because they do not tell whether it ran with tasks. "
-                    "Default: false, i.e. doall and reduction only."
-                ),
             },
         },
         "required": ["project_path", "config_name"],
@@ -607,13 +599,25 @@ def _run_profiling(
     return {"status": "success", "elapsed_time": elapsed, **warning_fields(stderr)}
 
 
+# the pattern types gather_data detects
+DETECTED_PATTERNS = ["task", "doall", "reduction"]
+
+
+def _detected_patterns(patterns_json: Path) -> set[str]:
+    """The pattern types a patterns.json was detected for; none for results which do not say."""
+    try:
+        with open(patterns_json) as f:
+            return set(json.load(f).get("enabled_patterns") or [])
+    except (OSError, ValueError, AttributeError):
+        return set()
+
+
 def _run_pattern_detection(
     project_path: str,
     timeout_seconds: int,
     force: bool,
     ctx: ToolContext,
     source_mtime: Optional[float],
-    enable_task_detection: bool = False,
 ) -> dict[str, Any]:
     p = Path(project_path)
     discopop_dir = p / ".discopop"
@@ -629,7 +633,7 @@ def _run_pattern_detection(
             "message": "profiler/dynamic_dependencies.txt not found — profiling step must have failed.",
         }
 
-    if not force and not enable_task_detection and patterns_json.exists():
+    if not force and patterns_json.exists() and _detected_patterns(patterns_json) >= set(DETECTED_PATTERNS):
         result_mtime = patterns_json.stat().st_mtime
         if source_mtime is None or source_mtime <= result_mtime:
             return {
@@ -649,8 +653,12 @@ def _run_pattern_detection(
 
     ctx.log_action(project_path, "gather_data", "Pattern detection: invoking discopop_explorer")
     try:
-        command = [explorer, "--enable-patterns", "task,doall,reduction"] if enable_task_detection else [explorer]
-        proc = ctx.run_process(command, timeout=timeout_seconds, cwd=str(discopop_dir), env=env)
+        proc = ctx.run_process(
+            [explorer, "--enable-patterns", ",".join(DETECTED_PATTERNS)],
+            timeout=timeout_seconds,
+            cwd=str(discopop_dir),
+            env=env,
+        )
     except subprocess.TimeoutExpired:
         _discard_partial_output(patterns_json, project_path, ctx)
         return {"status": "error", "message": f"discopop_explorer timed out after {timeout_seconds}s."}
@@ -843,7 +851,6 @@ def _pipeline(
     timeout_seconds: int,
     force: bool,
     ctx: ToolContext,
-    enable_task_detection: bool = False,
 ) -> dict[str, Any]:
     """The data collection pipeline itself, as a result dict.
 
@@ -968,7 +975,7 @@ def _pipeline(
         return _cancelled_result(project_path, steps)
     step += 1
     _progress(step, total_steps, "Pattern detection (discopop_explorer)", ctx)
-    detection = _run_pattern_detection(project_path, timeout_seconds, force, ctx, source_mtime, enable_task_detection)
+    detection = _run_pattern_detection(project_path, timeout_seconds, force, ctx, source_mtime)
     steps["pattern_detection"] = detection
     if ctx.cancelled:
         return _cancelled_result(project_path, steps)
@@ -1010,7 +1017,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         hotspot_config_names: list[str] = arguments.get("hotspot_config_names") or [config_name]
         timeout_seconds: int = arguments.get("timeout_seconds", 3600)
         force: bool = arguments.get("force", False)
-        enable_task_detection: bool = arguments.get("enable_task_detection", False)
         for name in [config_name, *hotspot_config_names]:
             name_error = invalid_configuration_name(name)
             if name_error is not None:
@@ -1018,9 +1024,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         # A single step (an instrumented run, above all) can take an hour; the heartbeat
         # keeps reporting the step in progress so the client knows the call is alive.
         with ctx.heartbeat():
-            result = _pipeline(
-                project_path, config_name, hotspot_config_names, timeout_seconds, force, ctx, enable_task_detection
-            )
+            result = _pipeline(project_path, config_name, hotspot_config_names, timeout_seconds, force, ctx)
 
             # Leave the project buildable by hand again. Only when something was
             # actually compiled in place: a call that skipped every instrumentation

@@ -54,6 +54,15 @@ except (ImportError, ModuleNotFoundError):
     Visualizer = object  # type: ignore[assignment, misc]
 
 
+PATTERN_TYPES = ["reduction", "doall", "task", "pipeline", "geodec", "simplegpu"]
+
+
+def selected_pattern_types(enable_patterns: str) -> List[str]:
+    """The pattern types a comma-separated selection (or '*', i.e. all) stands for, in the order of PATTERN_TYPES."""
+    selected = [name.strip() for name in enable_patterns.split(",")]
+    return [name for name in PATTERN_TYPES if "*" in selected or name in selected]
+
+
 class PatternDetectorX(object):
     pet: PEGraphX
     ast_helper: ASTPatternDetectionHelper
@@ -123,6 +132,7 @@ class PatternDetectorX(object):
         with stage("Enforcing single function exit nodes", 5, total=5):
             self.pet.enforce_single_function_exit_node()
         res = DetectionResult(self.pet)
+        res.enabled_patterns = selected_pattern_types(enable_patterns)
 
         # create TaskGraph from pet
         dynamic_deps_file = dependencies
@@ -273,6 +283,7 @@ class PatternDetectorX(object):
         self.pet.calculateFunctionMetadata()
         self.pet.calculateLoopMetadata()
         res = DetectionResult(self.pet)
+        res.enabled_patterns = ["doall", "reduction"]
 
         # init pattern lists
         res.patterns.reduction = []
