@@ -111,8 +111,10 @@ Other findings:
    `start_line`/`end_line`; library about 130). The MCP server stays line-based (presentation).
 
 Stage 4 progress: `Context.get_instruction_scope` (done); `instruction_ids` on TASK and
-PARALLELREGION entries of `patterns.json` (done; fib: task 31 = 847-850, task 32 = 851-854); open:
-the same for do-all and reduction (loop body), then the explorer's line queries module by module.
+PARALLELREGION entries of `patterns.json` (done; fib: task 31 = 847-850, task 32 = 851-854);
+`instruction_ids` of do-all and reduction (done: the instructions of the loop context, as the pattern node is only the header CU of the loop);
+open: the explorer's line queries module by module. The MCP server does not show instruction ids:
+they are too detailed for it and stay behind a more abstract layer (maintainer).
 
 Each stage gets its own tests and commit.
 

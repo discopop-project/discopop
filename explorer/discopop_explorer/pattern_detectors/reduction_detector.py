@@ -24,7 +24,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 from discopop_library.StatusReporting.console import progress
 
-from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo, instruction_ids_of
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
@@ -66,6 +66,8 @@ class ReductionInfo(PatternInfo):
         # determine affected cu and line ids
         affected_cus = subtree_of_type(pet, node)
         self.affected_cu_ids = [n.id for n in affected_cus]
+        # the instructions of the loop body (instruction ids of this build), see design/instruction_focus.md
+        self.instruction_ids: List[int] = instruction_ids_of(affected_cus)
         self.affected_line_ids: List[LineID] = []
         for node in affected_cus:
             self.affected_line_ids += [
