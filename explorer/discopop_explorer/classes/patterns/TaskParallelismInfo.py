@@ -7,7 +7,7 @@
 # directory for details.
 
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
@@ -112,6 +112,10 @@ class ParallelRegionInfo(PatternInfo):
         )
         # set if the tasks are created per iteration of a loop: the line of the loop (file id:line)
         self.loop_start_line: Optional[str] = None
+        # a later task depends on an earlier one: {"from_task", "to_task" (pattern ids), "variable", "kind": RAW | WAR}
+        self.task_dependences: List[Dict[str, Any]] = []
+        # the code after the region depends on a task: {"task" (pattern id), "variable", "kind": RAW | WAR, "line"}
+        self.after_dependences: List[Dict[str, Any]] = []
 
     def __str__(self) -> str:
         return (

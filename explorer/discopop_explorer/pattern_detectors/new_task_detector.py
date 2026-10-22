@@ -28,6 +28,7 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.task_dataflow import analyze_task_group, clauses_of_dependences
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.StatusReporting.console import stage
@@ -170,6 +171,28 @@ def _is_valid_task_body(ctg: ContextTaskGraph, task: Context) -> bool:
     return len(exits) <= 1
 
 
+def _record_data_flow(
+    pet: PEGraphX,
+    tasks: List[Context],
+    task_lines: List[Tuple[int, int, int]],
+    task_patterns: List[TaskParallelismInfo],
+    region: ParallelRegionInfo,
+) -> None:
+    """Dependences between the tasks, what the code after the region depends on and the data sharing of the tasks."""
+    flow = analyze_task_group(pet, tasks, task_lines)
+    ids = [t.pattern_id for t in task_patterns]
+    region.task_dependences = [
+        {"from_task": ids[d.from_task], "to_task": ids[d.to_task], "variable": d.variable, "kind": d.kind}
+        for d in flow.dependences
+    ]
+    region.after_dependences = [
+        {"task": ids[a.task], "variable": a.variable, "kind": a.kind, "line": a.line} for a in flow.after
+    ]
+    for index, (task, sharing) in enumerate(zip(task_patterns, flow.sharing)):
+        task.shared, task.private, task.first_private = sharing.shared, sharing.private, sharing.first_private
+        task.in_dep, task.out_dep, task.in_out_dep = clauses_of_dependences(flow.dependences, index)
+
+
 def identify_simple_tasking(
     ctg: ContextTaskGraph, simplification_results: List[TaskParentContext]
 ) -> List[PatternInfo]:
@@ -215,6 +238,7 @@ def identify_simple_tasking(
         # TODO: check if data sharing clauses are required
         invalid = False
         pattern_objects: List[TaskParallelismInfo] = []
+        task_lines: List[Tuple[int, int, int]] = []
         parallel_region_start: Optional[int] = None
         parallel_region_end: Optional[int] = None
 
@@ -247,6 +271,7 @@ def identify_simple_tasking(
                 break
             task_scope_min = min(filtered_task_scope_line_nums)
             task_scope_max = max(filtered_task_scope_line_nums)
+            task_lines.append((parent_scope_file_id, task_scope_min, task_scope_max))
             # update parallel region
             if parallel_region_start is None:
                 parallel_region_start = task_scope_min
@@ -294,6 +319,8 @@ def identify_simple_tasking(
             task_group=[task_group_num],
             contained_tasks=pattern_objects,
         )
+
+        _record_data_flow(ctg.pet, valid_tasks, task_lines, pattern_objects, parallel_region_pattern)
 
         patterns.append(parallel_region_pattern)
         # close task group

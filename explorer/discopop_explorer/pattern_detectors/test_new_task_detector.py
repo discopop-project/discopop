@@ -16,7 +16,7 @@ of the explorer from it (see design/task_suggestions.md).
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 import pytest
 
@@ -36,17 +36,39 @@ def _lines(file_id: int, first: int, last: int) -> List[str]:
     return [f"{file_id}:{n}" for n in range(first, last + 1)]
 
 
+class _StubContext:
+    """The parts of a Context the detector reads. Hashable like the real one."""
+
+    def __init__(
+        self, scope: List[str], node: Node | None, instructions: List[int] | None, cus: List[Node] | None
+    ) -> None:
+        self.scope, self.node, self.instructions, self.cus = scope, node, instructions or [], cus or []
+        self.outgoing_dependencies: Set[Any] = set()
+        self.incoming_dependencies: Set[Any] = set()
+
+    def get_contained_nodes(self, inclusive: bool = False) -> List[Any]:
+        return [SimpleNamespace(get_pet_node=lambda pet, cu=cu: cu) for cu in self.cus]
+
+    def get_contained_contexts(self, inclusive: bool = False) -> Set[Any]:
+        return set()
+
+    def get_successive_contexts(self) -> Set[Any]:
+        return set()
+
+    def get_code_scope(self, pet: Any, inclusive: bool = False) -> List[str]:
+        return list(self.scope)
+
+    def get_instruction_scope(self, pet: Any, inclusive: bool = False) -> List[int]:
+        return list(self.instructions)
+
+    def get_first_pet_node(self, pet: Any) -> Node | None:
+        return self.node
+
+
 def _context(
     scope: List[str], node: Node | None = None, instructions: List[int] | None = None, cus: List[Node] | None = None
 ) -> Any:
-    return SimpleNamespace(
-        get_contained_nodes=lambda inclusive=False: [
-            SimpleNamespace(get_pet_node=lambda pet, cu=cu: cu) for cu in (cus or [])
-        ],
-        get_code_scope=lambda pet, inclusive=False: list(scope),
-        get_instruction_scope=lambda pet, inclusive=False: list(instructions or []),
-        get_first_pet_node=lambda pet: node,
-    )
+    return _StubContext(scope, node, instructions, cus)
 
 
 def _detect(
