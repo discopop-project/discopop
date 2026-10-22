@@ -98,7 +98,11 @@ def _detect(
     )
     lines = instruction_lines or {}
     lines_of = lambda ids: [lines[i] for i in ids if i in lines]  # noqa: E731
-    pet = pet or SimpleNamespace(get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of)
+    # g: the stub has no node, so instruction ids that another test left in the global instructionToCUIdMap lead
+    # nowhere
+    pet = pet or SimpleNamespace(
+        get_line_ids_of_instructions=lines_of, get_statement_line_ids_of_instructions=lines_of, g=set()
+    )
     patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc], observed)  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]

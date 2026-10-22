@@ -131,7 +131,8 @@ def test_the_task_of_a_cursor_loop_is_the_call_without_the_header_and_the_update
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
     assert len(tasks) == 1 and len(regions) == 1
     assert (tasks[0].region_start_line, tasks[0].region_end_line) == ("6", "6")
-    assert (regions[0].region_start_line, regions[0].region_end_line) == ("5", "6")
+    # like every loop task: the region covers the task statement, the loop header is the loop_start_line
+    assert (regions[0].region_start_line, regions[0].region_end_line) == ("6", "6")
     assert tasks[0].loop_start_line == "1:5"
     assert tasks[0].first_private == ["cursor", "n"]
 

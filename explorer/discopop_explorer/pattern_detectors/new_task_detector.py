@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
@@ -25,20 +25,20 @@ from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     TaskParallelismInfo,
     TPIType,
 )
-from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.task_cursor_loops import LoopTaskSource
 from discopop_explorer.pattern_detectors.task_dataflow import (
+    AfterDependence,
     analyze_task_group,
     clauses_of_dependences,
     after_dependences_of_instructions,
     function_of,
     instructions_with_callees,
 )
+from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.StatusReporting.console import stage
@@ -51,7 +51,12 @@ except (ImportError, ModuleNotFoundError):
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
 
-def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer | None) -> List[PatternInfo]:
+def run_detection(
+    pet: PEGraphX,
+    task_graph: TaskGraph,
+    visualizer: Visualizer | None,
+    ast_helper: Optional[ASTPatternDetectionHelper] = None,
+) -> List[PatternInfo]:
     logger.info("Starting task detection...")
     result: List[PatternInfo] = []
 
@@ -60,7 +65,9 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
         simplification_result = context_task_graph.simplify_graph()
 
     # result += identify_simple_taskloop(pet, task_graph)
-    result += identify_simple_tasking(context_task_graph, simplification_result, observed_dependences(task_graph))
+    result += identify_simple_tasking(
+        context_task_graph, simplification_result, observed_dependences(task_graph), ast_helper
+    )
     if visualizer:
         show_all_plots(context_task_graph)
 
@@ -171,23 +178,35 @@ def _is_valid_task_body(ctg: ContextTaskGraph, task: Context) -> bool:
     return len(exits) <= 1
 
 
+def _after_record(task_id: int, dependence: AfterDependence) -> Dict[str, Any]:
+    """An entry of ``after_dependences`` of a region (patterns.json). ``line`` is None and ``at_return`` true if the
+    reader is outside of the function (the join is before the function returns); ``variable`` is a name of the scope
+    of the function, or empty if there is none."""
+    return {
+        "task": task_id,
+        "variable": dependence.variable,
+        "kind": dependence.kind,
+        "line": dependence.line,
+        "at_return": dependence.at_return,
+    }
+
+
 def _record_data_flow(
     pet: PEGraphX,
     tasks: List[Context],
     task_lines: List[Tuple[int, int, int]],
     task_patterns: List[TaskParallelismInfo],
     region: ParallelRegionInfo,
+    ast_helper: Optional[ASTPatternDetectionHelper] = None,
 ) -> None:
     """Dependences between the tasks, what the code after the region depends on and the data sharing of the tasks."""
-    flow = analyze_task_group(pet, tasks, task_lines)
+    flow = analyze_task_group(pet, tasks, task_lines, ast_helper)
     ids = [t.pattern_id for t in task_patterns]
     region.task_dependences = [
         {"from_task": ids[d.from_task], "to_task": ids[d.to_task], "variable": d.variable, "kind": d.kind}
         for d in flow.dependences
     ]
-    region.after_dependences = [
-        {"task": ids[a.task], "variable": a.variable, "kind": a.kind, "line": a.line} for a in flow.after
-    ]
+    region.after_dependences = [_after_record(ids[a.task], a) for a in flow.after]
     for index, (task, sharing) in enumerate(zip(task_patterns, flow.sharing)):
         task.shared, task.private, task.first_private = sharing.shared, sharing.private, sharing.first_private
         task.in_dep, task.out_dep, task.in_out_dep = clauses_of_dependences(flow.dependences, index)
@@ -229,6 +248,7 @@ def identify_simple_tasking(
     ctg: ContextTaskGraph,
     simplification_results: List[TaskParentContext],
     observed: Optional[Set[Tuple[int, int]]] = None,
+    ast_helper: Optional[ASTPatternDetectionHelper] = None,
 ) -> List[PatternInfo]:
     """Analyzes the results of the graph simplification and create simple tasking patterns.
 
@@ -366,7 +386,7 @@ def identify_simple_tasking(
             contained_tasks=pattern_objects,
         )
 
-        _record_data_flow(ctg.pet, valid_tasks, task_lines, pattern_objects, parallel_region_pattern)
+        _record_data_flow(ctg.pet, valid_tasks, task_lines, pattern_objects, parallel_region_pattern, ast_helper)
 
         patterns.append(parallel_region_pattern)
         # close task group
@@ -430,6 +450,7 @@ def identify_loop_tasking(
     do_all_patterns: Sequence[LoopTaskSource],
     hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     first_task_group: int,
+    ast_helper: Optional[ASTPatternDetectionHelper] = None,
 ) -> List[PatternInfo]:
     """Loops whose iterations are independent (do-all) and whose body calls a function that is a hotspot are suggested
     as one task per iteration, e.g. the recursive calls in the loop of ``fft_aux`` (omp-tasks: ``task`` on the call
@@ -456,7 +477,7 @@ def identify_loop_tasking(
     loop_headers = {(loop.file_id, loop.start_line) for loop in all_nodes(pet, LoopNode)}
 
     # the candidates: the do-all loop, its node and the lines of the statement of its task
-    candidates: List[Tuple[DoAllInfo, Node, List[int], Set[int]]] = []
+    candidates: List[Tuple[LoopTaskSource, Node, List[int], Set[int]]] = []
     for do_all in do_all_patterns:
         called = [
             callees[i]
@@ -486,7 +507,7 @@ def identify_loop_tasking(
         candidates.append((do_all, loop_node, body_lines, header_lines))
 
     # loops of a nest with the same statement: the innermost one (fewest instructions) is the suggestion
-    innermost: Dict[Tuple[int, int, int], DoAllInfo] = dict()
+    innermost: Dict[Tuple[int, int, int], LoopTaskSource] = dict()
     for do_all, loop_node, body_lines, header_lines in candidates:
         key = (loop_node.file_id, min(body_lines), max(body_lines))
         known = innermost.get(key)
@@ -511,12 +532,22 @@ def identify_loop_tasking(
         task.first_private = sorted({v.name for v in do_all.first_private})
         function = function_of(pet, loop_node)
         after = (
-            after_dependences_of_instructions(pet, do_all.instruction_ids, loop_node.file_id, max(body_lines), function)
+            after_dependences_of_instructions(
+                pet,
+                do_all.instruction_ids,
+                loop_node.file_id,
+                max(body_lines),
+                function,
+                ast_helper=ast_helper,
+                task_first_line=min(body_lines),
+            )
             if function is not None
             else []
         )
-        # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it
-        for needed in sorted({a.variable for a in after if a.kind == "RAW"}):
+        # what the code after the loop reads is shared: the task writes it, and the code after the loop needs it.
+        # Not what the caller of the function reads (``at_return``): that is the memory a pointer parameter points to,
+        # the parameter itself stays what the do-all loop made of it (a read-only pointer is firstprivate).
+        for needed in sorted({a.variable for a in after if a.kind == "RAW" and not a.at_return and a.variable}):
             task.private = [v for v in task.private if v != needed]
             task.first_private = [v for v in task.first_private if v != needed]
             if needed not in task.shared:
@@ -545,9 +576,7 @@ def identify_loop_tasking(
         ]
         if len(loop_ends) > 0:
             region.loop_end_line = f"{loop_node.file_id}:{max(loop_ends)}"
-        region.after_dependences = [
-            {"task": task.pattern_id, "variable": a.variable, "kind": a.kind, "line": a.line} for a in after
-        ]
+        region.after_dependences = [_after_record(task.pattern_id, a) for a in after]
         patterns += [task, region]
         task_group_num += 1
     return patterns
