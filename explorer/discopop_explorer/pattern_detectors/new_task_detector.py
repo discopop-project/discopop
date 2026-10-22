@@ -553,8 +553,12 @@ def identify_loop_tasking(
         # A reduced variable keeps its clause, which is how it is shared. A last private one is shared as well, and
         # listed in last_private as a hint: the value of the last iteration has to be the one that remains.
         special = {v.name for v in do_all.reduction}
+        # The cursor of a loop (while (v) { f(v); v = v->next; }) is firstprivate: the task gets the pointer by value,
+        # the update stays in the creating thread. A dependence the names of the join map to it is one on what it
+        # points to.
+        cursors = set(getattr(do_all, "cursors", []))
         for needed in sorted(
-            {a.variable for a in after if a.kind == "RAW" and not a.at_return and a.variable} - special
+            {a.variable for a in after if a.kind == "RAW" and not a.at_return and a.variable} - special - cursors
         ):
             task.private = [v for v in task.private if v != needed]
             task.first_private = [v for v in task.first_private if v != needed]

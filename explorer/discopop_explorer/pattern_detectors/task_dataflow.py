@@ -636,7 +636,8 @@ def after_dependences_of_instructions(
     own_code = scope.instructions
     written_by_task = inside - set(later)
     unpassed_parameters: Set[str] = set()
-    if (own_code - set(instruction_ids)) & inside:
+    recursive = bool((own_code - set(instruction_ids)) & inside)
+    if recursive:
         # the task reaches its own function: the code of the function cannot be told apart from the code the task
         # runs in the recursive calls
         written_by_task = _written_by_recursive_task(pet, written_by_task, function, file_id)
@@ -661,7 +662,9 @@ def after_dependences_of_instructions(
             sink = dependence.sink_instruction_id
             if dependence.source_instruction_id not in written_by_task or sink is None:
                 continue
-            if not _belongs_to_task(pet, dependence, own_instructions):
+            # the callpath state tells which call wrote, but not for a recursive task: the states are cut at the
+            # recursive call, and every record has the state of the first level
+            if not recursive and not _belongs_to_task(pet, dependence, own_instructions):
                 continue
             if sink in later:
                 line: Optional[str] = later[sink]
@@ -673,7 +676,9 @@ def after_dependences_of_instructions(
                     _variables_at_line(pet, function, line, ast_helper),
                 )
                 at_return = False
-            elif kind == "RAW" and sink not in excluded and sink not in own_code:
+            elif not recursive and kind == "RAW" and sink not in excluded and sink not in own_code:
+                # not for a recursive task: the writes of its recursion levels cannot be told apart (the call paths
+                # are cut), and memory the recursion left on the stack would be reported as read by unrelated code
                 line, at_return = None, True
                 names = _caller_names(scope, dependence.var_name, False, own_names)
             else:

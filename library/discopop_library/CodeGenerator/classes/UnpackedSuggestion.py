@@ -248,7 +248,9 @@ class UnpackedSuggestion(object):
         region_end = int(self.values["region_end_line"])
         loop_end_unknown = False
         if self.values.get("loop_start_line"):
-            # tasks per loop iteration: the region ends with the loop, not with the last task in its body
+            # tasks per loop iteration: the region (which covers the task statement) starts at the loop header and ends
+            # with the loop, not with the last task in its body
+            region_start = int(str(self.values["loop_start_line"]).split(":")[1])
             if self.values.get("loop_end_line"):
                 region_end = int(str(self.values["loop_end_line"]).split(":")[1])
             else:

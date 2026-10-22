@@ -27,7 +27,8 @@ from test.end_to_end.pipeline import build_and_profile, explore
 
 SRC = Path(__file__).parent / "src"
 
-# (name of the omp-tasks variant, line of the loop header and of the task statement in src/health.c, line of the
+# (name of the omp-tasks variant, line of the loop header and of the task statement in src/health.c (the region covers
+# the task statement, the loop header is its loop_start_line), line of the
 # first read of what the tasks wrote: check_patients_realloc, after the taskwait of omp-tasks)
 GROUPS = [("if_cutoff", 39, 40, 47), ("manual_cutoff", 56, 57, 64), ("plain", 73, 74, 81)]
 VARIANTS = [(name, header, task) for name, header, task, _ in GROUPS]
@@ -48,7 +49,7 @@ def _regions(result: Any, header: int, line: int) -> List[ParallelRegionInfo]:
         p
         for p in result.patterns.task
         if isinstance(p, ParallelRegionInfo)
-        and p.region_start_line == str(header)
+        and p.region_start_line == str(line)
         and p.region_end_line == str(line)
         and p.loop_start_line == f"1:{header}"
     ]
