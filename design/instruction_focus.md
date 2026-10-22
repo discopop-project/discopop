@@ -113,7 +113,10 @@ Other findings:
 Stage 4 progress: `Context.get_instruction_scope` (done); `instruction_ids` on TASK and
 PARALLELREGION entries of `patterns.json` (done; fib: task 31 = 847-850, task 32 = 851-854);
 `instruction_ids` of do-all and reduction (done: the instructions of the loop context, as the pattern node is only the header CU of the loop);
-open: the explorer's line queries module by module. The MCP server does not show instruction ids:
+TaskGraph: dependence ends are looked up by instruction id first (exact CU/context),
+lines only for ends no CU holds (done; no change on the fixtures, fib, fft); open: the other line queries
+module by module (inventory: `LineID` 139 uses in 206 files; most in `TaskGraph.py` 19, `GPULoop.py` 13, `Context.py` 10,
+the do-all/reduction/task detectors 7-9 each, `Node.py` 8). The MCP server does not show instruction ids:
 they are too detailed for it and stay behind a more abstract layer (maintainer).
 
 Each stage gets its own tests and commit.

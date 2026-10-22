@@ -4298,7 +4298,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         state_id: str,
         instructionID_mappings_dict: Dict[str, str],
         state_mappings_dict: Dict[str, List[str]],
-        location_to_work_contexts: Dict[LineID, Set[WorkContext]],
+        location_to_work_contexts: Dict[str, Set[WorkContext]],
         lookup_cache: Dict[Tuple[str, str], Set[Context]],
         state_ids_cache: Dict[Context, FrozenSet[int]],
         fallback: Optional["_ContextFallback"] = None,
@@ -4306,8 +4306,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long
         run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths.
-        location_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
-        built once per dependency-insertion pass (see __insert_data_dependencies_from_files).
+        location_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it} and
+        {instruction id: WorkContexts whose instruction scope contains it}, built once per dependency-insertion
+        pass (see __insert_data_dependencies_from_files).
         state_ids_cache memoizes get_state_ids per context for the duration of that pass.
         With a fallback, an end whose state no context at the location carries is not dropped but
         mapped approximately (see _ContextFallback.resolve)."""
@@ -4318,11 +4319,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         contexts: Set[Context] = set()
         requested_location = location
-        # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
-        if ":" not in location:
-            # location is an instruction id or something unspecified (e.g. '*').
-            if location in instructionID_mappings_dict:
-                location = instructionID_mappings_dict[location]
+        if ":" not in location and location in location_to_work_contexts:
+            # the instruction is held by a CU of the contexts of the index: an exact match, no line needed. An
+            # instruction of a CU the cuts deleted is in the index without contexts.
+            contexts = set(location_to_work_contexts[location])
+        elif ":" not in location and location in instructionID_mappings_dict:
+            # an instruction id no CU holds: its line
+            location = instructionID_mappings_dict[location]
 
         # handle location, if it is a regular lineID in the format "file:line".
         if ":" in location:
@@ -4421,12 +4424,27 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
 
         # build spatial index: LineID -> Set[WorkContext]
-        location_to_work_contexts: Dict[LineID, Set[WorkContext]] = {}
+        location_to_work_contexts: Dict[str, Set[WorkContext]] = {}
         for _ctx in self.contexts:
             if not isinstance(_ctx, WorkContext):
                 continue
             for _line_id in _ctx.get_code_scope(self.pet):
                 location_to_work_contexts.setdefault(_line_id, set()).add(_ctx)
+
+        # the same by instruction id: the exact match, lines are the fallback for instructions no CU holds
+        for _ctx in self.contexts:
+            if not isinstance(_ctx, WorkContext):
+                continue
+            for _held_instruction in _ctx.get_instruction_scope(self.pet):
+                location_to_work_contexts.setdefault(str(_held_instruction), set()).add(_ctx)
+        # instructions of CUs the cuts deleted belong to no context: they must not fall back to a line
+        for _deleted_cu in self.cus_deleted_by_early_exits | self.cus_deleted_by_exception_unwinding:
+            if _deleted_cu is None:
+                continue
+            _deleted_node = self.pet.node_at(_deleted_cu)
+            if isinstance(_deleted_node, CUNode):
+                for _held_instruction in _deleted_node.instruction_ids:
+                    location_to_work_contexts.setdefault(str(_held_instruction), set())
 
         # cache for repeated (location, state_id) lookups
         _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
@@ -4849,7 +4867,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             else {}
         )
 
-        location_to_work_contexts: Dict[LineID, Set[WorkContext]] = {}
+        location_to_work_contexts: Dict[str, Set[WorkContext]] = {}
         for ctx in self.contexts:
             if isinstance(ctx, WorkContext):
                 for line_id in ctx.get_code_scope(self.pet):
