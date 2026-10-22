@@ -62,10 +62,10 @@ The server offers 12 tools. In workflow order:
 | `delete_execution_configuration` | Delete a configuration; its recorded results are kept. |
 | `get_configurations` | Show the build scripts and configurations of a project. |
 | `get_project_status` | Show which steps have run, whether they are stale and which call comes next. |
-| `gather_data` | Run the pipeline: hotspot detection (`hotspot_config_names`), instrumentation, profiling and pattern detection. Rebuilds the project plainly afterwards. A failing hotspot step fails the call. |
+| `gather_data` | Run the pipeline: hotspot detection (`hotspot_config_names`), instrumentation, profiling and pattern detection. Rebuilds the project plainly afterwards. A failing hotspot step fails the call. `enable_task_detection` adds task parallelism to the pattern detection (repeated even if its results are current). |
 | `get_hotspots` | List the hotspots, longest running first, with their runtime and share of the program's. |
-| `get_parallelization_suggestions` | List the suggestions, hottest first, with the pragma to add. |
-| `explain_parallelization` | Explain in a text why code at given lines was or was not suggested for parallelization, e.g. which dependency prevents it. |
+| `get_parallelization_suggestions` | List the suggestions, hottest first, with the pragma to add. Task parallelism is a task group instead: the enclosing function with its runtime, the parallel region, the code of each task, the dependences between the tasks and flags where the group looks implausible; it names no pragmas, the agent places them. |
+| `explain_parallelization` | Explain in a text why code at given lines was or was not suggested for parallelization, e.g. which dependency prevents it. For lines in a task group it names the group. |
 | `get_side_effects` | Describe in a text the data a function reads and writes outside of itself, including its callees. |
 | `run_configuration` | Build the project as it is and run a configuration with a given thread count; reports the time, the result of `validate.sh`, and the errors and warnings of the build and the run. |
 

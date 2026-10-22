@@ -17,7 +17,8 @@ test setup, the state of the working trees, and what was verified.
 ## Where we are
 
 - Branch `improvement/mcp_server/task_suggestions` (based on `improvement/mcp_server/interface`).
-  `design/task_suggestions.md` is committed; **no code is written yet**.
+  `design/task_suggestions.md` is committed; the core of the MCP tool part is implemented
+  (`mcp_server/tools/task_groups.py`, see the checklist in the design file for what is open).
 - The goal: `get_parallelization_suggestions` (`mcp_server/tools/get_parallelization_suggestions.py`)
   reports task parallelism as parallel region + task bodies + dependences between tasks, without
   ready-made pragmas, so that the agent decides on pragmas and positions.
@@ -100,7 +101,5 @@ Not verified:
 
 ## Next step
 
-Start with the first MCP step of the design file: map the `task` key, print one entry per
-region with its tasks, then add the flags and the hotspot mapping, tests first, using fixtures
-built from the fib (3 groups) and fft (26 groups) data above. Run pytest, mypy, black and ruff
+Continue with the open items of section 3.1 of the design file, then the explorer (3.2). Run pytest, mypy, black and ruff
 as in `CLAUDE.md`.

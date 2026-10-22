@@ -190,3 +190,12 @@ def describe(group: TaskGroup, display_file: str, source: list[str]) -> list[str
     for flag in flags(group, source):
         lines.append(f"  flag: {flag}")
     return lines
+
+
+def covering(groups: dict[str, TaskGroup], file_id: int, start_line: int, end_line: int) -> dict[str, TaskGroup]:
+    """The groups whose parallel region shares a line with the given lines."""
+    return {
+        pid: g
+        for pid, g in groups.items()
+        if g.file_id == file_id and g.start_line <= end_line and start_line <= g.end_line
+    }

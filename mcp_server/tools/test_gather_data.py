@@ -278,6 +278,26 @@ class TestIncompleteStepsAreNotTakenAsCurrent(unittest.TestCase):
                 self.assertEqual(result["status"], "error")
                 self.assertFalse(os.path.exists(patterns_json))
 
+    def test_task_detection_is_enabled_on_request_and_repeats_current_results(self) -> None:
+        self.__write(os.path.join(self.profiler_dir, "dynamic_dependencies.txt"))
+        self.__write(os.path.join(self.dot_dp, "explorer", "patterns.json"))
+        proc = subprocess.CompletedProcess(args=["discopop_explorer"], returncode=0, stdout="", stderr="")
+        for enable, expected in (
+            (False, ["discopop_explorer"]),
+            (True, ["discopop_explorer", "--enable-patterns", "task,doall,reduction"]),
+        ):
+            with self.subTest(enable_task_detection=enable):
+                with (
+                    mock.patch("mcp_server.tools.gather_data.shutil.which", return_value="discopop_explorer"),
+                    mock.patch.object(self.ctx, "run_process", return_value=proc) as run,
+                ):
+                    result = gather_data._run_pattern_detection(self.project_path, 60, False, self.ctx, None, enable)
+                # up to date results are kept, unless they may lack the tasks
+                self.assertEqual(result["status"], "success" if enable else "skipped")
+                self.assertEqual(run.call_count, 1 if enable else 0)
+                if enable:
+                    self.assertEqual(run.call_args.args[0], expected)
+
 
 class TestHotspotResultsCoverTheRequestedConfigurations(unittest.TestCase):
     """Hotspot results are compared across inputs, so they count only as a complete set."""

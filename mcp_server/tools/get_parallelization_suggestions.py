@@ -216,7 +216,10 @@ def _describe_task_group(suggestion: dict[str, Any], hotspot: Optional[HotspotRe
             f"Suggestion {suggestion['pattern_id']}: Task group in {hotspot_prefix(hotspot)}"
             f"Function {scope.name} ({place}; {weight})"
         )
-    return "\n".join([head] + suggestion["details"])
+    details: list[str] = list(suggestion["details"])
+    if "nested_in" in suggestion:
+        details.append(f"  nested in suggestion {', '.join(sorted(suggestion['nested_in'], key=int))}")
+    return "\n".join([head] + details)
 
 
 def _describe(suggestion: dict[str, Any], hotspot: Optional[HotspotRegionInfo], total: float) -> str:
@@ -228,6 +231,8 @@ def _describe(suggestion: dict[str, Any], hotspot: Optional[HotspotRegionInfo], 
     weight = f" ({runtime_text(hotspot, total)})" if hotspot is not None else ""
     text = f"Suggestion {suggestion['pattern_id']}: {hotspot_prefix(hotspot)}{place}{weight}: {suggestion['type']}"
     text += f", {suggestion['pragma']}"
+    if "contains" in suggestion:
+        text += f"; contains task group {', '.join(sorted(suggestion['contains'], key=int))}"
     if "nested_in" in suggestion:
         text += f"; nested in suggestion {', '.join(suggestion['nested_in'])}"
     if "same_region" in suggestion:
@@ -319,6 +324,18 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                     hotspots.get((fact["file_id"], line, kind)) if "file_id" in fact and line is not None else None
                 )
                 entries.append((hotspot, suggestion))
+
+        # a task group inside a suggested loop is nested in it; the loop contains the group
+        by_id = {s["pattern_id"]: s for _, s in entries}
+        for pid, group in groups.items():
+            task_entry = by_id.get(pid)
+            if task_entry is None or group.end_line == task_groups.UNKNOWN_LINE:
+                continue
+            for other, region in regions.items():
+                if region[0] == group.file_id and region[1] <= group.start_line and group.end_line <= region[2]:
+                    task_entry.setdefault("nested_in", []).append(other)
+                    if other in by_id:
+                        by_id[other].setdefault("contains", []).append(pid)
 
         # the longest running first; regions without a measurement keep their order after them
         entries.sort(key=lambda e: -e[0].max_val if e[0] is not None else float("inf"))

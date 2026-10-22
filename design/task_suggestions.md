@@ -85,14 +85,16 @@ Implausible groups are flagged, not hidden (see 3.3).
       reconsidering for statements without any call (e.g. a plain assignment), if such groups
       turn out to be noise.
 - [x] Do not use the first `@@` line or the default kind `Loop` for tasks.
-- [ ] Relations (`nested_in` / alternative) for task regions and doall loops, e.g. a region
+- [x] Relations (`nested_in` / alternative) for task regions and doall loops, e.g. a region
       inside the loop of a doall suggestion.
-- [ ] `explain_parallelization` for task regions; tool description and
+- [x] `explain_parallelization` for task regions (names the group covering the lines; reasons
+      for rejected groups need the decision log of 3.2); tool description and
       `docs/tools/MCP_server.md`.
-- [ ] Tests with fixtures from the fib and fft runs (including the stale or missing
+- [x] Tests with fixtures from the fib and fft runs (`fft_task_groups_fixture.py`) (including the stale or missing
       hotspot and side-effect data).
-- [ ] `gather_data`: option to enable task detection (and the patch generator for it);
-      decide whether it belongs in the default.
+- [x] `gather_data`: option `enable_task_detection` (the explorer writes the patches itself).
+      Not in the default; to be decided by the maintainer. It repeats the detection even if
+      its results are current, since patterns.json does not say whether tasks were enabled.
 
 ### 3.2 Explorer follow-ups (separate work)
 
@@ -119,8 +121,6 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [ ] **Join points.** Report what is read after the region (fib: `x`, `y` at line 34), so
       that a join (taskwait, depend) can be derived.
 - [ ] **Data sharing.** `shared`, `private`, `first_private` are always empty.
-- [ ] **Dependences.** `in_dep`, `out_dep`, `in_out_dep` are always empty (being filled
-      manually by the maintainer).
 - [ ] **Enclosing loop.** Export the innermost enclosing loop (start line) of a region so
       that its hotspot can be matched; loops are not in the side-effect export.
 - [ ] **Decision log.** Record task decisions (accepted and rejected groups) in

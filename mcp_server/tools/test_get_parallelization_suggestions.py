@@ -15,7 +15,8 @@ from typing import Any, cast
 
 from discopop_explorer.classes.patterns.PatternDecisions import CodeRegion, PatternDecisionLog
 from mcp_server.argument_coercion import coerce_arguments, validation_error
-from mcp_server.tools import get_parallelization_suggestions
+from mcp_server.tools import get_parallelization_suggestions, task_groups
+from mcp_server.tools.fft_task_groups_fixture import ENTRIES
 from mcp_server.tools.helpers import ToolContext
 
 
@@ -281,6 +282,36 @@ class TestTaskGroups(unittest.TestCase):
         self.assertNotIn("flag:", text)
         self.assertNotIn("#pragma omp parallel", text)
         self.assertNotIn("Loop", text)
+
+    def test_a_group_inside_a_suggested_loop_is_nested_in_it_and_the_loop_contains_it(self) -> None:
+        log = PatternDecisionLog()
+        log.ran(DETECTOR, TYPES)
+        log.consider(DETECTOR, TYPES, CodeRegion("3:7", 3, 7, 10, "loop"))
+        log.finalize(DETECTOR, [cast(Any, _Pattern("3:7", 7))])
+        log.save(str(self.dot_discopop / "explorer" / "pattern_decisions.json"))
+        patterns = json.loads((self.dot_discopop / "explorer" / "patterns.json").read_text())
+        patterns["patterns"]["do_all"] = [{"pattern_id": 7, "start_line": "3:7"}]
+        (self.dot_discopop / "explorer" / "patterns.json").write_text(json.dumps(patterns))
+        patch_dir = self.dot_discopop / "patch_generator" / "7"
+        patch_dir.mkdir()
+        (patch_dir / "3.patch").write_text(_patch(7, "#pragma omp parallel for"))
+
+        text = self.__handle()
+        self.assertIn("  nested in suggestion 7", text)
+        self.assertIn("doall, #pragma omp parallel for; contains task group 5", text)
+
+    def test_the_groups_of_a_real_run_of_bots_fft_are_flagged_where_they_look_implausible(self) -> None:
+        # the task entries of patterns.json from a run of BOTS fft: 26 groups, 52 tasks
+        groups = task_groups.task_groups({"task": ENTRIES})
+        self.assertEqual(len(groups), 26)
+        self.assertEqual(sum(len(g.tasks) for g in groups.values()), 52)
+        flagged = {pid: task_groups.flags(g, []) for pid, g in groups.items()}
+        self.assertEqual(flagged["2"], ["an end line is unknown"])
+        self.assertEqual(flagged["8"], ["an end line is unknown"])
+        self.assertEqual(flagged["5"], ["tasks 3 and 4 have the same lines"])
+        self.assertEqual(flagged["81"], ["the lines of tasks 79 and 80 overlap"])
+        self.assertEqual(flagged["84"], [])
+        self.assertEqual(len([pid for pid, f in flagged.items() if f]), 16)
 
     def test_dependences_are_printed_as_the_explorer_recorded_them(self) -> None:
         self.__group([_task(3, 8, 8, out_dep=["x"]), _task(4, 9, 9, in_dep=["x"], in_out_dep=["y"])], 8, 9)
