@@ -42,7 +42,8 @@ TOOL = Tool(
     description=(
         "Report where a project stands in the DiscoPoP workflow: whether it is set up, which "
         "pipeline steps have run and whether the sources changed since, and how many suggestions "
-        "exist. 'next_step' names the call to make next. Use it when starting or resuming work on a project, "
+        "exist. Results prepared earlier or elsewhere count: with current results the queries are cheap and "
+        "need no run. 'next_step' names the call to make next. Use it when starting or resuming work on a project, "
         "or when unsure what to do next, instead of probing several tools. Cheap to call; changes nothing."
     ),
     inputSchema={
@@ -97,7 +98,7 @@ def _next_step(
             "Pattern detection ran but no patches exist. Call gather_data with force=true to "
             "regenerate them, or initialize_discopop_directory(reset=true) first if that fails."
         )
-    return next_step_hint(suggestions)
+    return next_step_hint(suggestions) + " Results exist: the queries are cheap, no run is needed."
 
 
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
@@ -110,21 +111,21 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
 
         result: dict[str, Any] = {}
         result["initialized"] = configs_dir.is_dir()
-        if not result["initialized"]:
-            result["next_step"] = setup_next_step(configs_dir)
-            return _respond(result, ctx, project_path)
+        names = configuration_names(configs_dir) if result["initialized"] else []
+        set_up = result["initialized"] and compile_script_configured(configs_dir) and bool(names)
+        if result["initialized"]:
+            result["compile_script_configured"] = compile_script_configured(configs_dir)
+            result["configurations"] = names
 
-        names = configuration_names(configs_dir)
-        result["compile_script_configured"] = compile_script_configured(configs_dir)
-        result["configurations"] = names
-        if not (result["compile_script_configured"] and names):
-            result["next_step"] = setup_next_step(configs_dir)
-            return _respond(result, ctx, project_path)
-
+        # Results prepared outside of the server (or by an earlier session) are usable without any setup.
         source_mtime = ToolContext.newest_source_mtime(project_path)
+        pipeline = _pipeline_state(dot_dp, source_mtime)
+        has_results = bool(pipeline["pattern_detection"].get("at") and pipeline["profiling"].get("at"))
+        if not (set_up or has_results):
+            result["next_step"] = setup_next_step(configs_dir)
+            return _respond(result, ctx, project_path)
         if source_mtime is not None:
             result["sources_modified_at"] = ToolContext.fmt_ts(source_mtime)
-        pipeline = _pipeline_state(dot_dp, source_mtime)
         result["pipeline"] = pipeline
 
         suggestions = count_suggestions(project_path)
@@ -132,6 +133,8 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             result["suggestions"] = suggestions
         analysis_stale = any(pipeline[step].get("stale") for step in _ANALYSIS_STEPS)
         result["next_step"] = _next_step(configs_dir, names, pipeline, analysis_stale, suggestions)
+        if has_results and not set_up and not analysis_stale:
+            result["next_step"] += " The project itself is not set up for gather_data; the queries need no setup."
         return _respond(result, ctx, project_path)
 
     except Exception as e:

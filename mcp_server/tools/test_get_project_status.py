@@ -111,6 +111,24 @@ class TestGetProjectStatus(unittest.TestCase):
         self.__analyse(suggestions=0)
         self.assertIn("explain_parallelization", self.__handle()["next_step"])
 
+    def test_prepared_results_without_any_setup_are_usable(self) -> None:
+        self.__analyse(suggestions=2)
+        data = self.__handle()
+        self.assertFalse(data["initialized"])
+        self.assertEqual(data["suggestions"], 2)
+        self.assertIn("get_parallelization_suggestions", data["next_step"])
+        self.assertIn("cheap", data["next_step"])
+        self.assertIn("no setup", data["next_step"])
+
+    def test_prepared_results_older_than_the_sources_are_stale(self) -> None:
+        self.__analyse(mtime=_OLD - 7200)
+        self.assertTrue(self.__handle()["pipeline"]["pattern_detection"]["stale"])
+
+    def test_current_results_say_that_the_queries_are_cheap(self) -> None:
+        self.__set_up()
+        self.__analyse()
+        self.assertIn("cheap", self.__handle()["next_step"])
+
     def test_the_result_does_not_report_what_discopop_no_longer_does(self) -> None:
         self.__set_up()
         self.__analyse()

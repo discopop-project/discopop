@@ -360,6 +360,12 @@ DiscoPoP never modifies the sources: the agent applies a suggestion by making th
 
 After changing the sources, call `gather_data` again: `get_project_status` marks the analysis as stale, as it no longer describes the code.
 
+### Prepared results
+
+The query tools (`get_hotspots`, `get_parallelization_suggestions`, `explain_parallelization`, `get_side_effects`) only read the results in `.discopop`; none of them starts a profiling run, so they are cheap. Results produced beforehand, by a person running `gather_data`, or `discopop_cxx`, the profiled run and `discopop_explorer` by hand (or by an earlier session), are used as they are: an agent starts with `get_project_status`, finds current results and queries them without any wait. This works without `initialize_discopop_directory` and the configuration tools; `--tools analysis` then offers just the analysis tools. A repeated `gather_data` call is cheap as well: it skips every step whose outputs are current.
+
+The results count as current while no source file is newer than them (modification time). After editing, copying or checking out the sources again, `get_project_status` reports them as stale and `gather_data` re-runs the affected steps. The results hold for the inputs that were profiled.
+
 ### The project is left buildable
 
 `gather_data`'s instrumentation steps compile **in place** (`execute_inplace=True`, unlike the ProjectManager flow, which works in a sibling copy) — the profiling output has to land in this project's `.discopop`. A compile script that configures a build directory therefore leaves it pinned to `discopop_cc`/`discopop_cxx`, and an ordinary `make` in it afterwards yields an instrumented binary: orders of magnitude slower than the program, and prone to aborting outright with an allocation or heap error once the code is also multithreaded.

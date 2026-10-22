@@ -21,6 +21,11 @@ It is not suitable when the project cannot be built and run locally, for other l
 - A build script that uses `$CC`/`$CXX` and `$CFLAGS`/`$CXXFLAGS` instead of fixed compiler names. The same script is used for plain, instrumented and parallel builds.
 - A small but representative program input, because instrumented runs are slow.
 
+## Prepared results
+The query tools (`get_hotspots`, `get_parallelization_suggestions`, `explain_parallelization`, `get_side_effects`) only read the results in `.discopop`, so they are cheap: the profiling run is the only expensive step. You can run it beforehand, with `gather_data` or by hand (`discopop_cxx`, the profiled run, `discopop_explorer`), and the agent then starts with `get_project_status`, finds the results and queries them without any wait. This needs no `initialize_discopop_directory` and no configuration; start the server with `--tools analysis` to offer just the analysis tools. A repeated `gather_data` call is cheap too, as it skips every step whose outputs are current.
+
+Results are current while no source file is newer than them (modification time); otherwise `get_project_status` reports them as stale. They hold for the inputs that were profiled.
+
 ## Installation
 The server is part of `pip install discopop`. Activate the environment and check the command:
 ```bash
