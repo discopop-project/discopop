@@ -26,6 +26,8 @@ from discopop_explorer.classes.patterns.TaskParallelismInfo import (
 )
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.task_dataflow import (
@@ -344,6 +346,42 @@ def _hotspot_functions(
     }
 
 
+def _guard_lines(pet: PEGraphX, instruction_ids: List[int], cu_of: Dict[int, CUNode]) -> Set[int]:
+    """Lines of the instructions that only evaluate a condition, e.g. ``if (BENCH[i] != NULL)`` guarding a task: no
+    CU on the line calls anything, at least one ends in a conditional branch (more than one successor), and the others
+    do nothing (no variable; the jump of ``if.end``). The condition is no part of the code of the task."""
+    cus_of_line: Dict[int, Set[Optional[CUNode]]] = dict()
+    for instruction in instruction_ids:
+        for line_id in pet.get_line_ids_of_instructions([instruction]):
+            cus_of_line.setdefault(int(line_id.split(":")[1]), set()).add(cu_of.get(instruction))
+    guards: Set[int] = set()
+    for line, cus in cus_of_line.items():
+        if None in cus or any(cu.node_calls or cu.recursive_function_calls for cu in cus if cu is not None):
+            continue
+        branching = [
+            cu is not None and len({target for _, target, _ in out_edges(pet, cu.id, EdgeType.SUCCESSOR)}) > 1
+            for cu in cus
+        ]
+        idle = [cu is not None and not cu.local_vars and not cu.global_vars for cu in cus]
+        if any(branching) and all(b or i for b, i in zip(branching, idle)):
+            guards.add(line)
+    return guards
+
+
+def _loop_index_names(pet: PEGraphX, header_lines: Set[str], cus: List[CUNode]) -> Set[str]:
+    """The variables that are the index of a loop with one of the header lines: they depend on themselves (RAW) in the
+    line of the header (``jj++``)."""
+    return {
+        str(dependence.var_name)
+        for cu in cus
+        for _, _, dependence in out_edges(pet, cu.id, EdgeType.DATA)
+        if dependence.dtype == DepType.RAW
+        and dependence.var_name is not None
+        and dependence.sink_line == dependence.source_line
+        and dependence.source_line in header_lines
+    }
+
+
 def identify_loop_tasking(
     pet: PEGraphX,
     do_all_patterns: List[DoAllInfo],
@@ -355,17 +393,27 @@ def identify_loop_tasking(
     and a ``taskwait`` after the loop). Without hotspot information, every call qualifies. The tasks are created
     inside the loop and have to be joined after it; the parallel region belongs to the caller.
     The loop is not a task candidate itself if its body does not call anything: do-all is the better suggestion then.
+
+    The task and the region cover the statement the task executes: not the header of the loop and not the conditions
+    that only guard the call. Loops of a nest that give the same statement are one suggestion, for the innermost
+    loop (one task per iteration of the nest, as in omp-tasks).
     """
     patterns: List[PatternInfo] = []
     hotspot_functions = _hotspot_functions(hotspots)
     # instruction id of a call -> the function it calls
     callees: Dict[int, Node] = dict()
+    cu_of: Dict[int, CUNode] = dict()
     for cu in all_nodes(pet, CUNode):
+        for instruction in cu.instruction_ids:
+            cu_of[instruction] = cu
         for call in cu.node_calls:
             if call.get("callInstId") is not None and call["cuid"] in pet.g:
                 callees[int(call["callInstId"])] = pet.node_at(NodeID(call["cuid"]))
 
-    task_group_num = first_task_group
+    loop_headers = {(loop.file_id, loop.start_line) for loop in all_nodes(pet, LoopNode)}
+
+    # the candidates: the do-all loop, its node and the lines of the statement of its task
+    candidates: List[Tuple[DoAllInfo, Node, List[int], Set[int]]] = []
     for do_all in do_all_patterns:
         called = [
             callees[i]
@@ -376,16 +424,37 @@ def identify_loop_tasking(
         if len(called) == 0:
             continue
         loop_node = pet.node_at(NodeID(do_all.node_id))
-        loop_line = str(loop_node.start_position())
         lines = [
             int(line.split(":")[1])
             for line in pet.get_statement_line_ids_of_instructions(do_all.instruction_ids)
             if int(line.split(":")[0]) == loop_node.file_id
         ]
-        # the body: the lines of the loop without its header
-        body_lines = [line for line in lines if line != loop_node.start_line] or lines
+        # the body: the lines of the loop without its header and without the conditions that only guard the task
+        guards = _guard_lines(pet, do_all.instruction_ids, cu_of)
+        # the header of the loop and those of the loops in it
+        header_lines = {loop_node.start_line} | {line for line in lines if (loop_node.file_id, line) in loop_headers}
+        body_lines = [line for line in lines if line not in header_lines] or [
+            line for line in lines if line != loop_node.start_line
+        ]
+        body_lines = body_lines or lines
+        body_lines = [line for line in body_lines if line not in guards] or body_lines
         if len(body_lines) == 0:
             continue
+        candidates.append((do_all, loop_node, body_lines, header_lines))
+
+    # loops of a nest with the same statement: the innermost one (fewest instructions) is the suggestion
+    innermost: Dict[Tuple[int, int, int], DoAllInfo] = dict()
+    for do_all, loop_node, body_lines, header_lines in candidates:
+        key = (loop_node.file_id, min(body_lines), max(body_lines))
+        known = innermost.get(key)
+        if known is None or len(do_all.instruction_ids) < len(known.instruction_ids):
+            innermost[key] = do_all
+
+    task_group_num = first_task_group
+    for do_all, loop_node, body_lines, header_lines in candidates:
+        if innermost[(loop_node.file_id, min(body_lines), max(body_lines))] is not do_all:
+            continue
+        loop_line = str(loop_node.start_position())
         task = TaskParallelismInfo(loop_node, TPIType.TASK, ["#pragma omp task"], str(min(body_lines)), [], [], [])
         task.region_end_line = str(max(body_lines))
         task.task_group.append(task_group_num)
@@ -409,10 +478,17 @@ def identify_loop_tasking(
             task.first_private = [v for v in task.first_private if v != needed]
             if needed not in task.shared:
                 task.shared = sorted(task.shared + [needed])
+        # what the task gets by value (firstprivate, the index of the loop) can be written by the code after the loop
+        # while the task runs: that write does not have to wait for the task
+        task_cus = [cu_of[i] for i in do_all.instruction_ids if i in cu_of]
+        by_value = set(task.first_private) | _loop_index_names(
+            pet, {f"{loop_node.file_id}:{line}" for line in header_lines}, task_cus
+        )
+        after = [a for a in after if not (a.kind == "WAR" and a.variable in by_value)]
         region = ParallelRegionInfo(
             loop_node,
             TPIType.PARALLELREGION,
-            loop_node.start_line,
+            min(body_lines),
             max(body_lines),
             task_group=[task_group_num],
             contained_tasks=[task],

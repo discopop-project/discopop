@@ -49,9 +49,6 @@ def test_the_task_in_the_loop_is_found_once(result: Any, first: int, last: int, 
 
 
 @pytest.mark.parametrize("first,last,_join", VARIANTS)  # type: ignore[misc]
-@pytest.mark.xfail(  # type: ignore[misc]
-    strict=True, reason="the region also covers the line of the for loop that creates the tasks"
-)
 def test_the_region_covers_exactly_the_task_statement(result: Any, first: int, last: int, _join: int) -> None:
     assert (str(first), str(last)) in _lines(_regions(result))
 
