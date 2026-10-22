@@ -59,10 +59,9 @@ def _span(task: TaskParallelismInfo) -> Tuple[int, int]:
 def fib_group(isolated_pattern_id_cwd: Any, make_node: MakeNode) -> Tuple[Any, Any]:
     """fib.c, lines 31 and 32: x = fib(n - 1); y = fib(n - 2);  (omp-tasks/fib/fib.c: one task each).
 
-    The scopes are those of the explorer's run: the second task is the CU 3:237, which the CU
-    generation starts at line 31 although its call is on line 32."""
+    The scopes are those of the explorer's run: each call is in a CU of its own statement (3:288, 3:289)."""
     parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
-    return _detect(parent, ["3:29", "3:35"], [["3:31"], ["3:31", "3:32"]])
+    return _detect(parent, ["3:29", "3:35"], [["3:31"], ["3:32"]])
 
 
 def test_the_two_recursive_calls_of_fib_are_two_tasks_in_one_region(fib_group: Tuple[Any, Any]) -> None:
@@ -77,11 +76,6 @@ def test_the_two_recursive_calls_of_fib_are_two_tasks_in_one_region(fib_group: T
     assert all(t.pragma == ["#pragma omp task"] for t in tasks)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="the CU of the second call starts at line 31 although the call is on line 32 (CU 3:237 of fib), "
-    "so the lines of the two tasks overlap",
-)  # type: ignore[misc]
 def test_the_tasks_of_fib_cover_one_statement_each(fib_group: Tuple[Any, Any]) -> None:
     tasks, _ = fib_group
     assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]

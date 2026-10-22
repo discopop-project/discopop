@@ -10,7 +10,7 @@ directory for details.
 
 # Instruction focus: CUs made of instruction IDs — Plan
 
-Status: stages 1 and 2 done (2026-10-22). Branch `improvement/profiler/instruction_ids` (based on
+Status: stages 1-3 done (2026-10-22). Branch `improvement/profiler/instruction_ids` (based on
 `improvement/mcp_server/task_suggestions`).
 
 Goal (maintainer): instruction IDs become the identity of what the analysis works with — CUs,
@@ -95,9 +95,16 @@ Other findings:
    (instruction id → CU) is used by `PEGraphX`; lines remain only as fallback for an end without
    an id or an id no CU holds. On fib the calls 849/853 now sit in 3:237/3:238 (one CU off before).
    The line maps have no other consumer (GUI, optimizer: checked).
-3. **Split position.** Split before the first instruction of the call's statement (move the
-   statement head into the new CU); compute phases, sizes and counts from the instruction list
-   when a CU closes instead of incrementally. Makes the fib xfail pass.
+3. **Split position — done.** A call's statement is not torn apart: the head (the trailing
+   instructions of the CU that evaluate the call's operands, after the last store, call or
+   terminator) moves into the CU of the call, or, if the head is the whole CU, the call joins it;
+   the CU ends with the statement of its call (the next instruction on another line starts a new
+   CU). `account`/`rebuild` in `createCUs.cpp` derive lines, phases, sizes and counts from the
+   instruction list, so a moved head or a cautious-property split leaves no stale lines (2a: both
+   findings are gone). The fib xfail passes: the real run gives the tasks (31,31) and (32,32).
+   Not done: CUs of statements without a call still end where they did (phase/scope/cautious
+   splits); the incremental data of the scope split is not rebuilt. fft: still 4 doall (incl.
+   `fft_aux`, line 2951).
 4. **Migration.** `instruction_scope` beside `get_code_scope` in the task graph contexts;
    instruction IDs of loop bodies and tasks in `patterns.json` (added beside existing fields);
    explorer queries move module by module (explorer: 138 uses of `LineID` in 27 files, 236 of

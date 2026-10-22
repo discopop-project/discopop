@@ -848,44 +848,19 @@
 	</Node>
 
 	<Node id="1:36" type="0" name="" startsAtLine = "1:33" endsAtLine = "1:33">
-		<childrenNodes></childrenNodes>
-		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>32</readDataSize>
-		<writeDataSize>0</writeDataSize>
-		<performsFileIO>0</performsFileIO>
-		<instructionsCount>3</instructionsCount>
-		<instructionLines count="1">1:33</instructionLines>
-		<instructionIDs count="2">223,224</instructionIDs>
-		<readPhaseLines count="1">1:33</readPhaseLines>
-		<writePhaseLines count="0"></writePhaseLines>
-		<returnInstructions count="0"></returnInstructions>
-		<successors>
-			<CU>1:37</CU>
-		</successors>
-		<localVariables>
-		</localVariables>
-		<globalVariables>
-			<global type="ptr" defLine="1:32" accessMode="R">i</global>
-			<global type="ptr" defLine="1:31" accessMode="R">s</global>
-		</globalVariables>
-		<callsNode>
-		</callsNode>
-	</Node>
-
-	<Node id="1:37" type="0" name="" startsAtLine = "1:33" endsAtLine = "1:34">
 		<childrenNodes>1:39</childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>96</readDataSize>
+		<readDataSize>64</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<performsFileIO>0</performsFileIO>
-		<instructionsCount>9</instructionsCount>
-		<instructionLines count="2">1:33,1:34</instructionLines>
-		<instructionIDs count="9">225,226,227,228,229,230,231,232,233</instructionIDs>
-		<readPhaseLines count="2">1:33,1:34</readPhaseLines>
+		<instructionsCount>6</instructionsCount>
+		<instructionLines count="1">1:33</instructionLines>
+		<instructionIDs count="6">223,224,225,226,227,228</instructionIDs>
+		<readPhaseLines count="1">1:33</readPhaseLines>
 		<writePhaseLines count="1">1:33</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:38</CU>
+			<CU>1:37</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
@@ -907,24 +882,26 @@
 		<funcReturnLines></funcReturnLines>
 	</Node>
 
-	<Node id="1:38" type="0" name="" startsAtLine = "1:34" endsAtLine = "1:35">
+	<Node id="1:37" type="0" name="" startsAtLine = "1:34" endsAtLine = "1:34">
 		<childrenNodes>1:40</childrenNodes>
 		<BasicBlockID>for.body</BasicBlockID>
-		<readDataSize>32</readDataSize>
+		<readDataSize>96</readDataSize>
 		<writeDataSize>64</writeDataSize>
 		<performsFileIO>0</performsFileIO>
-		<instructionsCount>6</instructionsCount>
-		<instructionLines count="2">1:34,1:35</instructionLines>
-		<instructionIDs count="7">234,235,236,237,238,239,240</instructionIDs>
+		<instructionsCount>11</instructionsCount>
+		<instructionLines count="1">1:34</instructionLines>
+		<instructionIDs count="11">229,230,231,232,233,234,235,236,237,238,239</instructionIDs>
 		<readPhaseLines count="1">1:34</readPhaseLines>
 		<writePhaseLines count="1">1:34</writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
 		<successors>
-			<CU>1:41</CU>
+			<CU>1:38</CU>
 		</successors>
 		<localVariables>
 		</localVariables>
 		<globalVariables>
+			<global type="ptr" defLine="1:32" accessMode="R">i</global>
+			<global type="ptr" defLine="1:31" accessMode="R">s</global>
 		</globalVariables>
 		<callsNode>
 			<nodeCalled atLine="1:34" callInstId="234">1:40</nodeCalled>
@@ -939,6 +916,29 @@
 			<arg type="i32" defLine="21" accessMode="RW">b</arg>
 		</funcArguments>
 		<funcReturnLines></funcReturnLines>
+	</Node>
+
+	<Node id="1:38" type="0" name="" startsAtLine = "1:35" endsAtLine = "1:35">
+		<childrenNodes></childrenNodes>
+		<BasicBlockID>for.body</BasicBlockID>
+		<readDataSize>0</readDataSize>
+		<writeDataSize>0</writeDataSize>
+		<performsFileIO>0</performsFileIO>
+		<instructionsCount>1</instructionsCount>
+		<instructionLines count="1">1:35</instructionLines>
+		<instructionIDs count="1">240</instructionIDs>
+		<readPhaseLines count="0"></readPhaseLines>
+		<writePhaseLines count="0"></writePhaseLines>
+		<returnInstructions count="0"></returnInstructions>
+		<successors>
+			<CU>1:41</CU>
+		</successors>
+		<localVariables>
+		</localVariables>
+		<globalVariables>
+		</globalVariables>
+		<callsNode>
+		</callsNode>
 	</Node>
 
 	<Node id="1:41" type="0" name="" startsAtLine = "1:32" endsAtLine = "1:32">
@@ -970,10 +970,10 @@
 		<BasicBlockID>for.end</BasicBlockID>
 		<readDataSize>64</readDataSize>
 		<writeDataSize>0</writeDataSize>
-		<performsFileIO>0</performsFileIO>
+		<performsFileIO>1</performsFileIO>
 		<instructionsCount>3</instructionsCount>
 		<instructionLines count="1">1:36</instructionLines>
-		<instructionIDs count="2">246,247</instructionIDs>
+		<instructionIDs count="3">246,247,248</instructionIDs>
 		<readPhaseLines count="1">1:36</readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="0"></returnInstructions>
@@ -995,10 +995,10 @@
 		<BasicBlockID>for.end</BasicBlockID>
 		<readDataSize>0</readDataSize>
 		<writeDataSize>0</writeDataSize>
-		<performsFileIO>1</performsFileIO>
+		<performsFileIO>0</performsFileIO>
 		<instructionsCount>1</instructionsCount>
 		<instructionLines count="1">1:37</instructionLines>
-		<instructionIDs count="2">248,249</instructionIDs>
+		<instructionIDs count="1">249</instructionIDs>
 		<readPhaseLines count="0"></readPhaseLines>
 		<writePhaseLines count="0"></writePhaseLines>
 		<returnInstructions count="1">1:37</returnInstructions>
