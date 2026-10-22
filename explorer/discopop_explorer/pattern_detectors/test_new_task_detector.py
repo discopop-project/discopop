@@ -22,18 +22,25 @@ import pytest
 
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.patterns.TaskParallelismInfo import ParallelRegionInfo, TaskParallelismInfo
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.pattern_detectors.new_task_detector import identify_simple_tasking
 
 MakeNode = Callable[..., Node]
+BuildPetGraph = Callable[..., Any]
 
 
 def _lines(file_id: int, first: int, last: int) -> List[str]:
     return [f"{file_id}:{n}" for n in range(first, last + 1)]
 
 
-def _context(scope: List[str], node: Node | None = None, instructions: List[int] | None = None) -> Any:
+def _context(
+    scope: List[str], node: Node | None = None, instructions: List[int] | None = None, cus: List[Node] | None = None
+) -> Any:
     return SimpleNamespace(
+        get_contained_nodes=lambda inclusive=False: [
+            SimpleNamespace(get_pet_node=lambda pet, cu=cu: cu) for cu in (cus or [])
+        ],
         get_code_scope=lambda pet, inclusive=False: list(scope),
         get_instruction_scope=lambda pet, inclusive=False: list(instructions or []),
         get_first_pet_node=lambda pet: node,
@@ -46,15 +53,20 @@ def _detect(
     task_scopes: List[List[str]],
     task_instructions: List[List[int]] | None = None,
     instruction_lines: Dict[int, str] | None = None,
+    task_cus: List[List[Node]] | None = None,
+    pet: Any = None,
 ) -> Tuple[Any, Any]:
     """The tasks and the parallel region the detector reports for one group of tasks."""
     instructions = task_instructions or [[] for _ in task_scopes]
     tpc = SimpleNamespace(
         parent_context=_context(parent_scope, parent_node),
-        registered_tasks=[_context(scope, None, ids) for scope, ids in zip(task_scopes, instructions)],
+        registered_tasks=[
+            _context(scope, None, ids, cus)
+            for scope, ids, cus in zip(task_scopes, instructions, task_cus or [[] for _ in task_scopes])
+        ],
     )
     lines = instruction_lines or {}
-    pet = SimpleNamespace(get_line_ids_of_instructions=lambda ids: [lines[i] for i in ids if i in lines])
+    pet = pet or SimpleNamespace(get_line_ids_of_instructions=lambda ids: [lines[i] for i in ids if i in lines])
     patterns = identify_simple_tasking(SimpleNamespace(pet=pet), [tpc])  # type: ignore[arg-type, list-item]
     tasks = [p for p in patterns if isinstance(p, TaskParallelismInfo) and not isinstance(p, ParallelRegionInfo)]
     regions = [p for p in patterns if isinstance(p, ParallelRegionInfo)]
@@ -124,25 +136,79 @@ def test_a_group_without_scope_inside_its_parent_is_skipped(isolated_pattern_id_
     assert regions == []
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="a closing brace is reported as the body of a task (bots_get_params, bots_main.c:440)",
-)  # type: ignore[misc]
-def test_a_closing_brace_is_no_task(isolated_pattern_id_cwd: Any, make_node: MakeNode) -> None:
-    """bots_get_params: a call and the closing brace of the function. omp-tasks has no tasks here."""
-    parent = make_node("1:76", NodeType.CU, start_line=436, end_line=440)
-    tasks, _ = _detect(parent, _lines(1, 436, 440), [["1:438"], ["1:440"]])
-    assert tasks == []
+def _cu(make_node: MakeNode, node_id: str, work: bool = True) -> Node:
+    """A CU that reads a variable and makes a call, or one that does nothing (a ``return``, a jump)."""
+    if not work:
+        return make_node(node_id, NodeType.CU)
+    return make_node(node_id, NodeType.CU, node_calls=[{"cuid": "9:9", "atLine": "3:1", "callInstId": "1"}])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="independent calls of formatting code are reported as tasks (bots_print_results, bots_common.c)",
-)  # type: ignore[misc]
-def test_formatting_calls_outside_of_the_computation_are_no_tasks(
-    isolated_pattern_id_cwd: Any, make_node: MakeNode
+def test_a_closing_brace_is_no_task(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
 ) -> None:
-    """bots_print_results: sprintf calls. omp-tasks has no tasks in the shared BOTS sources."""
-    parent = make_node("2:136", NodeType.CU, start_line=115, end_line=336)
-    _, regions = _detect(parent, _lines(2, 115, 336), [_lines(2, 170, 171), _lines(2, 173, 184)])
+    """bots_get_params: a call and the closing brace of the function. omp-tasks has no tasks here."""
+    call, brace = _cu(make_node, "1:83"), _cu(make_node, "1:84", work=False)
+    pet = build_pet_graph([call, brace], [("1:83", "1:84", EdgeType.SUCCESSOR)])
+    parent = make_node("1:76", NodeType.CU, start_line=436, end_line=440)
+    tasks, regions = _detect(parent, _lines(1, 436, 440), [["1:438"], ["1:440"]], task_cus=[[call], [brace]], pet=pet)
+    assert tasks == []
     assert regions == []
+
+
+def test_a_task_that_ends_in_a_conditional_branch_is_no_task(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    """``bots_message(...)`` is ``if (verbose) fprintf(...)``: its CU is only the condition, the call lies in the
+    branch. omp-tasks has no tasks in the shared BOTS sources."""
+    call, condition = _cu(make_node, "2:181"), _cu(make_node, "2:182")
+    then, after = make_node("2:183", NodeType.CU), make_node("2:184", NodeType.CU)
+    pet = build_pet_graph(
+        [call, condition, then, after],
+        [
+            ("2:181", "2:182", EdgeType.SUCCESSOR),
+            ("2:182", "2:183", EdgeType.SUCCESSOR),
+            ("2:182", "2:184", EdgeType.SUCCESSOR),
+        ],
+    )
+    parent = make_node("2:136", NodeType.CU, start_line=115, end_line=336)
+    tasks, regions = _detect(
+        parent, _lines(2, 115, 336), [["2:170"], ["2:173"]], task_cus=[[call], [condition]], pet=pet
+    )
+    assert tasks == []
+    assert regions == []
+
+
+def test_a_task_with_a_branch_inside_is_a_task(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    """Both targets of the branch belong to the task: it has a single exit."""
+    first, condition = _cu(make_node, "3:1"), _cu(make_node, "3:2")
+    then, otherwise, after = _cu(make_node, "3:3"), _cu(make_node, "3:4"), make_node("3:5", NodeType.CU)
+    pet = build_pet_graph(
+        [first, condition, then, otherwise, after],
+        [
+            ("3:1", "3:2", EdgeType.SUCCESSOR),
+            ("3:2", "3:3", EdgeType.SUCCESSOR),
+            ("3:2", "3:4", EdgeType.SUCCESSOR),
+            ("3:3", "3:5", EdgeType.SUCCESSOR),
+            ("3:4", "3:5", EdgeType.SUCCESSOR),
+        ],
+    )
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    tasks, _ = _detect(
+        parent, ["3:29", "3:35"], [["3:31"], ["3:32"]], task_cus=[[first], [condition, then, otherwise]], pet=pet
+    )
+    assert len(tasks) == 2
+
+
+def test_the_invalid_task_of_a_group_of_three_is_dropped(
+    isolated_pattern_id_cwd: Any, make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    one, two, empty = _cu(make_node, "3:1"), _cu(make_node, "3:2"), _cu(make_node, "3:3", work=False)
+    pet = build_pet_graph([one, two, empty])
+    parent = make_node("3:233", NodeType.CU, start_line=29, end_line=29)
+    tasks, regions = _detect(
+        parent, ["3:29", "3:35"], [["3:31"], ["3:32"], ["3:33"]], task_cus=[[one], [two], [empty]], pet=pet
+    )
+    assert [_span(t) for t in tasks] == [(31, 31), (32, 32)]
+    assert len(regions) == 1

@@ -117,10 +117,13 @@ Implausible groups are flagged, not hidden (see 3.3).
       call is on line 32, and the scope of a task is the line range of its CUs.
 - [ ] **Loop and recursive tasking.** The detector does not find the recursive calls in the
       `for` loop of `fft_aux` (TODO comments in `new_task_detector.run_detection`).
-- [ ] **Mutually exclusive branches.** Do not report statements of different branches of an
-      `if ... else if` chain as parallel tasks (fft: 2944-2949, 2959-2964).
-- [ ] **Task bodies.** `return` statements and closing braces are reported as task bodies
-      (fft 2917-2918, fib/bots_main 440); snap spans to whole statements.
+- [x] **Mutually exclusive branches / conditional tasks.** `identify_simple_tasking` drops tasks that do no work
+      (CUs without variables and calls: `return`, the jump over an `else`) and tasks that lead to more than one CU
+      outside of them (end in a conditional branch: `||` operands, `bots_message`), and groups with fewer than
+      two tasks left. fft: 27 groups -> 14 (13 real pairs, one `sprintf` group). Possible later: do the check in
+      `split_taskable_control_sequence` (note in `_is_valid_task_body`).
+- [x] **Task bodies.** `return` statements and closing braces are no tasks any more (no-work rule, see above);
+      open: snap spans to whole statements.
 - [x] **Overlapping spans** (fixed by the CU split, `design/instruction_focus.md`). Task 2 of the fib group starts at the line of task 1
       (31-32 against 31-31); derive the spans per task without the shared scope lines.
 - [ ] **Unknown end line.** Replace the sentinel 262143 by a real end line, or omit it.

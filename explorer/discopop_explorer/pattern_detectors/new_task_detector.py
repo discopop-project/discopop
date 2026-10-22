@@ -10,6 +10,7 @@ from typing import List, Optional, Set
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -20,6 +21,8 @@ from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     ParallelRegionInfo,
     TaskParallelismInfo,
 )
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.StatusReporting.console import stage
 
 try:
@@ -120,6 +123,46 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     context_task_graph.run_visualizer()
 
 
+def _cus_of_task(ctg: ContextTaskGraph, task: Context) -> List[CUNode]:
+    """The CUs a task consists of, including those of the contexts it contains."""
+    cus: List[CUNode] = []
+    for node in task.get_contained_nodes(inclusive=True):
+        pet_node = node.get_pet_node(ctg.pet)
+        if isinstance(pet_node, CUNode):
+            cus.append(pet_node)
+    return cus
+
+
+def _is_valid_task_body(ctg: ContextTaskGraph, task: Context) -> bool:
+    """Whether the CUs of a task can be the body of an OpenMP task. A task is rejected if
+
+    - it does no work: its CUs access no variable and call nothing, e.g. a ``return`` or the jump over an ``else``
+      branch (``fft_twiddle_gen``, ``bots_get_params``), or
+    - it is not a region with a single exit: its CUs lead to more than one CU outside of the task, i.e. it ends in a
+      conditional branch whose targets are not part of the task. The condition of ``if (verbose) fprintf(...)`` or
+      an operand of ``a || b`` is no task of its own, and what follows it depends on the condition.
+
+    A task without CUs (no information) is accepted.
+
+    Note: the checks could also be made in ``split_taskable_control_sequence``, so that the ContextTaskGraph would
+    not create these groups at all. This needs the CUs of CombinedContexts there and is therefore not done yet; the
+    task detection filters after the simplification instead.
+    """
+    cus = _cus_of_task(ctg, task)
+    if len(cus) == 0:
+        return True
+    if not any(cu.local_vars or cu.global_vars or cu.node_calls or cu.recursive_function_calls for cu in cus):
+        return False
+    task_cu_ids = {cu.id for cu in cus}
+    exits = {
+        target
+        for cu in cus
+        for _, target, _ in out_edges(ctg.pet, cu.id, EdgeType.SUCCESSOR)
+        if target not in task_cu_ids
+    }
+    return len(exits) <= 1
+
+
 def identify_simple_tasking(
     ctg: ContextTaskGraph, simplification_results: List[TaskParentContext]
 ) -> List[PatternInfo]:
@@ -169,7 +212,12 @@ def identify_simple_tasking(
         parallel_region_start: Optional[int] = None
         parallel_region_end: Optional[int] = None
 
-        for task in tpc.registered_tasks:
+        # tasks that cannot be the body of a task are dropped; fewer than two tasks are no parallelism
+        valid_tasks = [task for task in tpc.registered_tasks if _is_valid_task_body(ctg, task)]
+        if len(valid_tasks) < 2:
+            continue
+
+        for task in valid_tasks:
             task_scopes: List[LineID] = []
             task_scopes += ctg.pet.get_line_ids_of_instructions(
                 task.get_instruction_scope(ctg.pet, inclusive=True)
