@@ -330,6 +330,33 @@ class TestTaskGroups(unittest.TestCase):
         self.assertIn("  dependences between the tasks: task 3 -> task 4: a; task 3 -> task 4: b (anti)\n", text)
         self.assertIn("  join: no later code depends on the tasks", text)
 
+    def test_an_output_dependence_between_tasks_is_marked_and_the_join_says_overwrites(self) -> None:
+        self.__group(
+            [_task(3, 8, 8), _task(4, 9, 9)],
+            8,
+            9,
+            data_flow={
+                "task_dependences": [{"from_task": 3, "to_task": 4, "variable": "d", "kind": "WAW"}],
+                "after_dependences": [{"task": 4, "variable": "d", "kind": "WAW", "line": "3:11"}],
+            },
+        )
+        text = self.__handle()
+        self.assertIn("  dependences between the tasks: task 3 -> task 4: d (output)\n", text)
+        self.assertIn("which overwrites d (task 4)\n", text)
+
+    def test_reductions_and_last_private_variables_are_named_in_the_data_sharing(self) -> None:
+        self.__group(
+            [
+                _task(3, 8, 8, shared=["x"], reduction=["+:sum"], last_private=["x"]),
+                _task(4, 9, 9, reduction=["?:acc"]),
+            ],
+            8,
+            9,
+        )
+        text = self.__handle()
+        self.assertIn("  data sharing of task 3: shared x; reduction +:sum; lastprivate x\n", text)
+        self.assertIn("  data sharing of task 4: reduction acc (operation unknown)\n", text)
+
     def test_a_task_per_iteration_names_the_loop_and_the_join_after_it(self) -> None:
         self.__group([_task(3, 8, 8)], 7, 9, loop_start_line="3:7")
         text = self.__handle()
