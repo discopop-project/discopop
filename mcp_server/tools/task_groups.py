@@ -52,7 +52,9 @@ class TaskGroup:
     # what the explorer found out about the data flow of the group; None if it recorded nothing (older results)
     # {"from_task", "to_task", "variable", "kind": RAW | WAR}: the later task depends on the earlier one
     task_dependences: Optional[list[dict[str, Any]]] = None
-    # {"task", "variable", "kind": RAW | WAR, "line": file id:line}: the code after the region depends on a task
+    # {"task", "variable", "kind": RAW | WAR, "line": file id:line, "at_return": bool}: the code after the region
+    # depends on a task. "at_return" (absent in older results: false) means the reader is outside of the function (its
+    # caller), "line" is null then. "variable" is a name of the function's scope, "" if there is none.
     after_dependences: Optional[list[dict[str, Any]]] = None
 
 
@@ -197,7 +199,7 @@ def dependences(group: TaskGroup) -> str:
     if not group.task_dependences:
         return "none"
     return "; ".join(
-        f"task {d.get('from_task')} -> task {d.get('to_task')}: {d.get('variable')}"
+        f"task {d.get('from_task')} -> task {d.get('to_task')}: {d.get('variable') or 'a pointer target'}"
         + (" (anti)" if d.get("kind") == "WAR" else "")
         for d in group.task_dependences
     )
@@ -217,21 +219,40 @@ def _recorded_clauses(group: TaskGroup) -> str:
     return "; ".join(parts) if parts else "none recorded"
 
 
+def _reader(entry: dict[str, Any]) -> str:
+    verb = "overwrites" if entry.get("kind") == "WAR" else "reads"
+    variable = entry.get("variable")
+    # no name: the explorer found the dependence but no name of the scope of the function for it
+    what = str(variable) if variable else "what the tasks write through a pointer"
+    return f"{verb} {what} (task {entry.get('task')})"
+
+
 def join_points(group: TaskGroup, display_file: str) -> list[str]:
-    """Where the code after the region depends on the tasks: the line, the variables and the tasks to wait for."""
+    """Where the code after the region depends on the tasks: the line, the variables and the tasks to wait for. A
+    reader outside of the function (``at_return``: a task writes through a pointer parameter or a global, the caller
+    reads it) has no line: the tasks have to be complete before the function returns."""
     if group.after_dependences is None:
         return []
     by_line: dict[str, list[str]] = {}
+    at_return: list[str] = []
     for d in sorted(group.after_dependences, key=lambda d: (_int(str(d.get("line")).split(":")[-1]) or 0, str(d))):
+        if d.get("at_return"):
+            at_return.append(_reader(d))
+            continue
         line = str(d.get("line") or "").split(":")[-1] or "?"
-        verb = "overwrites" if d.get("kind") == "WAR" else "reads"
-        by_line.setdefault(line, []).append(f"{verb} {d.get('variable')} (task {d.get('task')})")
-    if not by_line:
-        return ["  join: no later code depends on the tasks (not tracked: what recursive calls write)"]
-    return [
+        by_line.setdefault(line, []).append(_reader(d))
+    lines = [
         f"  join: the tasks have to be complete before {display_file}:{line}, which " + ", ".join(entries)
         for line, entries in by_line.items()
     ]
+    if at_return:
+        lines.append(
+            "  join: the tasks have to be complete before the function returns, because its caller "
+            + ", ".join(at_return)
+        )
+    if not lines:
+        return ["  join: no later code depends on the tasks (not tracked: what recursive calls write)"]
+    return lines
 
 
 def data_sharing(group: TaskGroup) -> list[str]:
