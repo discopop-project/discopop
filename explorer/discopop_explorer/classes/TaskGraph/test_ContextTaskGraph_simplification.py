@@ -99,15 +99,10 @@ def test_independent_successive_contexts_become_one_task_parent(
     assert tasks[0].registered_tasks == works
     assert tasks[0].parent_context is function
     assert isinstance(tasks[0].task_end_context, TaskEndContext)
-    assert getattr(tasks[0].task_end_context, "task_parent") is tasks[0]
+    assert tasks[0].task_end_context.task_parent_context is tasks[0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="TaskEndContext.set_task_parent stores the parent in 'task_parent', but the declared (and None-initialised)"
-    " attribute is 'task_parent_context'",
-)  # type: ignore[misc]
-def test_task_end_context_declared_parent_attribute_is_set(
+def test_task_end_context_points_back_to_its_task_parent(
     build_pet_graph: Any, build_task_graph: Any, make_tg_node: Any
 ) -> None:
     ctg, _function, _works = _build_sequence(build_pet_graph, build_task_graph, make_tg_node, 2)
