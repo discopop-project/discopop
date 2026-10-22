@@ -99,7 +99,10 @@ Implausible groups are flagged, not hidden (see 3.3).
 
 ### 3.2 Explorer follow-ups (separate work)
 
-- [ ] **Fill `in_dep` / `out_dep` / `in_out_dep`** (maintainer, by hand; always empty today).
+- [~] **Fill `in_dep` / `out_dep` / `in_out_dep`** (`clauses_of_dependences`; `ParallelRegionInfo.task_dependences`
+      carries variable and kind, RAW and WAR; WAW is not registered on contexts; the tool prints `(anti)`). Groups
+      are built from tasks without a data edge between neighbours, so a dependence only shows for non-adjacent
+      tasks of a group of three; untested with real data (unit tests only). Old note:
       Then the tool (`task_groups.dependences`) must be adapted: it prints the fields as
       `in x; out y; in/out z` without telling the kind of dependence. Per the agreed
       presentation, RAW is the main information and WAR/WAW are marked `(anti)` / `(output)`,
@@ -133,9 +136,14 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [x] **Overlapping spans** (fixed by the CU split, `design/instruction_focus.md`). Task 2 of the fib group starts at the line of task 1
       (31-32 against 31-31); derive the spans per task without the shared scope lines.
 - [ ] **Unknown end line.** Replace the sentinel 262143 by a real end line, or omit it.
-- [ ] **Join points.** Report what is read after the region (fib: `x`, `y` at line 34), so
-      that a join (taskwait, depend) can be derived.
-- [ ] **Data sharing.** `shared`, `private`, `first_private` are always empty.
+- [x] **Join points.** `ParallelRegionInfo.after_dependences` (task, variable, RAW/WAR, first line after the region),
+      from the dependences registered on the TaskGraph contexts (`pattern_detectors/task_dataflow.py`); the tool prints
+      the join line. Open: loop tasks (the tool still says "after the loop"), writes through pointer parameters of
+      callees (the task contexts do not inline the callees: fft shows no join), reads in the caller after the
+      function returns.
+- [x] **Data sharing.** Filled from the accesses, not the types (`classify_variable`): declared in the task and not
+      needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Open: reductions,
+      last private, what pointers point to (side-effect export).
 - [ ] **Enclosing loop.** Export the innermost enclosing loop (start line) of a region so
       that its hotspot can be matched; loops are not in the side-effect export.
 - [ ] **Decision log.** Record task decisions (accepted and rejected groups) in

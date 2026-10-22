@@ -34,6 +34,9 @@ class Task:
     in_dep: list[str] = field(default_factory=list)
     out_dep: list[str] = field(default_factory=list)
     in_out_dep: list[str] = field(default_factory=list)
+    shared: list[str] = field(default_factory=list)
+    private: list[str] = field(default_factory=list)
+    first_private: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -46,6 +49,11 @@ class TaskGroup:
     tasks: list[Task]
     # set if the tasks are created per iteration of a loop: the line of the loop
     loop_line: Optional[int] = None
+    # what the explorer found out about the data flow of the group; None if it recorded nothing (older results)
+    # {"from_task", "to_task", "variable", "kind": RAW | WAR}: the later task depends on the earlier one
+    task_dependences: Optional[list[dict[str, Any]]] = None
+    # {"task", "variable", "kind": RAW | WAR, "line": file id:line}: the code after the region depends on a task
+    after_dependences: Optional[list[dict[str, Any]]] = None
 
 
 @dataclass
@@ -65,6 +73,10 @@ def _int(value: Any) -> Optional[int]:
 
 def _names(value: Any) -> list[str]:
     return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def _records(value: Any) -> Optional[list[dict[str, Any]]]:
+    return [r for r in value if isinstance(r, dict)] if isinstance(value, list) else None
 
 
 def task_groups(patterns: dict[str, Any]) -> dict[str, TaskGroup]:
@@ -88,6 +100,9 @@ def task_groups(patterns: dict[str, Any]) -> dict[str, TaskGroup]:
             _names(entry.get("in_dep")),
             _names(entry.get("out_dep")),
             _names(entry.get("in_out_dep")),
+            _names(entry.get("shared")),
+            _names(entry.get("private")),
+            _names(entry.get("first_private")),
         )
     groups: dict[str, TaskGroup] = {}
     for entry in entries:
@@ -104,6 +119,8 @@ def task_groups(patterns: dict[str, Any]) -> dict[str, TaskGroup]:
             end,
             contained,
             _int(str(entry.get("loop_start_line") or "").split(":")[-1]),
+            _records(entry.get("task_dependences")),
+            _records(entry.get("after_dependences")),
         )
     return groups
 
@@ -173,7 +190,21 @@ def flags(group: TaskGroup, source: list[str]) -> list[str]:
 
 
 def dependences(group: TaskGroup) -> str:
-    """What the explorer recorded as dependences between the tasks, as it holds it."""
+    """The dependences between the tasks: a later task needs what an earlier one wrote (RAW), or overwrites what it
+    read (WAR, marked as anti dependence)."""
+    if group.task_dependences is None:
+        return _recorded_clauses(group)
+    if not group.task_dependences:
+        return "none"
+    return "; ".join(
+        f"task {d.get('from_task')} -> task {d.get('to_task')}: {d.get('variable')}"
+        + (" (anti)" if d.get("kind") == "WAR" else "")
+        for d in group.task_dependences
+    )
+
+
+def _recorded_clauses(group: TaskGroup) -> str:
+    """What results of an older explorer hold: the clauses of the tasks, without the kind of dependence."""
     parts = []
     for task in group.tasks:
         recorded = [
@@ -186,6 +217,41 @@ def dependences(group: TaskGroup) -> str:
     return "; ".join(parts) if parts else "none recorded"
 
 
+def join_points(group: TaskGroup, display_file: str) -> list[str]:
+    """Where the code after the region depends on the tasks: the line, the variables and the tasks to wait for."""
+    if group.after_dependences is None:
+        return []
+    by_line: dict[str, list[str]] = {}
+    for d in sorted(group.after_dependences, key=lambda d: (_int(str(d.get("line")).split(":")[-1]) or 0, str(d))):
+        line = str(d.get("line") or "").split(":")[-1] or "?"
+        verb = "overwrites" if d.get("kind") == "WAR" else "reads"
+        by_line.setdefault(line, []).append(f"{verb} {d.get('variable')} (task {d.get('task')})")
+    if not by_line:
+        return ["  join: no later code depends on the tasks (values written through pointers are not tracked)"]
+    return [
+        f"  join: the tasks have to be complete before {display_file}:{line}, which " + ", ".join(entries)
+        for line, entries in by_line.items()
+    ]
+
+
+def data_sharing(group: TaskGroup) -> list[str]:
+    """The variables of each task by the way they are shared with it."""
+    lines = []
+    for task in group.tasks:
+        parts = [
+            f"{label} {', '.join(names)}"
+            for label, names in (
+                ("shared", task.shared),
+                ("firstprivate", task.first_private),
+                ("private", task.private),
+            )
+            if names
+        ]
+        if parts:
+            lines.append(f"  data sharing of task {task.pattern_id}: " + "; ".join(parts))
+    return lines
+
+
 def describe(group: TaskGroup, display_file: str, source: list[str]) -> list[str]:
     """The lines under a task group's headline."""
     if group.loop_line is not None:
@@ -195,6 +261,8 @@ def describe(group: TaskGroup, display_file: str, source: list[str]) -> list[str
         place = f"{display_file}:{task.start_line}-{task.end_line}"
         lines.append(f"  task {task.pattern_id}: {place}   {_body(task, source)}".rstrip())
     lines.append(f"  dependences between the tasks: {dependences(group)}")
+    lines += join_points(group, display_file)
+    lines += data_sharing(group)
     for flag in flags(group, source):
         lines.append(f"  flag: {flag}")
     return lines

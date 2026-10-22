@@ -247,8 +247,16 @@ class TestTaskGroups(unittest.TestCase):
             json.dumps({"code_regions": [main, function]})
         )
 
-    def __group(self, tasks: list[dict[str, Any]], start: int, end: int, loop_start_line: str = "") -> None:
+    def __group(
+        self,
+        tasks: list[dict[str, Any]],
+        start: int,
+        end: int,
+        loop_start_line: str = "",
+        data_flow: dict[str, Any] | None = None,
+    ) -> None:
         region = {
+            **(data_flow or {}),
             **({"loop_start_line": loop_start_line} if loop_start_line else {}),
             "pattern_id": 5,
             "type": "PARALLELREGION",
@@ -283,6 +291,44 @@ class TestTaskGroups(unittest.TestCase):
         self.assertNotIn("flag:", text)
         self.assertNotIn("#pragma omp parallel", text)
         self.assertNotIn("Loop", text)
+
+    def test_the_join_names_the_line_after_the_region_and_what_it_reads(self) -> None:
+        self.__group(
+            [_task(3, 8, 8, shared=["x"], first_private=["n"]), _task(4, 9, 9, shared=["y"], first_private=["n"])],
+            8,
+            9,
+            data_flow={
+                "task_dependences": [],
+                "after_dependences": [
+                    {"task": 3, "variable": "x", "kind": "RAW", "line": "3:11"},
+                    {"task": 4, "variable": "y", "kind": "RAW", "line": "3:11"},
+                ],
+            },
+        )
+        text = self.__handle()
+        self.assertIn("  dependences between the tasks: none\n", text)
+        self.assertIn(
+            "  join: the tasks have to be complete before fib.c:11, which reads x (task 3), reads y (task 4)\n", text
+        )
+        self.assertIn("  data sharing of task 3: shared x; firstprivate n\n", text)
+        self.assertIn("  data sharing of task 4: shared y; firstprivate n\n", text)
+
+    def test_a_dependence_between_tasks_names_the_variable_and_marks_an_anti_dependence(self) -> None:
+        self.__group(
+            [_task(3, 8, 8), _task(4, 9, 9)],
+            8,
+            9,
+            data_flow={
+                "task_dependences": [
+                    {"from_task": 3, "to_task": 4, "variable": "a", "kind": "RAW"},
+                    {"from_task": 3, "to_task": 4, "variable": "b", "kind": "WAR"},
+                ],
+                "after_dependences": [],
+            },
+        )
+        text = self.__handle()
+        self.assertIn("  dependences between the tasks: task 3 -> task 4: a; task 3 -> task 4: b (anti)\n", text)
+        self.assertIn("  join: no later code depends on the tasks", text)
 
     def test_a_task_per_iteration_names_the_loop_and_the_join_after_it(self) -> None:
         self.__group([_task(3, 8, 8)], 7, 9, loop_start_line="3:7")
