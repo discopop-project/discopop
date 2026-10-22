@@ -28,6 +28,7 @@ from discopop_explorer.pattern_detectors.task_dataflow import (
     classify_variable,
     clauses_of_dependences,
     instructions_with_callees,
+    variables_of_instructions,
 )
 
 
@@ -199,11 +200,75 @@ def test_what_a_callee_writes_through_a_pointer_is_read_after_the_task(
     assert [(a.variable, a.kind, a.line) for a in found] == [("a", "RAW", "3:17"), ("b", "RAW", "3:20")]
     assert after_dependences_of_instructions(pet, [5], 3, 17, function)[0].line == "3:20"  # only what follows
 
-    # a task that calls its own function reaches the code around it: no result
+    # a task that calls its own function reaches the code around it: the dependences are still found
     recursive = make_node(
         "3:12", node_calls=[{"cuid": "3:1", "atLine": "3:16", "callInstId": "6"}], instruction_ids=[6]
     )
     pet.g.add_node(recursive.id, data=recursive)
     pet.g.add_edge(function.id, recursive.id, data=Dependency(EdgeType.CHILD))
     monkeypatch.setitem(instructionToCUIdMap, 6, recursive.id)
-    assert after_dependences_of_instructions(pet, [6], 3, 16, function) == []
+    assert [(a.variable, a.kind) for a in after_dependences_of_instructions(pet, [6], 3, 16, function)] == [
+        ("a", "RAW"),
+        ("b", "RAW"),
+    ]
+
+
+def _recursive_function(
+    monkeypatch: pytest.MonkeyPatch, make_node: Any, build_pet_graph: Any, passed: List[str]
+) -> Tuple[Any, Any]:
+    """``void f(int *out, int *in)`` (header line 1) with the task ``f(&x, ...)`` on line 15 (instruction 5, its CU
+    accesses the variables ``passed``), a store through ``out`` on line 3 (instruction 20, the base case), a header
+    store (instruction 2) and the code after the task: line 17 reads ``x`` and ``out``, line 18 reads ``in``."""
+    function = make_node(
+        "3:1",
+        NodeType.FUNC,
+        end_line=30,
+        args=[Variable("ptr", VarName("out"), "1", "RW"), Variable("ptr", VarName("in"), "1", "RW")],
+    )
+    header = make_node("3:10", instruction_ids=[2], start_line=1)
+    base = make_node("3:11", instruction_ids=[20], start_line=3)
+    call = make_node(
+        "3:12",
+        node_calls=[{"cuid": "3:1", "atLine": "3:15", "callInstId": "5"}],
+        instruction_ids=[5],
+        local_vars=[Variable("ptr", VarName(name), "3:2", "R") for name in passed],
+        global_vars=[],
+    )
+    reader = make_node("3:13", instruction_ids=[9, 10], start_line=17)
+    edges: List[Any] = [(function.id, cu.id, EdgeType.CHILD) for cu in (header, base, call, reader)]
+    for source, sink, variable in ((20, 9, "x"), (20, 9, "out"), (20, 10, "in"), (2, 9, "h")):
+        dependence = Dependency(EdgeType.DATA)
+        dependence.dtype, dependence.var_name = DepType.RAW, variable
+        dependence.source_instruction_id, dependence.sink_instruction_id = source, sink
+        edges.append((reader.id, header.id if source == 2 else base.id, dependence))
+    pet = build_pet_graph([function, header, base, call, reader], edges)
+    pet.instruction_lines = {"2": "3:1", "20": "3:3", "5": "3:15", "9": "3:17", "10": "3:18"}
+    for instruction, cu in ((2, header), (20, base), (5, call), (9, reader), (10, reader)):
+        monkeypatch.setitem(instructionToCUIdMap, instruction, cu.id)
+    return pet, function
+
+
+def test_the_join_of_a_recursive_task_is_found_without_the_states_of_the_recursion_levels(
+    monkeypatch: pytest.MonkeyPatch, make_node: Any, build_pet_graph: Any
+) -> None:
+    """The base case of the recursion (instruction 20) writes through ``out``, which the caller passed as ``&x``: the
+    read of ``x`` on line 17 is a join. The header store of the parameters (instruction 2) never reaches the caller,
+    and a parameter that the task does not pass on (``in``) is only read in the frame of its own level."""
+    pet, function = _recursive_function(monkeypatch, make_node, build_pet_graph, passed=["out"])
+    found = after_dependences_of_instructions(pet, [5], 3, 15, function)
+    assert [(a.variable, a.kind, a.line) for a in found] == [("out", "RAW", "3:17"), ("x", "RAW", "3:17")]
+
+
+def test_a_parameter_the_recursive_task_does_not_pass_on_is_no_join(
+    monkeypatch: pytest.MonkeyPatch, make_node: Any, build_pet_graph: Any
+) -> None:
+    pet, function = _recursive_function(monkeypatch, make_node, build_pet_graph, passed=[])
+    found = after_dependences_of_instructions(pet, [5], 3, 15, function)
+    assert [(a.variable, a.kind, a.line) for a in found] == [("x", "RAW", "3:17")]
+
+
+def test_variables_of_instructions(monkeypatch: pytest.MonkeyPatch, make_node: Any, build_pet_graph: Any) -> None:
+    pet, _ = _recursive_function(monkeypatch, make_node, build_pet_graph, passed=["out", "k"])
+    assert variables_of_instructions(pet, [5]) == {"out", "k"}
+    assert variables_of_instructions(pet, [2]) == set()
+    assert variables_of_instructions(pet, [999]) == set()
