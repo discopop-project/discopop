@@ -52,9 +52,6 @@ def test_each_task_and_the_group_are_reported_once(result: Any) -> None:
     assert _lines(_tasks(result)) == [("24", "24"), ("26", "26")]
 
 
-@pytest.mark.xfail(  # type: ignore[misc]
-    strict=True, reason="the region has no after_dependences: the reads of with and without are not reported"
-)
 def test_the_max_after_the_taskwait_reads_both_results(result: Any) -> None:
     region = next(r for r in _regions(result) if r.region_start_line == "24")
     assert {(a["variable"], a["kind"], a["line"]) for a in region.after_dependences} == {

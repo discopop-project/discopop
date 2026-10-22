@@ -297,6 +297,32 @@ def _instruction_lines_after(pet: PEGraphX, function: FunctionNode, file_id: int
     return owner
 
 
+def variables_of_instructions(pet: PEGraphX, instruction_ids: List[int]) -> Set[str]:
+    """The names of the variables that the CUs of the instructions access (CU granularity: it may include variables
+    of code that shares a CU with the instructions)."""
+    names: Set[str] = set()
+    for cu_id in {instructionToCUIdMap[i] for i in instruction_ids if i in instructionToCUIdMap}:
+        if cu_id not in pet.g:
+            continue
+        node = pet.node_at(NodeID(cu_id))
+        names.update(v.name for v in list(getattr(node, "local_vars", [])) + list(getattr(node, "global_vars", [])))
+    return names
+
+
+def _written_by_recursive_task(pet: PEGraphX, reached: Set[int], function: FunctionNode, file_id: int) -> Set[int]:
+    """The instructions whose writes a task that reaches its own function may leave to the code after it.
+
+    The profiler cuts the callpath states at a recursive call, so every recursion level shares the states of the
+    first one: a record cannot tell whether its earlier end ran in the task (a deeper level) or in the code of the
+    function around it (the caller's level). Everything the function runs before the code after the task counts as
+    the work of the task, except the instructions on the header line of the function: they store the parameters,
+    which belong to the frame of the level that runs them, never to the caller. The result over-approximates: a write
+    of the caller's own level before the task that the code after it reads is reported as well (a join where none
+    may be needed, never a missing one)."""
+    header = f"{file_id}:{function.start_line}"
+    return {i for i in reached if header not in {str(line) for line in pet.get_line_ids_of_instructions([i])}}
+
+
 def after_dependences_of_instructions(
     pet: PEGraphX, instruction_ids: List[int], file_id: int, last_line: int, function: FunctionNode, task: int = 0
 ) -> List[AfterDependence]:
@@ -305,15 +331,20 @@ def after_dependences_of_instructions(
     writes through pointers the contexts do not see. A RAW or WAR whose earlier end is one of them and whose later
     end runs in the ``function`` that holds the task after ``last_line`` (the last line of the task), directly or in a
     function called there (reported at the line of the call). Its variable is the name at the later access.
-    If the task reaches its own function (recursion), the result is empty: the code of the function cannot be told apart
-    from the code the task runs in the recursive calls."""
+    If the task reaches its own function (recursion), the dependences cannot be assigned to a recursion level (the
+    callpath states are cut at the recursive call): see ``_written_by_recursive_task``; the result is an
+    over-approximation. A parameter of the function that the CUs of the task's own instructions do not access is not
+    reported: it is read by the code after the task through the frame of the caller's own level (``*out = 0; ...
+    *out += x`` after the task), while one the task passes on may be written by the deeper levels."""
     inside = instructions_with_callees(pet, instruction_ids)
     later = _instruction_lines_after(pet, function, file_id, last_line)
     own_code = {i for cu in subtree_of_type(pet, function, CUNode) for i in cu.instruction_ids} - set(instruction_ids)
-    if own_code & inside:
-        # the code of the function cannot be told apart from that of the recursive calls: nothing reliable to say
-        return []
     written_by_task = inside - set(later)
+    unpassed_parameters: Set[str] = set()
+    if own_code & inside:
+        written_by_task = _written_by_recursive_task(pet, written_by_task, function, file_id)
+        parameters = {str(v.name) for v in function.args}
+        unpassed_parameters = parameters - variables_of_instructions(pet, instruction_ids)
     first_line: Dict[Tuple[str, str], str] = {}
     cu_ids = sorted({NodeID(instructionToCUIdMap[i]) for i in written_by_task if i in instructionToCUIdMap})
     for cu_id in cu_ids:
@@ -322,6 +353,8 @@ def after_dependences_of_instructions(
         for _, _, dependence in in_edges(pet, cu_id, EdgeType.DATA):
             kind = _kind(dependence)
             if kind is None or dependence.var_name is None:
+                continue
+            if dependence.var_name in unpassed_parameters:
                 continue
             sink = dependence.sink_instruction_id
             if dependence.source_instruction_id not in written_by_task or sink not in later:
@@ -359,4 +392,5 @@ __all__: Tuple[str, ...] = (
     "function_of",
     "after_dependences_of_instructions",
     "instructions_with_callees",
+    "variables_of_instructions",
 )
