@@ -272,7 +272,7 @@ def _describe_loop(group: TaskGroup, display_file: str, source: list[str]) -> li
     """A task group that creates one task per iteration of a loop (the iterations are independent)."""
     lines = [
         f"  one task per iteration of the loop at {display_file}:{group.loop_line}"
-        f" (loop lines {group.start_line}-{group.end_line})"
+        f" (loop lines {group.loop_line}-{group.end_line})"
     ]
     for task in group.tasks:
         place = f"{display_file}:{task.start_line}-{task.end_line}"
@@ -287,9 +287,12 @@ def _describe_loop(group: TaskGroup, display_file: str, source: list[str]) -> li
 
 
 def covering(groups: dict[str, TaskGroup], file_id: int, start_line: int, end_line: int) -> dict[str, TaskGroup]:
-    """The groups whose parallel region shares a line with the given lines."""
+    """The groups whose parallel region shares a line with the given lines. The region of a loop group is the statement
+    of its tasks; the loop, i.e. its header, belongs to the group as well."""
     return {
         pid: g
         for pid, g in groups.items()
-        if g.file_id == file_id and g.start_line <= end_line and start_line <= g.end_line
+        if g.file_id == file_id
+        and min(g.start_line, g.loop_line or g.start_line) <= end_line
+        and start_line <= g.end_line
     }
