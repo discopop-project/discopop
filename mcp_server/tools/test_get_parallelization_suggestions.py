@@ -339,6 +339,19 @@ class TestTaskGroups(unittest.TestCase):
         self.assertNotIn("parallel region:", text)
         self.assertNotIn("fewer than two tasks", text)
 
+    def test_a_task_per_iteration_names_the_line_after_the_loop_that_reads_the_results(self) -> None:
+        self.__group(
+            [{**_task(3, 8, 8), "shared": ["res"], "first_private": ["n"]}],
+            7,
+            9,
+            loop_start_line="3:7",
+            data_flow={"after_dependences": [{"task": 3, "variable": "res", "kind": "RAW", "line": "3:10"}]},
+        )
+        text = self.__handle()
+        self.assertIn("  join: the tasks have to be complete before fib.c:10, which reads res (task 3)\n", text)
+        self.assertNotIn("wait for the tasks after the loop", text)
+        self.assertIn("  data sharing of task 3: shared res; firstprivate n\n", text)
+
     def test_a_group_inside_a_suggested_loop_is_nested_in_it_and_the_loop_contains_it(self) -> None:
         log = PatternDecisionLog()
         log.ran(DETECTOR, TYPES)

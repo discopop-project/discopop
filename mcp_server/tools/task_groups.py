@@ -277,7 +277,10 @@ def _describe_loop(group: TaskGroup, display_file: str, source: list[str]) -> li
     for task in group.tasks:
         place = f"{display_file}:{task.start_line}-{task.end_line}"
         lines.append(f"  task body {task.pattern_id}: {place}   {_body(task, source)}".rstrip())
-    lines.append("  join: wait for the tasks after the loop, before the results are used")
+    joins = join_points(group, display_file) if group.after_dependences else []
+    # nothing found does not mean that nothing is needed: writes through pointers are not tracked
+    lines += joins or ["  join: wait for the tasks after the loop, before the results are used"]
+    lines += data_sharing(group)
     for flag in flags(group, source):
         lines.append(f"  flag: {flag}")
     return lines
