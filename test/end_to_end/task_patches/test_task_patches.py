@@ -70,7 +70,8 @@ def _patched_run(
 def test_the_patch_of_two_tasks_applies_compiles_and_keeps_the_output(tmp_path: Path) -> None:
     expected, patched, source, _ = _patched_run(HERE / "two_tasks", tmp_path / "src", "dep.c")
     assert patched == expected
-    assert source[8:20] == [
+    # the code after the group reads a and b: the patch waits for the tasks before the end of the region
+    assert source[8:21] == [
         "int h(int k, int n) {",
         "  int a, b;",
         "  #pragma omp parallel",
@@ -80,6 +81,7 @@ def test_the_patch_of_two_tasks_applies_compiles_and_keeps_the_output(tmp_path: 
         "  a = f(k);        // line 11",
         "  #pragma omp task shared(b) firstprivate(n)",
         "  b = f(n + 1);    // line 12",
+        "  #pragma omp taskwait",
         "  }",
         "  return a + b;    // line 13",
         "}",
@@ -90,7 +92,7 @@ def test_the_patch_of_the_loop_tasks_ends_the_region_after_the_loop(tmp_path: Pa
     expected, patched, source, region = _patched_run(HERE / "loop", tmp_path / "src", "loop.c", loop=True)
     assert region.loop_start_line == "1:16"
     assert patched == expected
-    assert source[13:24] == [
+    assert source[13:25] == [
         "  int res[16];",
         "  int total;",
         "  #pragma omp parallel",
@@ -100,6 +102,17 @@ def test_the_patch_of_the_loop_tasks_ends_the_region_after_the_loop(tmp_path: Pa
         "    #pragma omp task shared(res) firstprivate(n)",
         "    store(&res[k], f(n + k));  // line 17",
         "  }",
+        "  #pragma omp taskwait",
         "  }",
         "  total = res[3] + res[5];  // line 19",
     ]
+
+
+def test_the_patch_of_tasks_writing_the_same_variable_orders_them_with_depend_clauses(tmp_path: Path) -> None:
+    """Two writes of d: the output dependence is a depend clause of both tasks (they stay ordered, the result is the
+    one of the serial program), the return statement reads d, so the patch waits for the tasks."""
+    expected, patched, source, _ = _patched_run(HERE / "waw", tmp_path / "src", "waw.c")
+    assert patched == expected
+    text = "\n".join(source)
+    assert text.count("depend(out: d)") == 2, text
+    assert "#pragma omp taskwait" in text

@@ -98,16 +98,44 @@ def test_a_variable_occurs_in_one_data_sharing_clause_only(tmp_path: Path) -> No
     assert "  #pragma omp task shared(a,k) firstprivate(n) private(x)" in code.splitlines()
 
 
-def test_a_task_that_depends_on_an_earlier_one_waits_for_it(tmp_path: Path) -> None:
-    tasks = [_task(0, 3, shared=["a"]), _task(1, 4, shared=["b"]), _task(2, 5, shared=["c"])]
+def test_the_dependences_between_the_tasks_are_depend_clauses_and_need_no_taskwait(tmp_path: Path) -> None:
+    tasks = [
+        _task(0, 3, shared=["a"]),
+        _task(1, 4, shared=["b"], out_dep=["b"]),
+        _task(2, 5, shared=["c"], in_dep=["b"], in_out_dep=["a"]),
+    ]
     dependences = [{"from_task": 1, "to_task": 2, "variable": "b", "kind": "RAW"}]
     code = _generate(tmp_path, _region([0, 1, 2], 3, 5, task_dependences=dependences), tasks)
     lines = code.splitlines()
-    assert lines[lines.index("  c = f(b);") - 2 :] == [
-        "  #pragma omp taskwait",
-        "  #pragma omp task shared(c)",
+    assert lines[lines.index("  #pragma omp task shared(c) depend(inout: a) depend(in: b)") :] == [
+        "  #pragma omp task shared(c) depend(inout: a) depend(in: b)",
         "  c = f(b);",
         "  }",
+        "  return a + b + c;",
+        "}",
+    ]
+    assert "  #pragma omp task shared(b) depend(out: b)" in lines
+    assert "  #pragma omp task shared(c) depend(inout: a) depend(in: b)" in lines
+    assert "  #pragma omp task shared(a)" in lines  # no dependences, no clause
+    assert code.count("taskwait") == 0
+
+
+def test_a_variable_is_in_one_depend_clause_only(tmp_path: Path) -> None:
+    tasks = [_task(0, 3, shared=["a"], in_dep=["a", "b"], out_dep=["a"], in_out_dep=["a", ""])]
+    code = _generate(tmp_path, _region([0], 3, 3), tasks)
+    assert "  #pragma omp task shared(a) depend(inout: a) depend(in: b)" in code.splitlines()
+
+
+def test_a_taskwait_ends_the_group_if_the_code_after_it_needs_the_results(tmp_path: Path) -> None:
+    tasks = [_task(0, 3, shared=["a"]), _task(1, 4, shared=["b"])]
+    after = [{"task": 1, "variable": "b", "kind": "RAW", "line": "1:5", "at_return": False}]
+    code = _generate(tmp_path, _region([0, 1], 3, 4, after_dependences=after), tasks)
+    lines = code.splitlines()
+    assert lines[lines.index("  b = f(n);") :] == [
+        "  b = f(n);",
+        "  #pragma omp taskwait",
+        "  }",
+        "  c = f(b);",
         "  return a + b + c;",
         "}",
     ]

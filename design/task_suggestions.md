@@ -314,9 +314,23 @@ Where the branches met (commit "reconcile the merged task branches"):
   dependence kind `WAW`; `pet.callpath_tree` (not stored).
 
 Open questions of the agents, still undecided: the region of a group (wrap the first call in the caller, as omp-tasks,
-instead of a parallel region per recursive function); `taskwait` or `depend` for dependences between tasks; whether
+instead of a parallel region per recursive function); whether
 a group that cannot be placed keeps a comment-only patch; `variable = ""` for join entries without a name; the
 name mapping of the join is a heuristic (no call arguments); a declaration as task line (fib: `int a = fib(n-1);`)
 cannot be patched; sparselu: fwd and bdiv are one region in omp-tasks; the data sharing of `csols` / `b` in nqueens
 (`&csols[i]` is only an address computation in the CU, the AST helper of the join branch could close it); the
 sibling race on a parent's field in health (cut call paths).
+
+### 3.8 Decision: depend and taskwait in the patches of task groups (2026-10-23)
+
+Maintainer: `depend` clauses are for the dependences between the tasks themselves; `taskwait` is for the case that a
+following statement needs the results of all tasks. In general `depend` is preferred: it allows more independent groups
+of tasks to run in parallel in the future while the dependences between the tasks stay correct.
+
+Implemented (branch `improvement/patch/depend_clauses`, `UnpackedSuggestion`): a task gets
+`depend(inout: ...) depend(out: ...) depend(in: ...)` from `in_out_dep` / `out_dep` / `in_dep` (each variable once); the
+`taskwait` before a dependent task is gone; a `#pragma omp taskwait` ends the group (before the closing brace of the
+`single` block) if the group has `after_dependences`. Test: `test/end_to_end/task_patches` (`waw`: two writes of a
+variable are ordered by `depend(out: d)`, the patched program gives the output of the serial one).
+Note: groups are pairs without a data edge, so today only WAW (and the `depend` clauses of loop tasks, none) shows
+up as `depend`; RAW and WAR between the tasks are the join, i.e. the taskwait.

@@ -223,6 +223,22 @@ class UnpackedSuggestion(object):
                 clauses += " " + clause + "(" + ",".join(names) + ")"
         return clauses
 
+    def __task_depend_clauses(self) -> str:
+        """The depend clauses of a task for its dependences on the other tasks of the group (in_dep, out_dep and
+        in_out_dep of the pattern), each variable once: a task that waits for the result of another one does so by its
+        clauses, the tasks that do not depend on each other stay independent."""
+        seen: set[str] = set()
+        clauses = ""
+        for clause, key in (("inout", "in_out_dep"), ("out", "out_dep"), ("in", "in_dep")):
+            names: List[str] = []
+            for name in self.values.get(key) or []:
+                if str(name) and str(name) not in seen:
+                    seen.add(str(name))
+                    names.append(str(name))
+            if len(names) > 0:
+                clauses += " depend(" + clause + ": " + ", ".join(names) + ")"
+        return clauses
+
     def __get_parallel_region_of_tasks_pragmas(
         self, contained_patterns: Optional[Dict[str, List[str]]]
     ) -> List[Pragma]:
@@ -234,11 +250,14 @@ class UnpackedSuggestion(object):
             #pragma omp parallel
             #pragma omp single
             {
-            [#pragma omp taskwait]      only before a task that depends on an earlier one of the group
-            #pragma omp task <data sharing clauses>
-            <task>
+            #pragma omp task <data sharing clauses> [depend clauses]
+            <task>                      depend: the dependences of the task on the other tasks of the group
             ...
+            [#pragma omp taskwait]      only if the code after the group needs the results of the tasks
             }                           the end of the region is the join: the tasks are complete after it
+
+        Dependences between the tasks of the group are depend clauses (the tasks that do not depend on each other
+        stay independent); a taskwait is for the case that a following statement needs the results of all tasks.
 
         A group of tasks per loop iteration starts at the loop header and ends after the last line of the loop.
         A group that cannot be placed (an unknown line, tasks that share lines) is left to the reader: the patch
@@ -303,16 +322,14 @@ class UnpackedSuggestion(object):
         parallel_pragma.children.append(single_pragma)
         single_pragma.children.append(line_pragma("{", region_start, PragmaPosition.BEFORE_START))
 
-        # a later task that depends on an earlier one of the group waits for the tasks created so far
-        waiting_tasks = {int(d["to_task"]) for d in (self.values.get("task_dependences") or [])}
         for task in tasks:
-            if task["pattern_id"] in waiting_tasks:
-                single_pragma.children.append(
-                    line_pragma("#pragma omp taskwait", int(task["region_start_line"]), PragmaPosition.BEFORE_START)
-                )
             single_pragma.children += UnpackedSuggestion("task", task).get_pragmas(contained_patterns)
 
+        # Pragmas after the same line are inserted directly after it, so the later one comes first: the closing brace
+        # is added before the taskwait, which the code after the group needs if it uses the results of the tasks.
         single_pragma.children.append(line_pragma("}", region_end, PragmaPosition.AFTER_END))
+        if self.values.get("after_dependences"):
+            single_pragma.children.append(line_pragma("#pragma omp taskwait", region_end, PragmaPosition.AFTER_END))
         return [parallel_pragma]
 
     def __get_task_pragmas(self, contained_patterns: Optional[Dict[str, List[str]]]) -> List[Pragma]:
@@ -329,7 +346,9 @@ class UnpackedSuggestion(object):
             pragma.file_id = self.file_id
             pragma.start_line = int(self.values["region_start_line"])  # self.start_line
             pragma.end_line = int(self.values["region_end_line"])  # self.end_line
-            pragma.pragma_str += " ".join(self.values["pragma"]) + self.__task_data_sharing_clauses()
+            pragma.pragma_str += (
+                " ".join(self.values["pragma"]) + self.__task_data_sharing_clauses() + self.__task_depend_clauses()
+            )
             pragmas.append(pragma)
         elif self.values["type"] == "PARALLELREGION":
             pragmas += self.__get_parallel_region_of_tasks_pragmas(contained_patterns)
