@@ -334,3 +334,44 @@ Implemented (branch `improvement/patch/depend_clauses`, `UnpackedSuggestion`): a
 variable are ordered by `depend(out: d)`, the patched program gives the output of the serial one).
 Note: groups are pairs without a data edge, so today only WAW (and the `depend` clauses of loop tasks, none) shows
 up as `depend`; RAW and WAR between the tasks are the join, i.e. the taskwait.
+
+### 3.9 Plan: hotspot information for `task` and `parallel_region` patterns (draft, not implemented)
+
+Need (maintainer): the autotuner shall be able to use task and parallel-region suggestions.
+
+Finding: the autotuner classifies a pattern only in `HostpotLoader/utilities.get_patterns_by_hotspot_type`
+(used by `priorities`, `check_single_combination`, `greedy`/`linear`/`evolutionary`/`coordinate_descent`/
+`hotspot_guided`/`parallel_region_combination_with_refinement`, `measure_only`, `PatchRepair/candidates`, `SanityChecker`).
+It only looks at **loop** hotspots (`HotspotNodeType.LOOP`) whose start line lies in `[start_line, end_line]` of the
+pattern (file id from `start_line`). Consequences for tasks:
+- the group patterns (`ParallelRegionInfo`) of recursive functions (fib, nqueens, ...) contain no loop, so they are
+  never YES/MAYBE/NO: they fall out of every bucket and are never tried; with hotspot information present, nothing is
+  falling back to "all suggestions" either (that fallback needs empty hotspot information);
+- `start_line`/`end_line` are the CU lines of the first task, not the region, so even a group around a hotspot loop
+  can be missed. The `FUNCTION` hotspots (`Hotspots.json`) are ignored.
+- the detectors already filter by hotspots (`filter_for_hotspots`, `_hotspot_functions` in `new_task_detector`), but
+  the result is not recorded on the pattern.
+
+Plan (each step with its tests, in this order):
+1. **Decide the semantics** (maintainer): a task group is YES if one of its tasks calls a hotspot function, or the
+   region contains a hotspot loop; MAYBE / NO analogously, using the best class of any contained hotspot; the
+   average runtime of the matching entries is recorded. Open: is a recursive function's hotspot the function itself
+   (FUNCTION entry matching the callee / the enclosing function)?
+2. **Attach the information in the explorer**: a field `hotspot_type` (`YES`/`MAYBE`/`NO`/None) and
+   `hotspot_runtime` on `PatternInfo` (serialised in `patterns.json`, loaded with the old files defaulting to None);
+   set by one function `classify_pattern(pattern, hotspots, pet)` that uses the region lines
+   (`region_start_line`..`region_end_line`, `loop_start_line`/`loop_end_line` for loop groups) and the callee names of
+   the tasks. Called in `pattern_detection.py` after the task detection, for `task` and `parallel_region` only.
+3. **Use it in the library**: `get_patterns_by_hotspot_type` first uses the attached type (if set), else the old
+   loop containment rule, and in addition matches `FUNCTION` hotspots against regions. One implementation, so all
+   optimisers profit. Unit tests with stub `DetectionResult`s (group with hotspot loop, recursive group with
+   function hotspot, group without hotspot, no hotspot information).
+4. **End to end**: a case with a recursive function that is a hotspot (the `omp_tasks` cases, e.g. fib/nqueens, or a
+   small program): the explorer output carries the type, `discopop_auto_tuner` selects the group and the run does not
+   skip it (check with `measure_only` and `-A` variants that list patterns by type).
+5. **MCP / docs**: show the class in `get_parallelization_suggestions` and `explain_parallelization`; document the
+   fields in `docs/.../tasks.md` and `Explorer_output.md`.
+
+Risks: pattern ids and the patterns.json schema (step 2 is additive); the hotspot file ids must match the
+`file_id:line` of the regions (checked per entry); nested groups can both match (the optimisers already handle
+overlapping patterns through the sanity checker).
