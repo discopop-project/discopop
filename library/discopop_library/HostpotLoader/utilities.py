@@ -46,6 +46,13 @@ def get_patterns_by_hotspot_type(
         end_line = int(pattern.end_line.split(":")[1])
         file_id = int(pattern.start_line.split(":")[0])
 
+        attached = getattr(pattern, "hotspot_type", None)
+        if hotspot_information and attached is not None:
+            # the explorer classified the pattern by its contents (task and parallel_region patterns: the hotspot
+            # loops in the region and the hotspot functions its tasks call, see design/task_suggestions.md, 3.9)
+            result_dict[HotspotType(attached)].append(pattern_id)
+            continue
+
         if hotspot_information:
             # check for hotspot type if hotspot information exists
             found_type = False
