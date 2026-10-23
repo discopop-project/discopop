@@ -66,28 +66,27 @@ explorer gets that far; adjust them to the omp-tasks code, not to the explorer o
 5. Then, by value: the cost per recursive call site (3.; floorplan too), the do-all result for loops with recursion (4.), the span
    including the loop header (5.).
 
-## 4. Todo list from `design/task_suggestions.md` (not started)
+## 4. Todo list (state 2026-10-23, branch `integration/task_detection`, see `design/task_suggestions.md` 3.2 to 3.7)
 
-- Patch generation for task patterns (verify the patches of fib, fft and loop tasks, `PARALLELREGION` handling, the
-  printed line).
-- Docs (`docs/tools/MCP_server.md`, explorer docs, the new `patterns.json` fields `task_dependences`,
-  `after_dependences`, `shared`, `private`, `first_private`, and `jumpInstructionIDs` in `Data.xml`).
-- Step 1b leftovers (open items under "Join points"):
-  1. tasks that reach their own function (recursion): no join is reported; needs the callpath state of the dependences,
-     which the parser strips;
-  2. reads in the caller after the function returns (a task writes through a pointer parameter or a global, the caller
-     reads it): the join should be "before the function returns". A prototype was written and reverted: it takes the RAW
-     dependences whose sink is outside the function and not in the task, as an `AfterDependence` with `line = None`,
-     and the tool prints "complete before the function returns"; it found nothing on fib/fft/`ptr.c`, and gave
-     `res RAW` on a program where `h(int *res)` writes through callees and `main` reads it;
-  3. the variable names are those at the later access (a callee writing `*dst` shows as `res`).
-- Reductions and lastprivate in the data sharing; WAW dependences; a real-data test for dependences between tasks.
+Done and merged on `integration/task_detection`: patch generation for task groups, docs for the fields, joins of
+recursive tasks and before the function returns, variable names in the function's scope, reductions / lastprivate /
+WAW, spans of loop tasks, spurious WAR, health (cursor loops), the tests one level down and for `task` alone, the
+warning and the note for loops with recursive calls.
+
+Open (details in the design notes):
+- uts and every loop with recursive calls: the call paths are cut at a recursive call (3.3); future profiler work: the
+  memory intrinsics, the maximum of iterations after `return`, `IsSingleExit`, `DP_DEBUG`, the unused return targets
+  file (3.4).
+- Decisions of the maintainer still needed (3.7): the region of a group (wrap the first call), `taskwait` or `depend`,
+  comment-only patches, `variable = ""`.
+- Sharing of `csols` / `b` (nqueens) and of the loop index (sparselu); sparselu fwd + bdiv as one region.
 - Enclosing loop export; decision log for tasks (`pattern_decisions.json`); unknown end line 262143; `static_callees`
-  of a self-recursive function; trivial groups (a few `sprintf` calls); loops with `depend`.
-- A test one level down (ContextTaskGraph simplification); a `--enable-patterns task` alone test.
-- MCP server items: stale server output, `dp_common/` paths in the output, stale `get_project_status` after a manual
-  run, GUI fallback default.
-- Open the PR chain: interface → task_suggestions → instruction_ids (and decide where the test branch goes).
+  of a self-recursive function; trivial groups (a few `sprintf` calls); loops with `depend`; mutual recursion for the
+  warning; the outermost loop / collapse check for plain do-all (3.6).
+- MCP server items (skipped): stale server output, `dp_common/` paths in the output, stale `get_project_status` after a
+  manual run, GUI fallback default.
+- Performance (parked): the cost per recursive call site, floorplan.
+- Open the PR chain (interface -> task_suggestions -> instruction_ids ...) and decide where the branches go.
 
 ## 5. How to work
 

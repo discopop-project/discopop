@@ -99,7 +99,9 @@ Implausible groups are flagged, not hidden (see 3.3).
 
 ### 3.2 Explorer follow-ups (separate work)
 
-- [~] **Fill `in_dep` / `out_dep` / `in_out_dep`** (`clauses_of_dependences`; `ParallelRegionInfo.task_dependences`
+- [x] **Fill `in_dep` / `out_dep` / `in_out_dep`** (done on `integration/task_detection`: WAW is read from the PET and shown as
+      `(output)`; real-data test `test/end_to_end/task_dependences`; RAW and WAR between the tasks of a group cannot occur,
+      they are the join, see 3.5). Old text: (`clauses_of_dependences`; `ParallelRegionInfo.task_dependences`
       carries variable and kind, RAW and WAR; WAW is not registered on contexts; the tool prints `(anti)`). Groups
       are built from tasks without a data edge between neighbours, so a dependence only shows for non-adjacent
       tasks of a group of three; untested with real data (unit tests only). Old note:
@@ -109,7 +111,8 @@ Implausible groups are flagged, not hidden (see 3.3).
       which needs the kind per variable in the explorer's output (a new field or a tagged
       entry); add a test with real dependences (fib: none; take a case from `bots/omp-tasks`).
 
-- [~] **Tests from `bots/omp-tasks`** (started): `pattern_detectors/test_new_task_detector.py`
+- [x] **Tests from `bots/omp-tasks`** (done: `test/end_to_end/task_omp_<app>` for eight apps, a test one level down in
+      `classes/TaskGraph/test_ContextTaskGraph_simplification.py`, `test/end_to_end/task_only`). Old text: `pattern_detectors/test_new_task_detector.py`
       feeds `identify_simple_tasking` with the code scopes captured in a run on serial fib and
       bots_main/bots_common and states what omp-tasks does as the expectation; known deviations
       are `xfail(strict)`. Open: more applications (nqueens, knapsack, health, floorplan, uts,
@@ -121,8 +124,8 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [x] **Loop and recursive tasking.** `identify_loop_tasking` (`new_task_detector.py`): a do-all loop whose body
       calls a hotspot function (any call without hotspot data) is one task per iteration (`loop_start_line` on
       task and region; fft: the loop of `fft_aux`, 2951). The do-all detection runs for it even if only `task` is
-      requested. Open: loops with some dependences between the iterations (`depend`), the join analysis (the
-      tool always names a join after the loop).
+      requested. Open: loops with some dependences between the iterations (`depend`), the join analysis (done for loop tasks too,
+      see Join points).
 - [x] **Mutually exclusive branches / conditional tasks.** `identify_simple_tasking` drops tasks that do no work
       (CUs without variables and calls: `return`, the jump over an `else`) and tasks that lead to more than one CU
       outside of them (end in a conditional branch: `||` operands, `bots_message`), and groups with fewer than
@@ -142,12 +145,12 @@ Implausible groups are flagged, not hidden (see 3.3).
       the file); the tool names the line, else it keeps the generic "after the loop". Writes through pointer parameters of callees
       (not in the task contexts) come from the PET (`after_dependences_of_instructions`: sources in the instructions of
       the task and of its callees, sinks in the function after the task, or in the callees of calls there, reported at
-      the line of the call). Open: tasks that reach their own function (recursion, e.g. the loop of fft: no join is
-      reported, since the code around the recursive call cannot be told from it; needs the callpath state of the
-      dependences), reads in the caller after the function returns, the variable names are those at the later access,
-      and the group choice flakiness below.
+      the line of the call). Done on `integration/task_detection`: tasks that reach their own function (the code of the function counts as the
+      task's work: an over-approximation, no `at_return`, see 3.7), reads in the caller after the function returns
+      (`at_return`, `line = null`, printed as "complete before the function returns"), the names are names of the
+      function's scope (heuristic, `""` if none). Open: the name heuristic needs the call arguments of the AST.
 - [x] **Data sharing.** Filled from the accesses, not the types (`classify_variable`): declared in the task and not
-      needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Loop tasks take the sharing of the do-all loop, plus what the code after the loop reads as shared. Open: reductions,
+      needed after: private; global, written, or written by a sibling: shared; otherwise firstprivate. Loop tasks take the sharing of the do-all loop, plus what the code after the loop reads as shared. Done: reductions and lastprivate (`reduction`, `last_private`, see 3.5). Open: reductions,
       last private, what pointers point to (side-effect export).
 - [ ] **Enclosing loop.** Export the innermost enclosing loop (start line) of a region so
       that its hotspot can be matched; loops are not in the side-effect export.
@@ -156,7 +159,10 @@ Implausible groups are flagged, not hidden (see 3.3).
 - [ ] **Side-effect export:** `static_callees` of `fib` is empty although it calls itself;
       check whether self recursion is excluded on purpose. A recursion flag per group
       (callee is the enclosing function) would let the output suggest a cut-off.
-- [ ] **Patch generation for task patterns.** Fix it: the patches of `PARALLELREGION` and `TASK` entries are not
+- [x] **Patch generation for task patterns** (`integration/task_detection`: the patches were wrong and are fixed,
+      `test/end_to_end/task_patches` applies them and compiles; open: a task line that is a declaration cannot be patched,
+      dependences between tasks use `taskwait` not `depend`, the region wraps the tasks, not the first call in the caller;
+      the printed line of the tool does not come from the patch). Old text: Fix it: the patches of `PARALLELREGION` and `TASK` entries are not
       verified (what the patch generator makes of `PARALLELREGION` in the `task` list; `UnpackedSuggestion` handles
       `task` and `parallel_region` separately; the line the tool prints for a task patch is unexplained). Check the
       generated patches for fib, fft and the loop tasks, and fix what is wrong.
@@ -175,8 +181,10 @@ Implausible groups are flagged, not hidden (see 3.3).
         same loop counts like a nested end). Since then the explorer finishes on health (about 11 s) and uts (about 4 s);
         floorplan does not finish (120 s guard in the test: `ContextTaskGraph` construction of 45142 nodes slows down to
         under 100 nodes per second).
-      - **health: groups not found.** None on the expected lines of the recursive call in the loop (the duplicates, 594
-        entries on 18 line ranges, are gone, see below).
+      - **health: groups not found:** fixed on `integration/task_detection`: the loops are pointer-chasing `while` loops
+        (`while (v) { f(v); v = v->next; }`) with a carried RAW on the cursor, which only the update has; they are loop
+        tasks now (`task_cursor_loops.py`), and groups with a dependence between neighbouring tasks are dropped (18 -> 6
+        entries). Open: the join before `check_patients_realloc`, the sibling race on the parent's field.
       - **uts: no task pattern at all** (the do-all detection rejects the loop, RAW on `parent` between the iterations).
       - **Cost per recursive call site** (sort: 90 s guard in the test, strassen: memory limit of 4 GiB in the test):
         `ContextTaskGraph` construction grows about 9x per call site; seven self-calls of a function run out of memory in
@@ -184,11 +192,14 @@ Implausible groups are flagged, not hidden (see 3.3).
       - **Duplicates** (health, knapsack): fixed; `identify_simple_tasking` reports a group once per (parent PET node,
         line ranges and instruction ids of its tasks). Health: 594 -> 18 entries, knapsack: 17 regions -> 1 (its xfail is
         gone). Not checked on the fft profile (44 entries before; no BOTS profile on the second machine).
-      - **Spans and joins** (nqueens, sparselu): the region and task spans include the header of the loop; the join and the
-        sharing of recursive calls are empty (see recursion join above); spurious WAR on loop variables (`jj`, `ii`);
-        tiny regions in initialisation loops (`genmat`).
+      - **Spans and joins** (nqueens, sparselu): fixed on `integration/task_detection`: the region and task cover the
+        task statement (not the loop header, guard conditions or nested headers), one suggestion per nest (innermost
+        loop), WARs on firstprivate variables are no after dependences; the joins of nqueens and knapsack are found.
+        Open: sparselu fwd and bdiv are two regions (one taskwait in omp-tasks), the sharing of `csols` / `b` in nqueens
+        and of the loop index in sparselu; one tiny region (`genmat`) remains by design.
       - Strassen, health, floorplan and the join/sharing expectations are guesses until the explorer gets that far.
-- [ ] **Docs.** Update the documentation where necessary (`docs/tools/MCP_server.md`, the explorer docs and the
+- [x] **Docs** (done on `integration/task_detection`: `docs/data/Parallel_patterns/tasks.md`, `Explorer.md`, `Explorer_output.md`,
+      `Patterns.md`, `Profiling_and_instrumentation_output.md`, `MCP_server.md`; keep it current when the fields change). Old text: Update the documentation where necessary (`docs/tools/MCP_server.md`, the explorer docs and the
       description of the new `patterns.json` fields `task_dependences`, `after_dependences`, `shared`, `private`,
       `first_private`, `jumpInstructionIDs` in `Data.xml`) once the data flow work is finished.
 - [ ] **Trivial groups.** Groups of unprofitable code (a few `sprintf` calls in the shared
